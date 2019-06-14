@@ -317,32 +317,43 @@ bool Population::cull() {
 }
 
 void Population::breed() {
-  //elitist algorithm, make the first individual in the next generation the previous most fit
-  offspring[0] = old_gen[best_organism_ind];
   std::uniform_int_distribution<size_t> dist_surv0(0, survivors_num - 1);
   std::uniform_int_distribution<size_t> dist_surv1(0, survivors_num - 2);
   std::vector<Organism*> children;
+  if (this->offspring_num % 2 == 1) {
+    //elitist algorithm, make the first individual in the next generation the previous most fit
+    offspring[0] = old_gen[best_organism_ind];
 
-  for (size_t i = 1; 2*i < this->offspring_num; i++) {
-    size_t par1_i = dist_surv0( args.get_generator() );
-    //use the survivors_num-1 distribution to guarantee different parents
-    size_t par2_i = dist_surv1( args.get_generator() );
-    if (par2_i >= par1_i) {
-      par2_i++;
+    for (size_t i = 1; 2*i < this->offspring_num; i++) {
+      size_t par1_i = dist_surv0( args.get_generator() );
+      //use the survivors_num-1 distribution to guarantee different parents
+      size_t par2_i = dist_surv1( args.get_generator() );
+      if (par2_i >= par1_i) {
+	par2_i++;
+      }
+      children = survivors[par1_i].get()->breed(&args, survivors[par2_i].get());
+      offspring[2*i] = std::shared_ptr<Organism>(children[0]);
+      offspring[2*i - 1] = std::shared_ptr<Organism>(children[1]);
     }
-    children = survivors[par1_i].get()->breed(&args, survivors[par2_i].get());
-    offspring[2*i] = std::shared_ptr<Organism>(children[0]);
-    if (2*i + 1 < this->offspring_num)
+  } else {
+    for (size_t i = 0; 2*i + 1 < this->offspring_num; i++) {
+      size_t par1_i = dist_surv0( args.get_generator() );
+      //use the survivors_num-1 distribution to guarantee different parents
+      size_t par2_i = dist_surv1( args.get_generator() );
+      if (par2_i >= par1_i) {
+	par2_i++;
+      }
+      children = survivors[par1_i].get()->breed(&args, survivors[par2_i].get());
+      offspring[2*i] = std::shared_ptr<Organism>(children[0]);
       offspring[2*i + 1] = std::shared_ptr<Organism>(children[1]);
-    //free(children);
+    }
   }
   //get rid of the old generation
   size_t i = 0;
   for (; i < best_organism_ind; ++i) {
     old_gen[i].reset();
   }
-  //skip over the best organism
-  i++;
+  i++;//skip over the best organism
   for (; i < this->offspring_num; ++i) {
     old_gen[i].reset();
   }
