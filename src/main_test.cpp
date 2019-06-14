@@ -1,5 +1,4 @@
-//#include "../include/genetics.hpp"
-#include <evo_q>
+#include "../include/evo_q.hpp"
 #define CATCH_CONFIG_MAIN
 #include "../include/catch.hpp"
 #define N_TRIALS 100
@@ -62,6 +61,29 @@ protected:
   Genetics::PhenotypeMap map_32;
 public:
   ChromosomeTestFixture() : chrom_96_bits_A(96), chrom_96_bits_B(96), chrom_32_bits_A(32), chrom_32_bits_B(32), map_96(96), map_32(32) {}
+};
+
+class TestProblemSingle : public Genetics::Problem {
+public:
+  TestProblemSingle() : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1) {
+    map.initialize(1, Genetics::t_real);
+  }
+  void evaluate_fitness(Genetics::Organism* org) {
+    double x = org->read_real(0);
+    org->set_fitness(0, x*x);
+  }
+};
+
+class TestProblemMulti : public Genetics::Problem {
+public:
+  TestProblemMulti() : Genetics::Problem(NUM_BITS, NUM_CHROMS, NUM_OBJS) {
+    map.initialize(NUM_CHROMS, Genetics::t_real);
+  }
+  void evaluate_fitness(Genetics::Organism* org) {
+    double x = org->read_real(0);
+    org->set_fitness(0, x*x);
+    org->set_fitness(1, (x - 2)*(x - 2));
+  }
 };
 
 // =============================== CHROMOSOME TEST CASES ===============================
@@ -339,7 +361,8 @@ TEST_CASE ( "Organisms are correctly created and decoded", "[organisms]" ) {
 
 TEST_CASE ("Populations are correctly created and data is successfully read", "[populations]") {
   Genetics::ArgStore inst;
-  inst.initialize_from_file( "ga.conf" );
+  Genetics::String conf_file("ga.conf");
+  inst.initialize_from_file(conf_file.c_str());
   Genetics::PhenotypeMap map(NUM_BITS);
   map.initialize(NUM_CHROMS, Genetics::t_real);
   map.set_range(0, -10, 10);
@@ -372,4 +395,16 @@ TEST_CASE ("Populations are correctly created and data is successfully read", "[
     }
     printf("\n");
   }
+}
+
+TEST_CASE ("Simple evolution of a single objective converges to roughly appropriate result", "[populations]") {
+  TestProblemSingle prob;
+  Genetics::String conf_file("ga.conf");
+  Genetics::Population pop( NUM_BITS, NUM_OBJS, &(prob.map), conf_file);
+  for (size_t i = 0; i < 100; ++i) {
+    pop.evaluate(&prob);
+    pop.iterate();
+  }
+  pop.evaluate(&prob);
+  REQUIRE( APPROX(pop.get_best_organism()->read_real(0), 0) );
 }

@@ -54,7 +54,7 @@ class ArgStore {
     ArgStore();
 
     void initialize_from_args(size_t argc, char** argv);
-    void initialize_from_file(char* fname);
+    void initialize_from_file(const char* fname);
     void initialize();
     void read_file(std::string fname);
     std::mt19937& get_generator() { return generator; }

@@ -2,7 +2,7 @@
 
 namespace Genetics {
   
-Population::Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map) :
+Population::Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname) :
   N_BITS(pn_bits),
   N_OBJS(pn_objs)
 {
@@ -45,9 +45,12 @@ Population::Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map) :
   }
   free(buf);
 #endif
+  if (conf_fname != "") {
+    args.initialize_from_file(conf_fname.c_str());
+  }
 }
 
-Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map) :
+Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname) :
   N_BITS(pn_bits),
   N_OBJS(pn_objs)
 {
@@ -80,6 +83,9 @@ Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeM
   for (_uint j = 0; j < N_OBJS; ++j) {
     snprintf(buf, OUT_BUF_SIZE - 1, "f_%d(x)", j);
     obj_labels[j] = String(buf);
+  }
+  if (conf_fname != "") {
+    args.initialize_from_file(conf_fname.c_str());
   }
 }
 

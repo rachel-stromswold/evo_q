@@ -16,7 +16,7 @@ ArgStore::ArgStore() : generator() {
   bern = NULL;
 }
 
-void ArgStore::initialize_from_file(char* fname) {
+void ArgStore::initialize_from_file(const char* fname) {
   pop_size = DEF_POP_SIZE;
   breed_pop_size = DEF_BREED_POP_SIZE;
   num_gens = DEF_NUM_GENS;

@@ -10,7 +10,7 @@
 #define NUM_CARRY	1
 
 #define MAX_NUM_GENS	100
-#define OUT_BUF_SIZE  10
+#define OUT_BUF_SIZE    10
 
 #define DEF_SORT_PARAM	-3
 
@@ -51,8 +51,8 @@ class Population {
     void breed();
 
   public:
-    Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map);
-    Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map);
+    Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname = "");
+    Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname = "");
     ~Population();
     Population(Population& o);
     Population& operator=(Population& o);
@@ -102,10 +102,10 @@ class Population_NSGAII : public Population {
     void hypermutate();
 
   public:
-    Population_NSGAII(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map) :
-      Population(pn_bits, pn_objs, p_map) {}
-    Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map) :
-      Population(pn_bits, pn_objs, tmplt, p_map) {}
+    Population_NSGAII(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname) :
+      Population(pn_bits, pn_objs, p_map, conf_fname) {}
+    Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname) :
+      Population(pn_bits, pn_objs, tmplt, p_map, conf_fname) {}
     ~Population_NSGAII();
 
     void evaluate(Problem* prob);
