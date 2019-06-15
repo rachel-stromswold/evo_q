@@ -420,6 +420,6 @@ TEST_CASE ("Simple evolution of a multi objective converges to roughly appropria
   pop.evaluate(&prob);
   Genetics::Vector<Genetics::String> pop_dat = pop.get_pop_data();
   for (size_t i = 0; i < pop_dat.size(); ++i) {
-    std::cout << "fitness " << i << " = " << pop_dat[i];
+    std::cout << "organism " << i << " = " << pop_dat[i] << std::endl;
   }
 }

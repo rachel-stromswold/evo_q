@@ -303,6 +303,7 @@ double Chromosome::gene_to_num(PhenotypeMap* al, _uint ind) {
 
     return al->get_factor(ind)*raw + min;
   }
+  return 0;
 }
 
 String Chromosome::get_string(PhenotypeMap* al, _uint ind) {
