@@ -11,6 +11,19 @@ Chromosome::Chromosome(_uint pn_bits) :
   for (unsigned i = 0; i < N; ++i) {
     genes[i] = 0;
   }
+  use_real = 0;
+}
+
+Chromosome::Chromosome(_uint pn_bits, _uchar real_mode) :
+  N_BITS(pn_bits),
+  N_BYTES( (N_BITS+7)/8 ),
+  N( (N_BYTES+sizeof(unsigned long)-1)/sizeof(unsigned long) ),
+  genes(N, (unsigned long)0)
+{
+  for (unsigned i = 0; i < N; ++i) {
+    genes[i] = 0;
+  }
+  use_real = real_mode;
 }
 
 Chromosome::Chromosome(_uint pn_bits, Chromosome* other) :
@@ -22,22 +35,27 @@ Chromosome::Chromosome(_uint pn_bits, Chromosome* other) :
   for (unsigned i = 0; i < N; ++i) {
     genes[i] = other->genes[i];
   }
+  use_real = other->use_real;
 }
 
 Chromosome::Chromosome(Chromosome& other) :
+  real_vals(other.real_vals),
   genes(other.genes)
 {
   N_BITS = other.N_BITS;
   N_BYTES = other.N_BYTES;
   N = other.N;
+  use_real = other.use_real;
 }
 
 Chromosome::Chromosome(Chromosome&& other) :
+  real_vals(std::move(other.real_vals)),
   genes(std::move(other.genes))
 {
   N_BITS = other.N_BITS;
   N_BYTES = other.N_BYTES;
   N = other.N;
+  use_real = other.use_real;
 }
 
 Chromosome& Chromosome::operator=(Chromosome& other) {
@@ -119,18 +137,6 @@ unsigned char Chromosome::operator[](unsigned int i) {
   return 0;
 }
 
-void Chromosome::mutate(ArgStore* args) {
-  for (size_t i = 0; i < N; i++) {
-    unsigned char num_ones = args->sample_binomial( bin_size );
-
-    //pick a random bitmask with num_ones bits flipped
-    std::uniform_int_distribution<unsigned long> dist( 0, nChoosek(bin_size, num_ones) - 1);
-    unsigned long x = dist(args->get_generator());
-
-    genes[i] = genes[i] ^ getBitStream( bin_size, num_ones, x);
-  }
-}
-
 //this function is a bijection mapping from the set of integers between 0 and n choose k to the set of n-bit integers with binary representation containing k 1 bits. Generating one random number and using this function requires fewer calls to the prng and is thus more efficient than calling the Bernoulli distribution for each bit
 size_t Chromosome::getBitStream (size_t n, size_t k, size_t x) {
   if (k == 0) { return 0; }
@@ -143,19 +149,60 @@ size_t Chromosome::getBitStream (size_t n, size_t k, size_t x) {
   }
 }
 
-void Chromosome::slow_mutate(ArgStore* args) {
-//  std::bernoulli_distribution flipBit( ArgStore::instance()->get_mutate_prob() );
-  for (unsigned i = 0; i < N - 1; ++i) {
-    for (unsigned j = 0; j < bin_size; ++j) {
-      if ( args->sample_bernoulli() ) {
-        genes[i] = genes[i] ^ (0x01 << j);
+bool Chromosome::real_space_mutate(ArgStore* args) {
+  if (use_real & REAL_ACTIVE) {
+    std::normal_distribution<double> norm(0, args->get_init_coup_var());
+    for (size_t i = 0; i < real_vals.size(); ++i) {
+      real_vals[i] += norm( args->get_generator() );
+      //ensure that the value is between 0 and 1
+      if (real_vals[i] > 1.0) {
+	real_vals[i] = 1.0;
+      }
+      if (real_vals[i] < 0.0) {
+	real_vals[i] = 0.0;
       }
     }
+    return false;
   }
-  //we have to do something special for the last long because it isn't filled
-  for (unsigned j = 0; j < N_BITS%(bin_size); ++j) {
-    if ( args->sample_bernoulli() ) {
-      genes[N-1] = genes[N-1] ^ (0x01 << j);
+  return true;
+}
+
+void Chromosome::mutate(ArgStore* args) {
+  bool perform_bit_mutation = true;
+  if (use_real & REAL_ENABLED) {
+    perform_bit_mutation = real_space_mutate(args);
+  }
+  if (perform_bit_mutation) {
+    for (size_t i = 0; i < N; i++) {
+      unsigned char num_ones = args->sample_binomial( bin_size );
+
+      //pick a random bitmask with num_ones bits flipped
+      std::uniform_int_distribution<unsigned long> dist( 0, nChoosek(bin_size, num_ones) - 1);
+      unsigned long x = dist(args->get_generator());
+
+      genes[i] = genes[i] ^ getBitStream( bin_size, num_ones, x);
+    }
+  }
+}
+
+void Chromosome::slow_mutate(ArgStore* args) {
+  bool perform_bit_mutation = true;
+  if (use_real & REAL_ENABLED) {
+    perform_bit_mutation = real_space_mutate(args);
+  }
+  if (perform_bit_mutation) {
+    for (unsigned i = 0; i < N - 1; ++i) {
+      for (unsigned j = 0; j < bin_size; ++j) {
+	if ( args->sample_bernoulli() ) {
+	  genes[i] = genes[i] ^ (0x01 << j);
+	}
+      }
+    }
+    //we have to do something special for the last long because it isn't filled
+    for (unsigned j = 0; j < N_BITS%(bin_size); ++j) {
+      if ( args->sample_bernoulli() ) {
+	genes[N-1] = genes[N-1] ^ (0x01 << j);
+      }
     }
   }
 }
@@ -245,14 +292,17 @@ int Chromosome::gene_to_int(PhenotypeMap* al, _uint ind) {
 }
 
 double Chromosome::gene_to_num(PhenotypeMap* al, _uint ind) {
-  double raw = (double)decodeGray( gene_to_ulong(al, ind) );
+  if ( (use_real & REAL_ACTIVE) && al->is_real(ind) ) {
+    double val = (al->get_range_max(ind) - al->get_range_min(ind))*real_vals[ind] + al->get_range_min(ind);
+  } else {
+    double raw = (double)decodeGray( gene_to_ulong(al, ind) );
+    if (!al->is_real(ind)) {
+      return raw;
+    }
+    double min = al->get_range_min(ind);
 
-  if (!al->is_real(ind)) {
-    return raw;
+    return al->get_factor(ind)*raw + min;
   }
-  double min = al->get_range_min(ind);
-
-  return al->get_factor(ind)*raw + min;
 }
 
 String Chromosome::get_string(PhenotypeMap* al, _uint ind) {

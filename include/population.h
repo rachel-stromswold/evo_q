@@ -48,7 +48,9 @@ class Population {
     bool cull_in_place();
     //cull first sorts the organisms and selects them based on the ratio of their relative fitness to the total relative fitness
     bool cull();
+    void breed_shuffle();
     void breed();
+    void find_best_organism();
 
   public:
     Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname = "");
@@ -62,17 +64,9 @@ class Population {
     void evaluate_async(Problem* prob);
     bool iterate();
 
-    std::shared_ptr<Organism> get_best_organism() { return old_gen[best_organism_ind]; }
-    std::shared_ptr<Organism> get_organism(size_t i) {
-      if (i > old_gen.size())
-        error(1, "Attempt to access invalid index %d when the maximum allowed is %d.", i, old_gen.size());
-      return old_gen[i];
-    }
-    std::shared_ptr<Organism> get_child(size_t i) {
-      if (i > offspring.size())
-        error(1, "Attempt to access invalid index %d when the maximum allowed is %d.", i, offspring.size());
-      return offspring[i];
-    }
+    std::shared_ptr<Organism> get_best_organism();
+    std::shared_ptr<Organism> get_organism(size_t i);
+    std::shared_ptr<Organism> get_child(size_t i);
 
     void run(Problem* prob);
     void swap_orgs(int i, int j);

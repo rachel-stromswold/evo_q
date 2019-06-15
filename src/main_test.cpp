@@ -3,8 +3,8 @@
 #include "../include/catch.hpp"
 #define N_TRIALS 100
 
-#define NUM_BITS	32
-#define NUM_OBJS  2
+#define NUM_BITS	16
+#define NUM_OBJS  	2
 #define NUM_CHROMS	1
 
 #define M_RANGE		2.0
@@ -406,5 +406,20 @@ TEST_CASE ("Simple evolution of a single objective converges to roughly appropri
     pop.iterate();
   }
   pop.evaluate(&prob);
-  REQUIRE( APPROX(pop.get_best_organism()->read_real(0), 0) );
+  REQUIRE( APPROX(pop.get_best_organism()->get_fitness(0), 0) );
+}
+
+TEST_CASE ("Simple evolution of a multi objective converges to roughly appropriate result", "[populations]") {
+  TestProblemMulti prob;
+  Genetics::String conf_file("ga.conf");
+  Genetics::Population pop( NUM_BITS, NUM_OBJS, &(prob.map), conf_file);
+  for (size_t i = 0; i < 100; ++i) {
+    pop.evaluate(&prob);
+    pop.iterate();
+  }
+  pop.evaluate(&prob);
+  Genetics::Vector<Genetics::String> pop_dat = pop.get_pop_data();
+  for (size_t i = 0; i < pop_dat.size(); ++i) {
+    std::cout << "fitness " << i << " = " << pop_dat[i];
+  }
 }

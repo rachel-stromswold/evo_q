@@ -11,23 +11,29 @@
 #include "phenotype.h"
 
 #define MUTATE_PROB	0.1
+#define REAL_ENABLED	1
+#define REAL_ACTIVE	2
+#define DISC_DISABLED	4
 
 namespace Genetics {
 
 class Chromosome {
 private:
   _uint N_BITS;
-  size_t N_BYTES;
+  _uint N_BYTES;
   size_t N;
+  Vector<double> real_vals;
 
 protected:
   static const _uint bin_size = sizeof(unsigned long)*8;
 //  unsigned long genes[(N_BYTES+sizeof(unsigned long)-1)/sizeof(unsigned long)];
   Vector<unsigned long> genes;
   size_t getBitStream (size_t n, size_t k, size_t x);
+  _uchar use_real = 0;
 
 public:
   Chromosome(_uint pn_bits);
+  Chromosome(_uint pn_bits, _uchar real_mode);
   Chromosome(_uint pn_bits, Chromosome* o);
   Chromosome(Chromosome& other);
   Chromosome(Chromosome&& other);
@@ -42,6 +48,7 @@ public:
 
   unsigned char operator[](unsigned int i);
   //randomly mutate each bit in the gene
+  bool real_space_mutate(ArgStore* args);
   void mutate(ArgStore* args);
   void slow_mutate(ArgStore* args);
   //set the gene to a new completely random value

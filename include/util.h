@@ -422,8 +422,8 @@ public:
   _uint k() { return k_; }
 
   template <class Generator>
-  std::vector<_uint> operator()(Generator& g) {
-    std::vector<_uint> ret(k_, 0);
+  Vector<_uint> operator()(Generator& g) {
+    Vector<_uint> ret(k_, 0);
     for (_uint i = 0; i < k_; ++i) {
       _uint x = dist( g ) % (n_ - i);
       bool append = true;

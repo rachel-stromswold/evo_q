@@ -8,6 +8,7 @@
 #include <math.h>
 #include <stdarg.h>
 #include <climits>
+#include <memory>
 
 //#ifndef USE_CUSTOM_CONTAINERS
 #include <vector>

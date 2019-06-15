@@ -11,6 +11,9 @@ Population::Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String
   max_fitness = (double*)malloc(sizeof(double)*N_OBJS);
   this->survivors_num = args.get_survivors();
   this->offspring_num = args.get_pop_size();
+  if (this->offspring_num % 2 == 0) {
+    this->offspring_num++;
+  }
   //we need to keep the old and new generation in separate arrays to avoid overwriting data
   this->offspring.insert(this->offspring.end(), this->offspring_num, std::shared_ptr<Organism>(NULL)); 
 
@@ -59,6 +62,9 @@ Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeM
   max_fitness = (double*)malloc(sizeof(double)*N_OBJS);
   this->survivors_num = args.get_survivors();
   this->offspring_num = args.get_pop_size();
+  if (this->offspring_num % 2 == 0) {
+    this->offspring_num++;
+  }
   //we need to keep the old and new generation in separate arrays to avoid overwriting data
   this->offspring.insert(this->offspring.end(), this->offspring_num, NULL);
 
@@ -192,6 +198,22 @@ void Population::evaluate(Problem* prob) {
   }
 }
 
+void Population::find_best_organism() {
+  max_fitness[0] = old_gen[0]->get_fitness(0);
+  min_fitness[0] = old_gen[0]->get_fitness(0);
+  best_organism_ind = 0;
+  for (size_t i = 1; i < this->offspring_num; ++i) {
+    double fitness_i = old_gen[i]->get_fitness(0);
+    if (fitness_i > max_fitness[0]) {
+      max_fitness[0] = fitness_i;
+      best_organism_ind = i;
+    }
+    if (fitness_i < min_fitness[0]) {
+      min_fitness[0] = fitness_i;
+    }
+  }
+}
+
 void Population::evaluate_async(Problem* prob) {
 }
 
@@ -316,12 +338,59 @@ bool Population::cull() {
   return false;
 }
 
+void Population::breed_shuffle() {
+  std::uniform_int_distribution<size_t> dist_surv0(0, survivors_num - 1);
+  std::vector<Organism*> children;
+  Organism** shuffled_inds = (Organism**)malloc(sizeof(Organism*)*offspring_num);
+  for (size_t i = 0; i < survivors_num; ++i) {
+    shuffled_inds[i] = survivors[i].get();
+  }
+  for (size_t i = 0; i < survivors_num; ++i) {
+    size_t ind_o = dist_surv0( args.get_generator() );
+    Organism* tmp = shuffled_inds[i];
+    shuffled_inds[i] = shuffled_inds[ind_o];
+    shuffled_inds[ind_o] = tmp;
+  }
+  size_t last_org_ind = offspring_num;
+  for (size_t i = survivors_num; i < offspring_num; ++i) {
+    size_t org_ind= dist_surv0( args.get_generator() );
+    //ensure that we don't see the same organism breeding with itself
+    if (org_ind == last_org_ind) {
+      org_ind = (org_ind + 1) % offspring_num;
+    }
+    shuffled_inds[i] = survivors[org_ind].get();
+    last_org_ind = org_ind;
+  }
+  if (this->offspring_num % 2 == 1) {
+    //elitist algorithm, make the first individual in the next generation the previous most fit
+    offspring[0] = old_gen[best_organism_ind];
+
+    for (size_t i = 1; 2*i < this->offspring_num; i++) {
+      children = shuffled_inds[2*i - 1]->breed(&args, shuffled_inds[2*i]);
+      offspring[2*i] = std::shared_ptr<Organism>(children[0]);
+      offspring[2*i - 1] = std::shared_ptr<Organism>(children[1]);
+    }
+  } else {
+    for (size_t i = 0; 2*i + 1 < this->offspring_num; i++) {
+      children = shuffled_inds[2*i]->breed(&args, shuffled_inds[2*i + 1]);
+      offspring[2*i] = std::shared_ptr<Organism>(children[0]);
+      offspring[2*i + 1] = std::shared_ptr<Organism>(children[1]);
+    }
+  }
+
+  offspring.swap(old_gen);
+}
+
 void Population::breed() {
   std::uniform_int_distribution<size_t> dist_surv0(0, survivors_num - 1);
   std::uniform_int_distribution<size_t> dist_surv1(0, survivors_num - 2);
   std::vector<Organism*> children;
+  size_t* shuffled_inds = (size_t*)malloc(sizeof(size_t)*survivors_num);
   if (this->offspring_num % 2 == 1) {
     //elitist algorithm, make the first individual in the next generation the previous most fit
+    if (best_organism_ind > offspring.size()) {
+      find_best_organism();
+    }
     offspring[0] = old_gen[best_organism_ind];
 
     for (size_t i = 1; 2*i < this->offspring_num; i++) {
@@ -348,15 +417,6 @@ void Population::breed() {
       offspring[2*i + 1] = std::shared_ptr<Organism>(children[1]);
     }
   }
-  //get rid of the old generation
-  size_t i = 0;
-  for (; i < best_organism_ind; ++i) {
-    old_gen[i].reset();
-  }
-  i++;//skip over the best organism
-  for (; i < this->offspring_num; ++i) {
-    old_gen[i].reset();
-  }
 
   offspring.swap(old_gen);
 }
@@ -367,6 +427,25 @@ bool Population::iterate() {
   }
   breed();
   return false;
+}
+
+std::shared_ptr<Organism> Population::get_best_organism() {
+  if (best_organism_ind >= old_gen.size()) {
+    find_best_organism();
+  }
+  return old_gen[best_organism_ind];
+}
+
+std::shared_ptr<Organism> Population::get_organism(size_t i) {
+  if (i > old_gen.size())
+    error(1, "Attempt to access invalid index %d when the maximum allowed is %d.", i, old_gen.size());
+  return old_gen[i];
+}
+
+std::shared_ptr<Organism> Population::get_child(size_t i) {
+  if (i > offspring.size())
+    error(1, "Attempt to access invalid index %d when the maximum allowed is %d.", i, offspring.size());
+  return offspring[i];
 }
 
 void Population::run(Problem* prob) {
