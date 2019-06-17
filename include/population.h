@@ -60,11 +60,13 @@ class Population {
     Population& operator=(Population& o);
     Population(Population&& o);
 
+    void resize_population(_uint new_size);
+    void set_n_survivors(_uint new_size);
     void evaluate(Problem* prob);
     void evaluate_async(Problem* prob);
     bool iterate();
 
-    std::shared_ptr<Organism> get_best_organism();
+    std::shared_ptr<Organism> get_best_organism(size_t i = 0);
     std::shared_ptr<Organism> get_organism(size_t i);
     std::shared_ptr<Organism> get_child(size_t i);
 
@@ -83,8 +85,8 @@ class Population {
 
     size_t get_offspring_num() { return offspring_num; }
     size_t get_survivors_num() { return survivors_num; }
-    inline _uint get_n_bits() { return N_BITS; }
-    inline _uint get_n_objs() { return N_OBJS; }
+    _uint get_n_bits() { return N_BITS; }
+    _uint get_n_objs() { return N_OBJS; }
     ArgStore& get_args() { return args; }
 };
 

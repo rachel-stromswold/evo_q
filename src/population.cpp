@@ -6,6 +6,9 @@ Population::Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String
   N_BITS(pn_bits),
   N_OBJS(pn_objs)
 {
+  if (conf_fname != "") {
+    args.initialize_from_file(conf_fname.c_str());
+  }
   map = p_map;
   min_fitness = (double*)malloc(sizeof(double)*N_OBJS);
   max_fitness = (double*)malloc(sizeof(double)*N_OBJS);
@@ -48,15 +51,15 @@ Population::Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String
   }
   free(buf);
 #endif
-  if (conf_fname != "") {
-    args.initialize_from_file(conf_fname.c_str());
-  }
 }
 
 Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname) :
   N_BITS(pn_bits),
   N_OBJS(pn_objs)
 {
+  if (conf_fname != "") {
+    args.initialize_from_file(conf_fname.c_str());
+  }
   map = p_map;
   min_fitness = (double*)malloc(sizeof(double)*N_OBJS);
   max_fitness = (double*)malloc(sizeof(double)*N_OBJS);
@@ -89,9 +92,6 @@ Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeM
   for (_uint j = 0; j < N_OBJS; ++j) {
     snprintf(buf, OUT_BUF_SIZE - 1, "f_%d(x)", j);
     obj_labels[j] = String(buf);
-  }
-  if (conf_fname != "") {
-    args.initialize_from_file(conf_fname.c_str());
   }
 }
 
@@ -161,6 +161,32 @@ Population::Population(Population&& o) : map(o.map) {
   }
   min_fitness = o.min_fitness;
   max_fitness = o.max_fitness;
+}
+
+void Population::resize_population(_uint new_size) {
+  size_t old_size = old_gen.size();
+  if (new_size > old_size) {
+    offspring.insert( offspring.end(), new_size - old_size, std::shared_ptr<Organism>(NULL) );
+    old_gen.reserve(new_size);
+    for (size_t i = old_size; i < old_size; ++i) {
+      old_gen.push_back( std::make_shared<Organism>(N_BITS, N_OBJS, map) );
+      old_gen.back()->randomize(&args);
+    }
+  } else {
+    offspring.resize(new_size);
+    old_gen.resize(new_size);
+  }
+  args.set_pop_size(new_size);
+}
+
+void Population::set_n_survivors(_uint new_size) {
+  size_t old_size = survivors_num;
+  if (new_size > old_size) {
+    survivors.insert( offspring.end(), new_size - old_size, std::shared_ptr<Organism>(NULL) );
+  } else {
+    survivors.resize(new_size);
+  }
+  args.set_survivors(new_size);
 }
 
 void Population::evaluate(Problem* prob) {
@@ -429,11 +455,16 @@ bool Population::iterate() {
   return false;
 }
 
-std::shared_ptr<Organism> Population::get_best_organism() {
+std::shared_ptr<Organism> Population::get_best_organism(size_t i) {
   if (best_organism_ind >= old_gen.size()) {
     find_best_organism();
   }
-  return old_gen[best_organism_ind];
+  if (i == 0) {
+    return old_gen[best_organism_ind];
+  } else {
+    sort_orgs(0, &old_gen);
+    return old_gen[i];
+  }
 }
 
 std::shared_ptr<Organism> Population::get_organism(size_t i) {

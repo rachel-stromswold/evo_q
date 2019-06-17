@@ -64,17 +64,27 @@ class ArgStore {
     void print_data();
 //END REMOVAL CANDIDATE
 
-    size_t get_pop_size()	{ return pop_size; }
-    size_t get_survivors()	{ return breed_pop_size; }
-    size_t get_num_gens() 	{ return num_gens; }
-    int get_num_crossovers() 	{ return num_crossovers; }
-    double get_init_coup_var()	{ return init_coup_var; }
-    double get_init_coup_mean() { return init_coup_mean; }
-    double get_mutate_prob()	{ return mutate_prob; }
+    size_t get_pop_size()			{ return pop_size; }
+    void set_pop_size(size_t n)			{ pop_size = n; }
+    size_t get_survivors()			{ return breed_pop_size; }
+    void set_survivors(size_t n)		{ breed_pop_size = n; }
+    size_t get_num_gens() 			{ return num_gens; }
+    void set_num_gens(size_t n) 		{ num_gens; }
+    int get_num_crossovers() 			{ return num_crossovers; }
+    void set_num_crossovers(int n) 		{ num_crossovers = n; }
+    double get_init_coup_var()			{ return init_coup_var; }
+    void set_init_coup_var(double x)		{ init_coup_var = x; }
+    double get_init_coup_mean() 		{ return init_coup_mean; }
+    void set_init_coup_mean(double x) 		{ init_coup_mean = x; }
+    double get_mutate_prob()			{ return mutate_prob; }
+    void set_mutate_prob(double x)		{ mutate_prob = x; }
     double get_hypermutation_threshold()	{ return hypermutation_threshold; }
-    bool wait_for_con()		{ return flags & WAIT_CON; }
-    bool verbose()		{ return flags & VERBOSE; }
-    std::string get_out_fname() { return out_fname; }
+    void set_hypermutation_threshold(double x)	{ hypermutation_threshold = x; }
+    bool wait_for_con()				{ return flags & WAIT_CON; }
+    void set_wait_for_con(bool b = true)	{ flags |= WAIT_CON * ((_uint)b); }
+    bool verbose()				{ return flags & VERBOSE; }
+    void set_verbose(bool b = true)		{ flags |= VERBOSE * ((_uint)b); }
+    std::string get_out_fname() 		{ return out_fname; }
 };
     
 }

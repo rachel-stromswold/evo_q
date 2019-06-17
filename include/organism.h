@@ -95,7 +95,7 @@ public:
   int get_rank() { return rank; }
   _uint get_n_bits() { return N_BITS; }
   _uint get_n_params() { return al->get_num_params(); }
-  _uint get_n_objs() { return N_BITS; }
+  _uint get_n_objs() { return N_OBJS; }
 };
 
 }

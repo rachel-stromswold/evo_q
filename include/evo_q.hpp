@@ -526,59 +526,69 @@ namespace Genetics {
     
 //PARSE_H
     
-    class ArgStore {
-    private:
-        std::mt19937 generator;
-        //REMOVAL CANDIDATE
-        std::binomial_distribution<unsigned char>* long_bin;
-        std::binomial_distribution<unsigned char>* short_bin;
-        std::bernoulli_distribution* bern;
-        unsigned int short_bin_n = 0;
-        //END REMOVAL CANDIDATE
-        
-        ArgStore(ArgStore const&){};
-        ArgStore& operator=(ArgStore const& arg) {return *this;};
-        
-        unsigned flags;
-        size_t pop_size;
-        size_t breed_pop_size;
-        size_t num_gens;
-        int num_crossovers;
-        double init_coup_var;
-        double init_coup_mean;
-        double mutate_prob;
-        double hypermutation_threshold;
-        std::string out_fname;
-        
-        bool activate = true;
-        int seed = 0;
-        
-    public:
-        ArgStore();
-        
-        void initialize_from_args(size_t argc, char** argv);
-        void initialize_from_file(const char* fname);
-        void initialize();
-        void read_file(std::string fname);
-        std::mt19937& get_generator() { return generator; }
-        //REMOVAL CANDIDATE
-        unsigned int sample_binomial(unsigned int n);
-        bool sample_bernoulli();
-        void print_data();
-        //END REMOVAL CANDIDATE
-        
-        size_t get_pop_size()    { return pop_size; }
-        size_t get_survivors()    { return breed_pop_size; }
-        size_t get_num_gens()     { return num_gens; }
-        int get_num_crossovers()     { return num_crossovers; }
-        double get_init_coup_var()    { return init_coup_var; }
-        double get_init_coup_mean() { return init_coup_mean; }
-        double get_mutate_prob()    { return mutate_prob; }
-        double get_hypermutation_threshold()    { return hypermutation_threshold; }
-        bool wait_for_con()        { return flags & WAIT_CON; }
-        bool verbose()        { return flags & VERBOSE; }
-        std::string get_out_fname() { return out_fname; }
-    };
+class ArgStore {
+  private:
+    std::mt19937 generator;
+//REMOVAL CANDIDATE
+    std::binomial_distribution<unsigned char>* long_bin;
+    std::binomial_distribution<unsigned char>* short_bin;
+    std::bernoulli_distribution* bern;
+    unsigned int short_bin_n = 0;
+//END REMOVAL CANDIDATE
+
+    ArgStore(ArgStore const&){};
+    ArgStore& operator=(ArgStore const& arg) {return *this;};
+
+    unsigned flags;
+    size_t pop_size;
+    size_t breed_pop_size;
+    size_t num_gens;
+    int num_crossovers;
+    double init_coup_var;
+    double init_coup_mean;
+    double mutate_prob;
+    double hypermutation_threshold;
+    std::string out_fname;
+
+    bool activate = true;
+    int seed = 0;
+
+  public: 
+    ArgStore();
+
+    void initialize_from_args(size_t argc, char** argv);
+    void initialize_from_file(const char* fname);
+    void initialize();
+    void read_file(std::string fname);
+    std::mt19937& get_generator() { return generator; }
+//REMOVAL CANDIDATE
+    unsigned int sample_binomial(unsigned int n);
+    bool sample_bernoulli();
+    void print_data();
+//END REMOVAL CANDIDATE
+
+    size_t get_pop_size()			{ return pop_size; }
+    void set_pop_size(size_t n)			{ pop_size = n; }
+    size_t get_survivors()			{ return breed_pop_size; }
+    void set_survivors(size_t n)		{ breed_pop_size = n; }
+    size_t get_num_gens() 			{ return num_gens; }
+    void set_num_gens(size_t n) 		{ num_gens; }
+    int get_num_crossovers() 			{ return num_crossovers; }
+    void set_num_crossovers(int n) 		{ num_crossovers = n; }
+    double get_init_coup_var()			{ return init_coup_var; }
+    void set_init_coup_var(double x)		{ init_coup_var = x; }
+    double get_init_coup_mean() 		{ return init_coup_mean; }
+    void set_init_coup_mean(double x) 		{ init_coup_mean = x; }
+    double get_mutate_prob()			{ return mutate_prob; }
+    void set_mutate_prob(double x)		{ mutate_prob = x; }
+    double get_hypermutation_threshold()	{ return hypermutation_threshold; }
+    void set_hypermutation_threshold(double x)	{ hypermutation_threshold = x; }
+    bool wait_for_con()				{ return flags & WAIT_CON; }
+    void set_wait_for_con(bool b = true)	{ flags |= WAIT_CON * ((_uint)b); }
+    bool verbose()				{ return flags & VERBOSE; }
+    void set_verbose(bool b = true)		{ flags |= VERBOSE * ((_uint)b); }
+    std::string get_out_fname() 		{ return out_fname; }
+};
     
 //CHROMOSOME_H
     
@@ -708,124 +718,120 @@ namespace Genetics {
     
 //POPULATION_H
     
-    class Population {
-    private:
-        _uint N_BITS;
-        _uint N_OBJS;
-    protected:
-        size_t sort_org_calls = 0;
-        size_t carryover_num;//How many of the best individuals carry over to the next generation
-        //OWNED POINTERS
-        double* max_fitness = NULL;
-        double* min_fitness = NULL;
-        //EXTERNALLY MANAGED POINTERS
-        PhenotypeMap* map = NULL;
-        
-        ArgStore args;
-        //all offspring from the previous generation
-        size_t offspring_num;
-        std::vector<std::shared_ptr<Organism>> offspring;
-        std::vector<std::shared_ptr<Organism>> old_gen;
-        //which offspring will survive to enter the next breeding round
-        size_t survivors_num;
-        std::vector<std::shared_ptr<Organism>> survivors;
-        //guarantee that the best organism appears in the next generation
-        size_t best_organism_ind;
-        std::shared_ptr<Organism> best_organism;
-        //labels for generating data output
-        Vector<String> var_labels;
-        Vector<String> obj_labels;
-        
-        //cull in place is slightly faster but less accurate than the standard cull method
-        bool cull_in_place();
-        //cull first sorts the organisms and selects them based on the ratio of their relative fitness to the total relative fitness
-        bool cull();
-        void breed();
-        
-    public:
-        Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname = "");
-        Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname = "");
-        ~Population();
-        Population(Population& o);
-        Population& operator=(Population& o);
-        Population(Population&& o);
-        
-        void evaluate(Problem* prob);
-        void evaluate_async(Problem* prob);
-        bool iterate();
-        
-        std::shared_ptr<Organism> get_best_organism() { return old_gen[best_organism_ind]; }
-        std::shared_ptr<Organism> get_organism(size_t i) {
-            if (i > old_gen.size())
-                error(1, "Attempt to access invalid index %d when the maximum allowed is %d.", i, old_gen.size());
-            return old_gen[i];
-        }
-        std::shared_ptr<Organism> get_child(size_t i) {
-            if (i > offspring.size())
-                error(1, "Attempt to access invalid index %d when the maximum allowed is %d.", i, offspring.size());
-            return offspring[i];
-        }
-        
-        void run(Problem* prob);
-        void swap_orgs(int i, int j);
-        int partition(_uint ind, std::vector<std::shared_ptr<Organism>>* work_arr, int s, int e);
-        void sort_orgs(unsigned int ind, std::vector<std::shared_ptr<Organism>>* arr, int s = DEF_SORT_PARAM, int e = DEF_SORT_PARAM);
-        Vector<String> get_header();
-        Vector<String> get_pop_data();
-        
-        double get_min_fitness(_uint i = 0) { return min_fitness[i]; }
-        double get_max_fitness(_uint i = 0) { return max_fitness[i]; }
-        
-        void set_var_label(_uint ind, String val) { var_labels[ind] = val; }
-        void set_obj_label(_uint ind, String val) { obj_labels[ind] = val; }
-        
-        size_t get_offspring_num() { return offspring_num; }
-        size_t get_survivors_num() { return survivors_num; }
-        inline _uint get_n_bits() { return N_BITS; }
-        inline _uint get_n_objs() { return N_OBJS; }
-        ArgStore& get_args() { return args; }
-    };
+class Population {
+  private:
+    _uint N_BITS;
+    _uint N_OBJS;
+  protected:
+    size_t sort_org_calls = 0;
+    size_t carryover_num;//How many of the best individuals carry over to the next generation 
+    //OWNED POINTERS
+    double* max_fitness = NULL;
+    double* min_fitness = NULL;
+    //EXTERNALLY MANAGED POINTERS
+    PhenotypeMap* map = NULL;
     
-    class Population_NSGAII : public Population {
-    private:
-        size_t survivors_num;
-        //the ngsa alternative to elitism
-        std::vector<std::vector<std::shared_ptr<Organism>>> pareto_fronts;
-        void hypermutate();
-        
-    public:
-        Population_NSGAII(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname) :
-        Population(pn_bits, pn_objs, p_map, conf_fname) {}
-        Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname) :
-        Population(pn_bits, pn_objs, tmplt, p_map, conf_fname) {}
-        ~Population_NSGAII();
-        
-        void evaluate(Problem* prob);
-        PhenotypeMap* get_map() { return this->map; }
-        
-        //cull in place is slightly faster but less accurate than the standard cull method
-        bool cull_in_place();
-        //cull first sorts the organisms and selects them based on the ratio of their relative fitness to the total relative fitness
-        void cull();
-        void breed();
-        bool iterate();
-        
-        _uint get_n_pareto_fronts() {
-            return pareto_fronts.size();
-        }
-        std::vector<std::shared_ptr<Organism>> get_pareto_front(_uint i) {
-            if (pareto_fronts.size() == 0) { error(1, "The population has not yet been evaluated."); }
-            return pareto_fronts[i];
-        }
-        
-        Vector<String> get_header();
-        Vector<String> get_pop_data();
-        
-        std::shared_ptr<Organism> get_organism(size_t i) { return (i < offspring_num) ? this->old_gen[i] : this->offspring[i - offspring_num]; }
-        
-        size_t get_offspring_num() { return this->offspring_num; }
-        size_t get_survivors_num() { return this->survivors_num; }
-    };
+    ArgStore args;
+    //all offspring from the previous generation
+    size_t offspring_num;
+    std::vector<std::shared_ptr<Organism>> offspring;
+    std::vector<std::shared_ptr<Organism>> old_gen;
+    //which offspring will survive to enter the next breeding round
+    size_t survivors_num;
+    std::vector<std::shared_ptr<Organism>> survivors;
+    //guarantee that the best organism appears in the next generation
+    size_t best_organism_ind;
+    std::shared_ptr<Organism> best_organism;
+    //labels for generating data output
+    Vector<String> var_labels;
+    Vector<String> obj_labels;
+
+    //cull in place is slightly faster but less accurate than the standard cull method
+    bool cull_in_place();
+    //cull first sorts the organisms and selects them based on the ratio of their relative fitness to the total relative fitness
+    bool cull();
+    void breed_shuffle();
+    void breed();
+    void find_best_organism();
+
+  public:
+    Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname = "");
+    Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname = "");
+    ~Population();
+    Population(Population& o);
+    Population& operator=(Population& o);
+    Population(Population&& o);
+
+    void resize_population(_uint new_size);
+    void set_n_survivors(_uint new_size);
+    void evaluate(Problem* prob);
+    void evaluate_async(Problem* prob);
+    bool iterate();
+
+    std::shared_ptr<Organism> get_best_organism(size_t i = 0);
+    std::shared_ptr<Organism> get_organism(size_t i);
+    std::shared_ptr<Organism> get_child(size_t i);
+
+    void run(Problem* prob);
+    void swap_orgs(int i, int j);
+    int partition(_uint ind, std::vector<std::shared_ptr<Organism>>* work_arr, int s, int e);
+    void sort_orgs(unsigned int ind, std::vector<std::shared_ptr<Organism>>* arr, int s = DEF_SORT_PARAM, int e = DEF_SORT_PARAM);
+    Vector<String> get_header();
+    Vector<String> get_pop_data();
+
+    double get_min_fitness(_uint i = 0) { return min_fitness[i]; }
+    double get_max_fitness(_uint i = 0) { return max_fitness[i]; }
+
+    void set_var_label(_uint ind, String val) { var_labels[ind] = val; }
+    void set_obj_label(_uint ind, String val) { obj_labels[ind] = val; }
+
+    size_t get_offspring_num() { return offspring_num; }
+    size_t get_survivors_num() { return survivors_num; }
+    inline _uint get_n_bits() { return N_BITS; }
+    inline _uint get_n_objs() { return N_OBJS; }
+    ArgStore& get_args() { return args; }
+};
+
+class Population_NSGAII : public Population {
+  private:
+    size_t survivors_num;
+    //the ngsa alternative to elitism
+    std::vector<std::vector<std::shared_ptr<Organism>>> pareto_fronts;
+    void hypermutate();
+
+  public:
+    Population_NSGAII(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname) :
+      Population(pn_bits, pn_objs, p_map, conf_fname) {}
+    Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname) :
+      Population(pn_bits, pn_objs, tmplt, p_map, conf_fname) {}
+    ~Population_NSGAII();
+
+    void evaluate(Problem* prob);
+    PhenotypeMap* get_map() { return this->map; }
+
+    //cull in place is slightly faster but less accurate than the standard cull method
+    bool cull_in_place();
+    //cull first sorts the organisms and selects them based on the ratio of their relative fitness to the total relative fitness
+    void cull();
+    void breed();
+    bool iterate();
+
+    _uint get_n_pareto_fronts() {
+      return pareto_fronts.size();
+    }
+    std::vector<std::shared_ptr<Organism>> get_pareto_front(_uint i) {
+      if (pareto_fronts.size() == 0) { error(1, "The population has not yet been evaluated."); }
+      return pareto_fronts[i];
+    }
+
+    Vector<String> get_header();
+    Vector<String> get_pop_data();
+
+    std::shared_ptr<Organism> get_organism(size_t i) { return (i < offspring_num) ? this->old_gen[i] : this->offspring[i - offspring_num]; }
+
+    size_t get_offspring_num() { return this->offspring_num; }
+    size_t get_survivors_num() { return this->survivors_num; }
+};
     
 }
 
