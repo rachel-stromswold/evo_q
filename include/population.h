@@ -34,6 +34,7 @@ class Population {
     size_t offspring_num;
     std::vector<std::shared_ptr<Organism>> offspring;
     std::vector<std::shared_ptr<Organism>> old_gen;
+    size_t min_penalty_ind, max_penalty_ind;
     //which offspring will survive to enter the next breeding round
     size_t survivors_num;
     std::vector<std::shared_ptr<Organism>> survivors;
@@ -80,8 +81,8 @@ class Population {
     double get_min_fitness(_uint i = 0) { return min_fitness[i]; }
     double get_max_fitness(_uint i = 0) { return max_fitness[i]; }
 
-    void set_var_label(_uint ind, String val) { var_labels[ind] = val; }
-    void set_obj_label(_uint ind, String val) { obj_labels[ind] = val; }
+    void set_var_label(_uint ind, String val); 
+    void set_obj_label(_uint ind, String val);
 
     size_t get_offspring_num() { return offspring_num; }
     size_t get_survivors_num() { return survivors_num; }
@@ -96,11 +97,12 @@ class Population_NSGAII : public Population {
     //the ngsa alternative to elitism
     std::vector<std::vector<std::shared_ptr<Organism>>> pareto_fronts;
     void hypermutate();
+    void update_fitness_ranges(Organism* org, size_t i);
 
   public:
-    Population_NSGAII(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname) :
+    Population_NSGAII(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname = "") :
       Population(pn_bits, pn_objs, p_map, conf_fname) {}
-    Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname) :
+    Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname = "") :
       Population(pn_bits, pn_objs, tmplt, p_map, conf_fname) {}
     ~Population_NSGAII();
 

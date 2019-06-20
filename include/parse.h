@@ -69,7 +69,7 @@ class ArgStore {
     size_t get_survivors()			{ return breed_pop_size; }
     void set_survivors(size_t n)		{ breed_pop_size = n; }
     size_t get_num_gens() 			{ return num_gens; }
-    void set_num_gens(size_t n) 		{ num_gens; }
+    void set_num_gens(size_t n) 		{ num_gens = n; }
     int get_num_crossovers() 			{ return num_crossovers; }
     void set_num_crossovers(int n) 		{ num_crossovers = n; }
     double get_init_coup_var()			{ return init_coup_var; }

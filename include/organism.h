@@ -47,6 +47,7 @@ private:
 
   char output_stream[BUF_SIZE];
   Vector<double> fitness;
+  double penalty;
   size_t output_len;
   PhenotypeMap* al;
 
@@ -81,6 +82,9 @@ public:
 
   double get_fitness(_uint i = 0);
   void set_fitness(double val);
+  void apply_penalty(double val) { penalty = val; }
+  double get_penalty() { return penalty; }
+  bool penalized() { return penalty != 0; }
   void set_fitness(_uint i, double val);
 
   void set_int(_uint i, int value);

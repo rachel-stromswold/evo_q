@@ -222,7 +222,10 @@ void ArgStore::print_data() {
 }
 
 unsigned int ArgStore::sample_binomial(unsigned int n) {
-  if (n == sizeof(unsigned long)*8) {
+  if (n == sizeof(unsigned long)*CHAR_BIT) {
+    if (!long_bin) {
+      long_bin = new std::binomial_distribution<unsigned char>(sizeof(unsigned long)*CHAR_BIT);
+    }
     return (*long_bin)(generator);
   } else if (n != short_bin_n) {
     if (short_bin != NULL) {

@@ -658,63 +658,67 @@ class ArgStore {
         virtual void evaluate_fitness_async(size_t index, Chromosome genes) {}
     };
     
-    class Organism {
-    private:
-        _uint N_BITS;
-        _uint N_OBJS;
-        
-        char output_stream[BUF_SIZE];
-        Vector<double> fitness;
-        size_t output_len;
-        PhenotypeMap* al;
-        
-    protected:
-        Chromosome* genes;
-        size_t n_nodes;
-        
-    public:
-        //this is not used internally, but can be set when evaluating the fitness
-        String misc_data;
-        double coupling_range;
-        double coupling_prec;
-        
-        int n_dominations;
-        int rank;
-        double distance;
-        
-        Organism(int N_BITS, int N_OBJS, PhenotypeMap* p_al);
-        Organism(int N_BITS, int N_OBJS, Chromosome p_genes, PhenotypeMap* p_al);
-        Organism(const Organism &obj);
-        Organism(Organism&& obj);
-        ~Organism();
-        
-        Organism& operator=(Organism& obj);
-        
-        std::vector<Organism*> breed(ArgStore* args, Organism* par1);
-        void reset();
-        void randomize(ArgStore* args);
-        void randomize(ArgStore* args, Organism* orgtmp);
-        
-        void evaluate_fitness(Problem* prob);
-        
-        double get_fitness(_uint i = 0);
-        void set_fitness(double val);
-        void set_fitness(_uint i, double val);
-        
-        void set_int(_uint i, int value);
-        void set_uint(_uint i, int value);
-        void set_real(_uint i, double value);
-        double read_real(_uint i);
-        int read_int(_uint i);
-        bool dominates(Organism* other);
-        String get_chromosome_string(_uint i) { return genes->get_string(al, i); }
-        char* get_output_stream() { return output_stream; }
-        size_t get_output_len() {return output_len; }
-        int get_rank() { return rank; }
-        _uint get_n_bits() { return N_BITS; }
-        _uint get_n_params() { return al->get_num_params(); }
-        _uint get_n_objs() { return N_BITS; }
-    };
+class Organism {
+private:
+  _uint N_BITS;
+  _uint N_OBJS;
+
+  char output_stream[BUF_SIZE];
+  Vector<double> fitness;
+  double penalty;
+  size_t output_len;
+  PhenotypeMap* al;
+
+protected:
+  Chromosome* genes;
+  size_t n_nodes;
+
+public:
+  //this is not used internally, but can be set when evaluating the fitness
+  String misc_data;
+  double coupling_range;
+  double coupling_prec;
+
+  int n_dominations;
+  int rank;
+  double distance;
+
+  Organism(int N_BITS, int N_OBJS, PhenotypeMap* p_al);
+  Organism(int N_BITS, int N_OBJS, Chromosome p_genes, PhenotypeMap* p_al);
+  Organism(const Organism &obj);
+  Organism(Organism&& obj);
+  ~Organism();
+
+  Organism& operator=(Organism& obj);
+
+  std::vector<Organism*> breed(ArgStore* args, Organism* par1);
+  void reset();
+  void randomize(ArgStore* args);
+  void randomize(ArgStore* args, Organism* orgtmp);
+
+  void evaluate_fitness(Problem* prob);
+
+  double get_fitness(_uint i = 0);
+  void set_fitness(double val);
+  void apply_penalty(double val) { penalty = val; }
+  double get_penalty() { return penalty; }
+  bool penalized() { return penalty != 0; }
+  void set_fitness(_uint i, double val);
+
+  void set_int(_uint i, int value);
+  void set_uint(_uint i, int value);
+  void set_real(_uint i, double value);
+  double read_real(_uint i);
+  int read_int(_uint i);
+  bool dominates(Organism* other);
+  String get_chromosome_string(_uint i) { return genes->get_string(al, i); }
+  char* get_output_stream() { return output_stream; }
+  size_t get_output_len() {return output_len; }
+  int get_rank() { return rank; }
+  _uint get_n_bits() { return N_BITS; }
+  _uint get_n_params() { return al->get_num_params(); }
+  _uint get_n_objs() { return N_OBJS; }
+};
     
 //POPULATION_H
     
@@ -782,8 +786,8 @@ class Population {
     double get_min_fitness(_uint i = 0) { return min_fitness[i]; }
     double get_max_fitness(_uint i = 0) { return max_fitness[i]; }
 
-    void set_var_label(_uint ind, String val) { var_labels[ind] = val; }
-    void set_obj_label(_uint ind, String val) { obj_labels[ind] = val; }
+    void set_var_label(_uint ind, String val);
+    void set_obj_label(_uint ind, String val);
 
     size_t get_offspring_num() { return offspring_num; }
     size_t get_survivors_num() { return survivors_num; }

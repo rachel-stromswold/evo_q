@@ -199,6 +199,7 @@ void Population::evaluate(Problem* prob) {
     min_fitness[0] = max_fitness[0];
    
     for (size_t i = 1; i < this->offspring_num; ++i) {
+      old_gen[i]->apply_penalty(0);
       if ( args.verbose() ) {
         std::cout << "Now evaluating organism " << i << std::endl;
       }
@@ -209,7 +210,7 @@ void Population::evaluate(Problem* prob) {
       old_gen[i]->evaluate_fitness(prob);
 
       // update the max and min fitnesses if we need to
-      if (old_gen[i]->get_fitness(0) > max_fitness[0]) {
+      if (old_gen[i]->get_fitness(0) > max_fitness[0] && !old_gen[i]->penalized()) {
         max_fitness[0] = old_gen[i]->get_fitness(0);
         best_organism = old_gen[i];
         best_organism_ind = i;
@@ -221,6 +222,17 @@ void Population::evaluate(Problem* prob) {
     }
   } else {
     //TODO: figure out what the default behavior should be
+  }
+  double penalty_fact;
+  if (max_fitness[0] > 0) {
+    penalty_fact = max_fitness[0];
+  } else {
+    penalty_fact = -min_fitness[0];
+  }
+  for (size_t i = 0; i < this->offspring_num; ++i) {
+    if (old_gen[i]->penalized()) {
+      old_gen[i]->set_fitness(min_fitness[0] - penalty_fact*old_gen[i]->get_penalty());
+    }
   }
 }
 
@@ -525,6 +537,26 @@ void Population::run(Problem* prob) {
   }
 }
 
+void Population::set_var_label(_uint ind, String val) {
+  if (ind >= var_labels.size()) {
+    var_labels.resize(ind + 1);
+  }
+  if (map && ind >= map->get_num_params()) {
+    var_labels.resize(map->get_num_params());
+  }
+  var_labels[ind] = val;
+}
+
+void Population::set_obj_label(_uint ind, String val) {
+  if (ind >= N_OBJS) {
+    error(1, "invalid index %u specified in set_var_label", ind);
+  }
+  if (ind >= obj_labels.size()) {
+    var_labels.resize(N_OBJS);
+  }
+  var_labels[ind] = val;
+}
+
 Vector<String> Population::get_header() {
   String def;
   Vector<String> ret;
@@ -542,6 +574,7 @@ Vector<String> Population::get_header() {
 }
 
 Vector<String> Population::get_pop_data() {
+  sort_orgs(0, &old_gen);
   _uint span = N_OBJS + map->get_num_params();
   String def;
   Vector<String> ret(offspring_num*span, def);
@@ -582,19 +615,63 @@ void Population_NSGAII::hypermutate() {
   }
 }
 
+void Population_NSGAII::update_fitness_ranges(Organism* org, size_t i) {
+  if (org->penalized()) {
+    max_penalty_ind = i + 1;
+    if (min_penalty_ind == Population::offspring_num) {
+      min_penalty_ind = i;
+    }
+  } else {
+    for (_uint j = 0; j < this->get_n_objs(); ++j) {
+      if (org->get_fitness(j) > Population::max_fitness[j]) {
+        Population::max_fitness[j] = org->get_fitness(j);
+      }
+      if (org->get_fitness(j) < Population::min_fitness[j]) {
+        Population::min_fitness[j] = org->get_fitness(j);
+      }
+    }
+  }
+}
+
 void Population_NSGAII::evaluate(Problem* prob) {
   std::vector<std::shared_ptr<Organism>> empty;
   pareto_fronts.push_back(empty);
 
   std::vector<std::shared_ptr<Organism>> cmb_arr = Population::old_gen;
+  //initialize max and min fitness values
+  for (_uint j = 0; j < this->get_n_objs(); ++j) {
+    max_fitness[j] = -std::numeric_limits<double>::infinity();
+    min_fitness[j] = std::numeric_limits<double>::infinity();
+  }
+  min_penalty_ind = Population::offspring_num, max_penalty_ind = 0;
   for (size_t i = 0; i < Population::offspring_num; ++i) {
-    Population::old_gen[i]->evaluate_fitness(prob);
-    Population::old_gen[i]->distance = 0;//initialize for later crowding calculations
+    //fitnesses for the old generation are leftover and already have applied penalties, ensure we don't apply these penalties again
+    Population::old_gen[i]->apply_penalty(0);
     if (Population::offspring[i] != NULL) {
+      Population::offspring[i]->apply_penalty(0);
       Population::offspring[i]->evaluate_fitness(prob);
       Population::offspring[i]->distance = 0;
       //to maintain elitism we look at both the parent and offspring generations
       cmb_arr.push_back(Population::offspring[i]);
+      update_fitness_ranges(Population::offspring[i].get(), Population::offspring_num + i);
+    } else {
+      Population::old_gen[i]->evaluate_fitness(prob);
+      Population::old_gen[i]->distance = 0;//initialize for later crowding calculations
+      update_fitness_ranges(Population::old_gen[i].get(), i);
+    }
+  }
+  //apply penalties to each organism in the combined array
+  for (size_t i = min_penalty_ind; i < max_penalty_ind; ++i) {
+    if (cmb_arr[i]->penalized()) {
+      for (size_t j = 0; j < this->get_n_objs(); ++j) {
+        double n_fit = min_fitness[j];
+        if (max_fitness[j] > 0) {
+          n_fit -= max_fitness[j]*(cmb_arr[i]->get_penalty());
+        } else {
+          n_fit += min_fitness[j]*(cmb_arr[i]->get_penalty());
+        }
+        cmb_arr[i]->set_fitness(n_fit);
+      }
     }
   }
   std::vector<std::vector<std::shared_ptr<Organism>>> dominating(cmb_arr.size(), empty);
@@ -603,12 +680,12 @@ void Population_NSGAII::evaluate(Problem* prob) {
     cmb_arr[i]->n_dominations = 0;
     for (size_t j = 0; j < cmb_arr.size(); ++j) {
       if (i != j) {
-	//if the ith solution dominates the jth add the jth entry to the list of dominated solutions, otherwise increment the number of dominating solutions
-	if ( cmb_arr[i].get()->dominates(cmb_arr[j].get()) ) {
-	  dominating[i].push_back(cmb_arr[j]);
-	} else if ( cmb_arr[j].get()->dominates(cmb_arr[i].get()) ) {
-	  cmb_arr[i]->n_dominations++;
-	}
+        //if the ith solution dominates the jth add the jth entry to the list of dominated solutions, otherwise increment the number of dominating solutions
+        if ( cmb_arr[i].get()->dominates(cmb_arr[j].get()) ) {
+          dominating[i].push_back(cmb_arr[j]);
+        } else if ( cmb_arr[j].get()->dominates(cmb_arr[i].get()) ) {
+          cmb_arr[i]->n_dominations++;
+        }
       }
     }
     if (cmb_arr[i]->n_dominations == 0) {
@@ -726,13 +803,13 @@ void Population_NSGAII::breed() {
     second_parent = Population::old_gen[t2[0]].get();
     for (size_t j = 1; j < t1.size(); ++j) {
       if (t1[j] >= Population::old_gen.size()) {
-	error(1, "Invalid index created from random sampling, %d", t1[j]);
+        error(1, "Invalid index created from random sampling, %d", t1[j]);
       }
       if (Population::old_gen[t1[j]]->get_rank() < first_parent->get_rank()) {
-	first_parent = Population::old_gen[t1[0]].get();
+        first_parent = Population::old_gen[t1[0]].get();
       }
       if (Population::old_gen[t2[j]]->get_rank() < second_parent->get_rank()) {
-	second_parent = Population::old_gen[t2[0]].get();
+        second_parent = Population::old_gen[t2[0]].get();
       }
     }
     //ensure that we don't use the same parent twice with reasonable probably
@@ -746,6 +823,7 @@ void Population_NSGAII::breed() {
       Population::offspring[2*i + 1] = std::shared_ptr<Organism>(children[1]);
     }
   }
+  Population::old_gen.swap(Population::offspring);
 }
 
 Vector<String> Population_NSGAII::get_header() {
