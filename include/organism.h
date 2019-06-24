@@ -47,7 +47,7 @@ private:
 
   char output_stream[BUF_SIZE];
   Vector<double> fitness;
-  double penalty;
+  double penalty = 0.0;
   size_t output_len;
   PhenotypeMap* al;
 

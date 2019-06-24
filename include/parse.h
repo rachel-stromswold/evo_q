@@ -52,6 +52,7 @@ class ArgStore {
 
   public: 
     ArgStore();
+    ~ArgStore();
 
     void initialize_from_args(size_t argc, char** argv);
     void initialize_from_file(const char* fname);

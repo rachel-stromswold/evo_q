@@ -360,16 +360,16 @@ TEST_CASE ( "Organisms are correctly created and decoded", "[organisms]" ) {
 }
 
 TEST_CASE ("Populations are correctly created and data is successfully read", "[populations]") {
-  Genetics::ArgStore inst;
+//  Genetics::ArgStore inst;
   Genetics::String conf_file("ga.conf");
-  inst.initialize_from_file(conf_file.c_str());
+//  inst.initialize_from_file(conf_file.c_str());
   Genetics::PhenotypeMap map(NUM_BITS);
   map.initialize(NUM_CHROMS, Genetics::t_real);
   map.set_range(0, -10, 10);
   Genetics::Organism tmplt(NUM_BITS, NUM_OBJS, &map);
   tmplt.set_real(0, 4.6);
-  Genetics::Population pop_none(NUM_BITS, NUM_OBJS, &tmplt, &map);
-  Genetics::Population pop_tmplt(NUM_BITS, NUM_OBJS, &map);
+  Genetics::Population pop_none(NUM_BITS, NUM_OBJS, &tmplt, &map, conf_file);
+  Genetics::Population pop_tmplt(NUM_BITS, NUM_OBJS, &map, conf_file);
 
   SECTION ( "The header is read correctly" ) {
     Genetics::Vector<Genetics::String> pop_dat = pop_none.get_header();

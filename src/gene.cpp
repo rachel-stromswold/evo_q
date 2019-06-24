@@ -5,9 +5,9 @@ namespace Genetics {
 Chromosome::Chromosome(_uint pn_bits) :
   N_BITS(pn_bits),
   N_BYTES( (N_BITS+7)/8 ),
-  N( (N_BYTES+sizeof(unsigned long)-1)/sizeof(unsigned long) ),
-  genes(N, (unsigned long)0)
+  N( (N_BYTES+sizeof(unsigned long)-1)/sizeof(unsigned long) )
 {
+  genes = (unsigned long*)malloc(sizeof(unsigned long)*N);
   for (unsigned i = 0; i < N; ++i) {
     genes[i] = 0;
   }
@@ -17,9 +17,9 @@ Chromosome::Chromosome(_uint pn_bits) :
 Chromosome::Chromosome(_uint pn_bits, _uchar real_mode) :
   N_BITS(pn_bits),
   N_BYTES( (N_BITS+7)/8 ),
-  N( (N_BYTES+sizeof(unsigned long)-1)/sizeof(unsigned long) ),
-  genes(N, (unsigned long)0)
+  N( (N_BYTES+sizeof(unsigned long)-1)/sizeof(unsigned long) )
 {
+  genes = (unsigned long*)malloc(sizeof(unsigned long)*N);
   for (unsigned i = 0; i < N; ++i) {
     genes[i] = 0;
   }
@@ -29,40 +29,70 @@ Chromosome::Chromosome(_uint pn_bits, _uchar real_mode) :
 Chromosome::Chromosome(_uint pn_bits, Chromosome* other) :
   N_BITS(pn_bits),
   N_BYTES( (N_BITS+7)/8 ),
-  N( (N_BYTES+sizeof(unsigned long)-1)/sizeof(unsigned long) ),
-  genes(N, (unsigned long)0)
+  N( (N_BYTES+sizeof(unsigned long)-1)/sizeof(unsigned long) )
 {
+  genes = (unsigned long*)malloc(sizeof(unsigned long)*N);
   for (unsigned i = 0; i < N; ++i) {
     genes[i] = other->genes[i];
   }
   use_real = other->use_real;
+
+  real_vals_size = other->get_real_vals_size();
+  if (real_vals_size > 0) {
+    real_vals = (double*)malloc(sizeof(double)*real_vals_size);
+  } else {
+    real_vals = NULL;
+  }
 }
 
-Chromosome::Chromosome(Chromosome& other) :
-  real_vals(other.real_vals),
-  genes(other.genes)
-{
+Chromosome::Chromosome(Chromosome& other) {
   N_BITS = other.N_BITS;
   N_BYTES = other.N_BYTES;
   N = other.N;
   use_real = other.use_real;
+  genes = (unsigned long*)malloc(sizeof(unsigned long)*N);
+  for (unsigned i = 0; i < N; ++i) {
+    genes[i] = other.genes[i];
+  }
+  real_vals_size = other.real_vals_size;
+  if (real_vals_size > 0) {
+    real_vals = (double*)malloc(sizeof(double)*real_vals_size);
+  } else {
+    real_vals = NULL;
+  }
 }
 
 Chromosome::Chromosome(Chromosome&& other) :
-  real_vals(std::move(other.real_vals)),
-  genes(std::move(other.genes))
+  real_vals(std::move(other.real_vals))
 {
   N_BITS = other.N_BITS;
   N_BYTES = other.N_BYTES;
   N = other.N;
   use_real = other.use_real;
+  genes = other.genes;
+  other.genes = NULL;
+  real_vals = other.real_vals;
+  real_vals_size = other.real_vals_size;
+  other.real_vals = NULL;
+  other.real_vals_size = 0;
+}
+
+Chromosome::~Chromosome() {
+  if (genes) {
+    free(genes);
+  }
+  if (real_vals) {
+    free(real_vals);
+  }
 }
 
 Chromosome& Chromosome::operator=(Chromosome& other) {
   N_BITS = other.N_BITS;
   N_BYTES = other.N_BYTES;
   N = other.N;
+  unsigned long* tmp = genes;
   genes = other.genes;
+  other.genes = tmp;
   return *this;
 }
 
@@ -152,7 +182,7 @@ size_t Chromosome::getBitStream (size_t n, size_t k, size_t x) {
 bool Chromosome::real_space_mutate(ArgStore* args) {
   if (use_real & REAL_ACTIVE) {
     std::normal_distribution<double> norm(0, args->get_init_coup_var());
-    for (size_t i = 0; i < real_vals.size(); ++i) {
+    for (size_t i = 0; i < real_vals_size; ++i) {
       real_vals[i] += norm( args->get_generator() );
       //ensure that the value is between 0 and 1
       if (real_vals[i] > 1.0) {

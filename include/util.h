@@ -7,6 +7,7 @@
 #include <random>
 #include <math.h>
 #include <stdarg.h>
+#include <climits>
 
 //#ifndef USE_CUSTOM_CONTAINERS
 #include <vector>
@@ -390,6 +391,9 @@ public:
   String& operator=(const char* str) {
     set(str);
     return *this;
+  }
+  size_t size() {
+    return buf_size - 1;//minus the null terminating character
   }
   char* c_str() {
     return Vector<char>::buf;

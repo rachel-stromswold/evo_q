@@ -555,6 +555,7 @@ class ArgStore {
 
   public: 
     ArgStore();
+    ~ArgStore();
 
     void initialize_from_args(size_t argc, char** argv);
     void initialize_from_file(const char* fname);
@@ -594,46 +595,53 @@ class ArgStore {
     
     class Chromosome {
     private:
-        _uint N_BITS;
-        size_t N_BYTES;
-        size_t N;
-        
+      _uint N_BITS;
+      _uint N_BYTES;
+      size_t N;
+      double* real_vals = NULL;
+      size_t real_vals_size = 0;
+
     protected:
-        static const _uint bin_size = sizeof(unsigned long)*8;
-        //  unsigned long genes[(N_BYTES+sizeof(unsigned long)-1)/sizeof(unsigned long)];
-        Vector<unsigned long> genes;
-        size_t getBitStream (size_t n, size_t k, size_t x);
-        
+      static const _uint bin_size = sizeof(unsigned long)*8;
+    //  unsigned long genes[(N_BYTES+sizeof(unsigned long)-1)/sizeof(unsigned long)];
+      unsigned long* genes = NULL;
+      size_t getBitStream (size_t n, size_t k, size_t x);
+      _uchar use_real = 0;
+      size_t get_real_vals_size() { return real_vals_size; }
+
     public:
-        Chromosome(_uint pn_bits);
-        Chromosome(_uint pn_bits, Chromosome* o);
-        Chromosome(Chromosome& other);
-        Chromosome(Chromosome&& other);
-        void exchange(Chromosome* other, size_t k);
-        void exchange_uniform(ArgStore* args, Chromosome* other);
-        
-        unsigned int get_N() { return N; }
-        unsigned int get_n_bits() { return N_BITS; }
-        Chromosome& operator=(Chromosome& other);
-        
-        void reset();
-        
-        unsigned char operator[](unsigned int i);
-        //randomly mutate each bit in the gene
-        void mutate(ArgStore* args);
-        void slow_mutate(ArgStore* args);
-        //set the gene to a new completely random value
-        void randomize(ArgStore* args);
-        //sets the gene to encode the value specified by min, max
-        void set_to_num(PhenotypeMap* al, _uint ind, double value);
-        void set_to_int(PhenotypeMap* al, _uint ind, int value);
-        void set_to_ulong(PhenotypeMap* al, _uint ind, unsigned long value);
-        //returns the corresponding integer for the gene
-        unsigned long gene_to_ulong(PhenotypeMap* al, _uint ind);
-        int gene_to_int(PhenotypeMap* al, _uint ind);
-        //returns a double value corresponding to the gene, it will have a value between max and min
-        double gene_to_num(PhenotypeMap* al, _uint ind);
-        String get_string(PhenotypeMap* al, _uint ind);
+      Chromosome(_uint pn_bits);
+      Chromosome(_uint pn_bits, _uchar real_mode);
+      Chromosome(_uint pn_bits, Chromosome* o);
+      Chromosome(Chromosome& other);
+      Chromosome(Chromosome&& other);
+      ~Chromosome();
+      void exchange(Chromosome* other, size_t k);
+      void exchange_uniform(ArgStore* args, Chromosome* other);
+
+      unsigned int get_N() { return N; }
+      unsigned int get_n_bits() { return N_BITS; }
+      Chromosome& operator=(Chromosome& other);
+
+      void reset();
+
+      unsigned char operator[](unsigned int i);
+      //randomly mutate each bit in the gene
+      bool real_space_mutate(ArgStore* args);
+      void mutate(ArgStore* args);
+      void slow_mutate(ArgStore* args);
+      //set the gene to a new completely random value
+      void randomize(ArgStore* args);
+      //sets the gene to encode the value specified by min, max
+      void set_to_num(PhenotypeMap* al, _uint ind, double value);
+      void set_to_int(PhenotypeMap* al, _uint ind, int value);
+      void set_to_ulong(PhenotypeMap* al, _uint ind, unsigned long value);
+      //returns the corresponding integer for the gene
+      unsigned long gene_to_ulong(PhenotypeMap* al, _uint ind);
+      int gene_to_int(PhenotypeMap* al, _uint ind);
+      //returns a double value corresponding to the gene, it will have a value between max and min
+      double gene_to_num(PhenotypeMap* al, _uint ind);
+      String get_string(PhenotypeMap* al, _uint ind);
     };
     
 //ORGANISM_H
@@ -725,6 +733,7 @@ public:
 class Population {
   private:
     _uint N_BITS;
+    _uint N_PARAMS;
     _uint N_OBJS;
   protected:
     size_t sort_org_calls = 0;
@@ -740,6 +749,7 @@ class Population {
     size_t offspring_num;
     std::vector<std::shared_ptr<Organism>> offspring;
     std::vector<std::shared_ptr<Organism>> old_gen;
+    size_t min_penalty_ind, max_penalty_ind;
     //which offspring will survive to enter the next breeding round
     size_t survivors_num;
     std::vector<std::shared_ptr<Organism>> survivors;
@@ -747,8 +757,10 @@ class Population {
     size_t best_organism_ind;
     std::shared_ptr<Organism> best_organism;
     //labels for generating data output
-    Vector<String> var_labels;
-    Vector<String> obj_labels;
+//    Vector<String> var_labels;
+//    Vector<String> obj_labels;
+    char** var_labels;
+    char** obj_labels;
 
     //cull in place is slightly faster but less accurate than the standard cull method
     bool cull_in_place();
@@ -786,13 +798,13 @@ class Population {
     double get_min_fitness(_uint i = 0) { return min_fitness[i]; }
     double get_max_fitness(_uint i = 0) { return max_fitness[i]; }
 
-    void set_var_label(_uint ind, String val);
+    void set_var_label(_uint ind, String val); 
     void set_obj_label(_uint ind, String val);
 
     size_t get_offspring_num() { return offspring_num; }
     size_t get_survivors_num() { return survivors_num; }
-    inline _uint get_n_bits() { return N_BITS; }
-    inline _uint get_n_objs() { return N_OBJS; }
+    _uint get_n_bits() { return N_BITS; }
+    _uint get_n_objs() { return N_OBJS; }
     ArgStore& get_args() { return args; }
 };
 

@@ -19,6 +19,7 @@ namespace Genetics {
 class Population {
   private:
     _uint N_BITS;
+    _uint N_PARAMS;
     _uint N_OBJS;
   protected:
     size_t sort_org_calls = 0;
@@ -42,8 +43,10 @@ class Population {
     size_t best_organism_ind;
     std::shared_ptr<Organism> best_organism;
     //labels for generating data output
-    Vector<String> var_labels;
-    Vector<String> obj_labels;
+//    Vector<String> var_labels;
+//    Vector<String> obj_labels;
+    char** var_labels;
+    char** obj_labels;
 
     //cull in place is slightly faster but less accurate than the standard cull method
     bool cull_in_place();

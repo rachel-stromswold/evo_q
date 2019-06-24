@@ -22,14 +22,16 @@ private:
   _uint N_BITS;
   _uint N_BYTES;
   size_t N;
-  Vector<double> real_vals;
+  double* real_vals = NULL;
+  size_t real_vals_size = 0;
 
 protected:
   static const _uint bin_size = sizeof(unsigned long)*8;
 //  unsigned long genes[(N_BYTES+sizeof(unsigned long)-1)/sizeof(unsigned long)];
-  Vector<unsigned long> genes;
+  unsigned long* genes = NULL;
   size_t getBitStream (size_t n, size_t k, size_t x);
   _uchar use_real = 0;
+  size_t get_real_vals_size() { return real_vals_size; }
 
 public:
   Chromosome(_uint pn_bits);
@@ -37,6 +39,7 @@ public:
   Chromosome(_uint pn_bits, Chromosome* o);
   Chromosome(Chromosome& other);
   Chromosome(Chromosome&& other);
+  ~Chromosome();
   void exchange(Chromosome* other, size_t k);
   void exchange_uniform(ArgStore* args, Chromosome* other);
 

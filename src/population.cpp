@@ -27,30 +27,21 @@ Population::Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String
   }
 
   for (_uint i = 0; i < N_OBJS; ++i) {
-    this->max_fitness[i] = 0;
+    this->min_fitness[i] = -std::numeric_limits<double>::infinity();
+    this->max_fitness[i] = std::numeric_limits<double>::infinity();
   }
 
-  var_labels.resize( map->get_num_params() );
-  obj_labels.resize( N_OBJS );
-#ifdef USE_CUSTOM_CONTAINERS
+  N_PARAMS = map->get_num_params();
+  var_labels = (char**)malloc(sizeof(char*)*N_PARAMS);
   for (_uint j = 0; j < map->get_num_params(); ++j) {
-    var_labels[j] << "x_" << j;
+    var_labels[j] = (char*)malloc(sizeof(char)*OUT_BUF_SIZE);
+    snprintf(var_labels[j], OUT_BUF_SIZE, "x_%d", j);
   }
+  obj_labels = (char**)malloc(sizeof(char*)*N_OBJS);
   for (_uint j = 0; j < N_OBJS; ++j) {
-    obj_labels[j] << "f_" << j << "(x)";
+    obj_labels[j] = (char*)malloc(sizeof(char)*OUT_BUF_SIZE);
+    snprintf(obj_labels[j], OUT_BUF_SIZE - 1, "f_%d(x)", j);
   }
-#else
-  char* buf = (char*)malloc(sizeof(char)*(3 + map->get_num_params() + N_OBJS));
-  for (_uint j = 0; j < map->get_num_params(); ++j) {
-    sprintf(buf, "x_%d", j);
-    var_labels[j] = buf;
-  }
-  for (_uint j = 0; j < N_OBJS; ++j) {
-    snprintf(buf, 2 + map->get_num_params() + N_OBJS, "f_%d(x)", j);
-    obj_labels[j] = buf;
-  }
-  free(buf);
-#endif
 }
 
 Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname) :
@@ -79,19 +70,22 @@ Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeM
   }
 
   for (_uint i = 0; i < N_OBJS; ++i) {
-    this->max_fitness[i] = 0;
+    this->min_fitness[i] = -std::numeric_limits<double>::infinity();
+    this->max_fitness[i] = std::numeric_limits<double>::infinity();
   }
 
   char buf[OUT_BUF_SIZE];
-  var_labels.resize(map->get_num_params());
+//  var_labels.resize(map->get_num_params());
+  N_PARAMS = map->get_num_params();
+  var_labels = (char**)malloc(sizeof(char*)*N_PARAMS);
   for (_uint j = 0; j < map->get_num_params(); ++j) {
-    snprintf(buf, OUT_BUF_SIZE - 1, "x_%d", j);
-    var_labels[j] = String(buf);
+    var_labels[j] = (char*)malloc(sizeof(char)*OUT_BUF_SIZE);
+    snprintf(var_labels[j], OUT_BUF_SIZE, "x_%d", j);
   }
-  obj_labels.resize( N_OBJS );
+  obj_labels = (char**)malloc(sizeof(char*)*N_OBJS);
   for (_uint j = 0; j < N_OBJS; ++j) {
-    snprintf(buf, OUT_BUF_SIZE - 1, "f_%d(x)", j);
-    obj_labels[j] = String(buf);
+    obj_labels[j] = (char*)malloc(sizeof(char)*OUT_BUF_SIZE);
+    snprintf(obj_labels[j], OUT_BUF_SIZE - 1, "f_%d(x)", j);
   }
 }
 
@@ -105,19 +99,42 @@ Population::~Population() {
   if (max_fitness) {
     free(max_fitness);
   }
+  if (var_labels) {
+    for (_uint i = 0; i < N_PARAMS; ++i) {
+      free(var_labels[i]);
+    }
+    free(var_labels);
+  }
+  if (obj_labels) {
+    for (_uint i = 0; i < N_OBJS; ++i) {
+      free(obj_labels[i]);
+    }
+    free(obj_labels);
+  }
 }
 
 Population::Population(Population& o) {
   N_BITS = o.get_n_bits();
+  N_PARAMS = o.N_PARAMS;
   N_OBJS = o.N_OBJS;
   map = o.map;
   old_gen = o.old_gen;
   offspring = o.offspring;
   min_fitness = (double*)malloc(sizeof(double)*N_OBJS);
   max_fitness = (double*)malloc(sizeof(double)*N_OBJS);
+  var_labels = (char**)malloc(sizeof(char*)*N_PARAMS);
+  obj_labels = (char**)malloc(sizeof(char*)*N_OBJS);
   for (_uint i = 0; i < N_OBJS; ++i) {
     min_fitness[i] = o.min_fitness[i];
     max_fitness[i] = o.max_fitness[i];
+    size_t len = strlen(o.obj_labels[i]) + 1;
+    obj_labels[i] = (char*)malloc( sizeof(char)*len);
+    snprintf(obj_labels[i], len, "%s", o.obj_labels[i]);
+  }
+  for (_uint i = 0; i < N_PARAMS; ++i) {
+    size_t len = strlen(o.var_labels[i]) + 1;
+    var_labels[i] = (char*)malloc(sizeof(char)*len);
+    snprintf(obj_labels[i], len, "%s", o.obj_labels[i]);
   }
 }
 
@@ -127,16 +144,22 @@ Population& Population::operator=(Population& o) {
   PhenotypeMap* tmp_map = map;
   double* tmp_min_fit = min_fitness;
   double* tmp_max_fit = max_fitness;
+  char** tmp_var_labels = var_labels;
+  char** tmp_obj_labels = obj_labels;
   N_BITS = o.N_BITS;
   N_OBJS = o.N_OBJS;
   map = o.map;
   min_fitness = o.min_fitness;
   max_fitness = o.max_fitness;
+  var_labels = o.var_labels;
+  obj_labels = o.obj_labels;
   o.N_BITS = tmp_N_BITS;
   o.N_OBJS = tmp_N_OBJS;
   o.map = tmp_map;
   o.min_fitness = tmp_min_fit;
   o.max_fitness = tmp_max_fit;
+  o.var_labels = tmp_var_labels;
+  o.obj_labels = tmp_obj_labels;
 
   old_gen = o.old_gen;
   offspring = o.offspring;
@@ -161,6 +184,12 @@ Population::Population(Population&& o) : map(o.map) {
   }
   min_fitness = o.min_fitness;
   max_fitness = o.max_fitness;
+  var_labels = o.var_labels;
+  obj_labels = o.obj_labels;
+  o.min_fitness = NULL;
+  o.max_fitness = NULL;
+  o.var_labels = NULL;
+  o.obj_labels = NULL;
 }
 
 void Population::resize_population(_uint new_size) {
@@ -302,7 +331,7 @@ void Population::sort_orgs(unsigned int fit_ind,
 bool Population::cull_in_place() {
   size_t j = 0;
 
-  double difference = max_fitness - min_fitness;
+  double difference = max_fitness[0] - min_fitness[0];
   //avoid divide by 0
   if (difference == 0) {
     return true;
@@ -316,7 +345,7 @@ bool Population::cull_in_place() {
     /* if M_f is the maximum fitness and m_f is the minimum the minimum, while x is the
      * fitness of a given organism, then the probability of survival is x/(M_f-m_f) or 1
      * if M_f = m_f */
-    if (dist(args.get_generator()) < old_gen[i]->get_fitness(0)-min_fitness[0]) {
+    if (dist(args.get_generator()) < old_gen[i]->get_fitness(0) - min_fitness[0]) {
       survivors[j] = old_gen[i];
       j++;
     }
@@ -420,15 +449,12 @@ void Population::breed_shuffle() {
 }
 
 void Population::breed() {
+  find_best_organism();
   std::uniform_int_distribution<size_t> dist_surv0(0, survivors_num - 1);
   std::uniform_int_distribution<size_t> dist_surv1(0, survivors_num - 2);
   std::vector<Organism*> children;
   size_t* shuffled_inds = (size_t*)malloc(sizeof(size_t)*survivors_num);
   if (this->offspring_num % 2 == 1) {
-    //elitist algorithm, make the first individual in the next generation the previous most fit
-    if (best_organism_ind > offspring.size()) {
-      find_best_organism();
-    }
     offspring[0] = old_gen[best_organism_ind];
 
     for (size_t i = 1; 2*i < this->offspring_num; i++) {
@@ -456,6 +482,7 @@ void Population::breed() {
     }
   }
 
+  free(shuffled_inds);
   offspring.swap(old_gen);
 }
 
@@ -538,36 +565,49 @@ void Population::run(Problem* prob) {
 }
 
 void Population::set_var_label(_uint ind, String val) {
-  if (ind >= var_labels.size()) {
-    var_labels.resize(ind + 1);
+  if (ind >= N_PARAMS) {
+    error(0, "Invalid parameter index %u provided for set_var_label. The parameter index must be less than %u.", ind, N_PARAMS);
+  } else {
+    size_t vs = val.size() + 1;
+    if (vs > OUT_BUF_SIZE) {
+      free(var_labels[ind]);
+      var_labels[ind] = (char*)malloc(sizeof(char)*vs);
+    }
+    for (int j = 0; j < vs; ++j) {
+      var_labels[ind][j] = val[j];
+    }
+    var_labels[ind][vs - 1] = 0;
   }
-  if (map && ind >= map->get_num_params()) {
-    var_labels.resize(map->get_num_params());
-  }
-  var_labels[ind] = val;
 }
 
 void Population::set_obj_label(_uint ind, String val) {
   if (ind >= N_OBJS) {
-    error(1, "invalid index %u specified in set_var_label", ind);
+    error(0, "Invalid objective index %u provided for set_obj_label. The objective index must be less than %u.", ind, N_OBJS);
+  } else {
+    size_t vs = val.size() + 1;
+    if (vs > OUT_BUF_SIZE) {
+      free(obj_labels[ind]);
+      obj_labels[ind] = (char*)malloc(sizeof(char)*vs);
+    }
+    for (int j = 0; j < vs; ++j) {
+      obj_labels[ind][j] = val[j];
+    }
+    obj_labels[ind][vs - 1] = 0;
   }
-  if (ind >= obj_labels.size()) {
-    var_labels.resize(N_OBJS);
-  }
-  var_labels[ind] = val;
 }
 
 Vector<String> Population::get_header() {
   String def;
   Vector<String> ret;
+  ret.reserve(old_gen.size()*(N_PARAMS + N_OBJS));
 
   for (_uint i = 0; i < old_gen.size(); ++i) {
-    for (_uint j = 0; j < map->get_num_params(); ++j) {
-      ret.push_back(var_labels[j]);
+    for (_uint j = 0; j < N_PARAMS; ++j) {
+      ret.push_back(String(var_labels[j]));
     }
 
     for (_uint j = 0; j < N_OBJS; ++j) {
-      ret.push_back(obj_labels[j]);
+      ret.push_back(String(obj_labels[j]));
     }
   }
   return ret;
@@ -830,15 +870,15 @@ Vector<String> Population_NSGAII::get_header() {
   Vector<String> ret;
   char buf[OUT_BUF_SIZE];
   for (_uint i = 0; i < 2*Population::old_gen.size(); ++i) {
-    snprintf(buf, OUT_BUF_SIZE - 1, "rank_%d", i);
-    ret.push_back(String(buf));
+    snprintf(buf, OUT_BUF_SIZE, "rank_%d", i);
+    ret.push_back( String(buf) );
 
     for (_uint j = 0; j < Population::map->get_num_params(); ++j) {
-      ret.push_back(Population::var_labels[j]);
+      ret.push_back( String(Population::var_labels[j]) );
     }
 
     for (_uint j = 0; j < get_n_objs(); ++j) {
-      ret.push_back(Population::obj_labels[j]);
+      ret.push_back( String(Population::obj_labels[j]) );
     }
   }
   return ret;

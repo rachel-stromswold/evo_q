@@ -16,6 +16,18 @@ ArgStore::ArgStore() : generator() {
   bern = NULL;
 }
 
+ArgStore::~ArgStore() {
+  if (long_bin) {
+    delete long_bin;
+  }
+  if (short_bin) {
+    delete short_bin;
+  }
+  if (bern) {
+    delete bern;
+  }
+}
+
 void ArgStore::initialize_from_file(const char* fname) {
   pop_size = DEF_POP_SIZE;
   breed_pop_size = DEF_BREED_POP_SIZE;
@@ -32,41 +44,53 @@ void ArgStore::initialize_from_file(const char* fname) {
   if (!fp) {
     error(1, "Could not open configuration file %s for reading.", fname);
   }
-  char str[BUF_SIZE];
+/*  char str[BUF_SIZE];
   double val;
   char val_str[BUF_SIZE];
   long pos = ftell(fp);
   int retval = fscanf(fp, "%s %lf\n", str, &val);
-  while (retval != EOF && retval != 0) {
-    if (strcmp(str, "population_size:") == 0) {
-      pop_size = (_uint)val;
-    } else if (strcmp(str, "tournament_size:") == 0 || strcmp(str, "breed_pop_size:") == 0){
-      breed_pop_size = (_uint)val;
-    } else if (strcmp(str, "num_generations:") == 0) {
-      num_gens = (_uint)val;
-    } else if (strcmp(str, "num_crossovers:") == 0) {
-      num_crossovers = (_uint)val;
-    } else if (strcmp(str, "parameter_variance:") == 0) {
-      init_coup_var = val;
-    } else if (strcmp(str, "parameter_mean:") == 0) {
-      init_coup_mean = val;
-    } else if (strcmp(str, "mutatation_probability:") == 0) {
-      mutate_prob = val;
-    } else if (strcmp(str, "hypermutation_threshold:") == 0) {
-      hypermutation_threshold = val;
-    } else if (strcmp(str, "output_file:") == 0) {
-      fseek(fp, pos, SEEK_SET);
-      retval = fscanf(fp, "%s %s\n", str, val_str);
-      out_fname = val_str;
-    } else if (strcmp(str, "seed:") == 0) {
-      seed = (int)val;
-    } else if (strcmp(str, "verbose") == 0 || (strcmp(str, "verbose:") == 0 && val != 0.0)) {
+  int retval = read(fp, BUF_SIZE);*/
+  char *str = NULL, *token = NULL, *val = NULL, *saveptr;
+  size_t strlen;
+  int retval = getline(&str, &strlen, fp);
+  while ( retval > 0) {
+    token = strtok_r(str, ":=", &saveptr);
+    val = strtok_r(NULL, ":=", &saveptr);
+    if (strcmp(token, "population_size") == 0) {
+      pop_size = atoi(val);
+    } else if (strcmp(token, "tournament_size") == 0 || strcmp(str, "breed_pop_size:") == 0){
+      breed_pop_size = atoi(val);
+    } else if (strcmp(token, "num_generations") == 0) {
+      num_gens = atoi(val);
+    } else if (strcmp(token, "num_crossovers") == 0) {
+      num_crossovers = atoi(val);
+    } else if (strcmp(token, "parameter_variance") == 0) {
+      init_coup_var = atof(val);
+    } else if (strcmp(token, "parameter_mean") == 0) {
+      init_coup_mean = atof(val);
+    } else if (strcmp(token, "mutatation_probability") == 0) {
+      mutate_prob = atof(val);
+    } else if (strcmp(token, "hypermutation_threshold") == 0) {
+      hypermutation_threshold = atof(val);
+    } else if (strcmp(token, "output_file") == 0) {
+      out_fname = val;
+    } else if (strcmp(token, "seed") == 0) {
+      seed = atoi(val);
+    } else if (strcmp(token, "verbose") == 0) {
       flags = flags | VERBOSE;
-    } else if (strcmp(str, "wait") == 0 || (strcmp(str, "wait:") == 0 && val != 0.0)) {
+    } else if (strcmp(token, "wait") == 0) {
       flags = flags | WAIT_CON;
     }
-    pos = ftell(fp);
-    retval = fscanf(fp, "%s %lf\n", str, &val);
+    if (str) {
+      free(str);
+      str = NULL;
+    } else {
+      break;
+    }
+    retval = getline(&str, &strlen, fp);
+  }
+  if (str) {
+    free(str);
   }
   if (seed == 0) {
     std::random_device rd;
@@ -78,6 +102,7 @@ void ArgStore::initialize_from_file(const char* fname) {
   if (bern) { delete bern; }
   long_bin = new std::binomial_distribution<unsigned char>(sizeof(unsigned long), mutate_prob);
   bern = new std::bernoulli_distribution(mutate_prob);
+  fclose(fp);
 }
 
 void ArgStore::initialize() {
