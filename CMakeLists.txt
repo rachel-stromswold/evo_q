@@ -20,10 +20,10 @@ endif()
 
 set(CMAKE_BUILD_TYPE Debug)
 
-pybind11_add_module(evo_p src/util.cpp src/phenotype.cpp src/parse.cpp src/gene.cpp src/organism.cpp src/population.cpp src/python.cpp)
+pybind11_add_module(evo_p src/util.cpp src/phenotype.cpp src/parse.cpp src/gene.cpp src/organism.cpp src/population.cpp src/convergence.cpp src/python.cpp)
 
 add_library( evo_q SHARED
-             src/util.cpp src/phenotype.cpp src/parse.cpp src/gene.cpp src/organism.cpp src/population.cpp )
+             src/util.cpp src/phenotype.cpp src/parse.cpp src/gene.cpp src/organism.cpp src/population.cpp src/convergence.cpp)
 
 set(APP_EXE main_test)
 add_executable( ${APP_EXE}

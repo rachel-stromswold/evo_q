@@ -16,17 +16,30 @@
 
 namespace Genetics {
 
+struct FitnessStats {
+  double mean;
+  double var;
+  double max;
+  double min;
+};
+
+class ConvergenceCriteria {
+  public:
+    virtual bool evaluate_convergence(FitnessStats* stats) = 0;
+};
+
 class Population {
   private:
     _uint N_BITS;
     _uint N_PARAMS;
     _uint N_OBJS;
+    _uint generation = 0;
   protected:
     size_t sort_org_calls = 0;
     size_t carryover_num;//How many of the best individuals carry over to the next generation 
+
     //OWNED POINTERS
-    double* max_fitness = NULL;
-    double* min_fitness = NULL;
+    FitnessStats* pop_stats = NULL;
     //EXTERNALLY MANAGED POINTERS
     PhenotypeMap* map = NULL;
     
@@ -64,11 +77,12 @@ class Population {
     Population& operator=(Population& o);
     Population(Population&& o);
 
+    void set_convergence_type(ConvergenceCriteria* conv);
     void resize_population(_uint new_size);
     void set_n_survivors(_uint new_size);
     void evaluate(Problem* prob);
     void evaluate_async(Problem* prob);
-    bool iterate();
+    bool iterate(ConvergenceCriteria* conv = NULL);
 
     std::shared_ptr<Organism> get_best_organism(size_t i = 0);
     std::shared_ptr<Organism> get_organism(size_t i);
@@ -81,8 +95,8 @@ class Population {
     Vector<String> get_header();
     Vector<String> get_pop_data();
 
-    double get_min_fitness(_uint i = 0) { return min_fitness[i]; }
-    double get_max_fitness(_uint i = 0) { return max_fitness[i]; }
+    double get_min_fitness(_uint i = 0) { return pop_stats[i].min; }
+    double get_max_fitness(_uint i = 0) { return pop_stats[i].max; }
 
     void set_var_label(_uint ind, String val); 
     void set_obj_label(_uint ind, String val);

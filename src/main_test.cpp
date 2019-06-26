@@ -1,4 +1,5 @@
-#include "../include/evo_q.hpp"
+//#include "../include/evo_q.hpp"
+#include "../include/convergence.h"
 #define CATCH_CONFIG_MAIN
 #include "../include/catch.hpp"
 #define N_TRIALS 100
@@ -8,6 +9,7 @@
 #define NUM_CHROMS	1
 
 #define M_RANGE		2.0
+#define TEST_CONV_GEN	10
 
 #define APPROX(a,b) ((a-b < 0.01 && a-b >= 0) || (b-a < 0.01 && b-a >= 0))
 
@@ -413,13 +415,47 @@ TEST_CASE ("Simple evolution of a multi objective converges to roughly appropria
   TestProblemMulti prob;
   Genetics::String conf_file("ga.conf");
   Genetics::Population pop( NUM_BITS, NUM_OBJS, &(prob.map), conf_file);
-  for (size_t i = 0; i < 100; ++i) {
+  bool converged = false;
+  while (!converged) {
     pop.evaluate(&prob);
-    pop.iterate();
+    converged = pop.iterate();
   }
   pop.evaluate(&prob);
   Genetics::Vector<Genetics::String> pop_dat = pop.get_pop_data();
   for (size_t i = 0; i < pop_dat.size(); ++i) {
     std::cout << "organism " << i << " = " << pop_dat[i] << std::endl;
+  }
+}
+
+TEST_CASE ("Convergence functions work", "[populations]") {
+  Genetics::Conv_VarianceCutoff var_cut(2, 0.011);
+  Genetics::Conv_RangeCutoff range_cut(2, 0.11);
+  Genetics::Conv_Plateau plat_cut(2, 0.1, TEST_CONV_GEN / 2);
+  Genetics::FitnessStats s[2];
+  //note that 1/n - 1/(n+1) = 1/(n^2 + n) < 1/10 => n^2 + n > 10 => n >= 3
+  for (unsigned i = 1; i < TEST_CONV_GEN + 1; ++i) {
+    s[0].var = 1.0 / (i*i);
+    s[0].mean = 1.0 - 1.5 / i;
+    s[0].max = 1.0 - 1.0 / i;
+    s[0].min = 1.0 - 2.0 / i;
+    s[1].var = 1.0 / (i*i*i*i);
+    s[1].mean = 1.0 - 1.5 / (i*i);
+    s[1].max = 1.0 - 1.0 / (i*i);
+    s[1].min = 1.0 - 2.0 / (i*i);
+    if (i < TEST_CONV_GEN) {
+      INFO("i = " << i << " var_1 = " << s[0].var << " var_2 = " << s[1].var)
+      REQUIRE( !var_cut.evaluate_convergence(s) );
+      INFO("i = " << i << " range_1 = " << s[0].max - s[0].min << " range_2 = " << s[1].max - s[1].min)
+      REQUIRE( !range_cut.evaluate_convergence(s) );
+      INFO("i = " << i << " max_1 = " << s[0].max << " max_2 = " << s[1].max)
+      REQUIRE( !plat_cut.evaluate_convergence(s) );
+    } else {
+      INFO("i = " << i << " var_1 = " << s[0].var << " var_2 = " << s[1].var)
+      REQUIRE( var_cut.evaluate_convergence(s) );
+      INFO("i = " << i << " range_1 = " << s[0].max - s[0].min << " range_2 = " << s[1].max - s[1].min)
+      REQUIRE( range_cut.evaluate_convergence(s) );
+      INFO("i = " << i << " max_1 = " << s[0].max << " max_2 = " << s[1].max)
+      REQUIRE( plat_cut.evaluate_convergence(s) );
+    }
   }
 }

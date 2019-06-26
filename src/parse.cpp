@@ -16,6 +16,52 @@ ArgStore::ArgStore() : generator() {
   bern = NULL;
 }
 
+ArgStore::ArgStore(const ArgStore& o) {
+  pop_size = o.pop_size;
+  breed_pop_size = o.breed_pop_size;
+  num_gens = o.num_gens;
+  num_crossovers = o.num_crossovers;
+  init_coup_var = o.init_coup_var;
+  init_coup_mean = o.init_coup_mean;
+  mutate_prob = o.mutate_prob;
+  hypermutation_threshold = o.hypermutation_threshold;
+  if (o.long_bin) {
+    long_bin = new std::binomial_distribution<unsigned char>(*o.long_bin);
+  } else {
+    long_bin = NULL;
+  }
+  if (o.short_bin) {
+    short_bin = new std::binomial_distribution<unsigned char>(*o.short_bin);
+    short_bin_n = o.short_bin_n;
+  } else {
+    short_bin = NULL;
+    short_bin_n = 0;
+  }
+  if (o.bern) {
+    bern = new std::bernoulli_distribution(*o.bern);
+  } else {
+    bern = NULL;
+  }
+}
+
+ArgStore::ArgStore(ArgStore&& o) {
+  pop_size = o.pop_size;
+  breed_pop_size = o.breed_pop_size;
+  num_gens = o.num_gens;
+  num_crossovers = o.num_crossovers;
+  init_coup_var = o.init_coup_var;
+  init_coup_mean = o.init_coup_mean;
+  mutate_prob = o.mutate_prob;
+  hypermutation_threshold = o.hypermutation_threshold;
+  //managed pointers dumb copying
+  long_bin = o.long_bin;
+  short_bin = o.short_bin;
+  bern = o.bern;
+  o.long_bin = NULL;
+  o.short_bin = NULL;
+  o.bern = NULL;
+}
+
 ArgStore::~ArgStore() {
   if (long_bin) {
     delete long_bin;
@@ -97,7 +143,6 @@ void ArgStore::initialize_from_file(const char* fname) {
     seed = rd();
   }
   generator.seed(seed);
-  print_data();
   if (long_bin) { delete long_bin; }
   if (bern) { delete bern; }
   long_bin = new std::binomial_distribution<unsigned char>(sizeof(unsigned long), mutate_prob);
@@ -223,7 +268,6 @@ void ArgStore::initialize_from_args(size_t argc, char** argv) {
   if (breed_pop_size > pop_size) {
     error(1, "The number of surviving individuals cannot be larger than the size of the population.");
   }
-  print_data();
   if (long_bin) { delete long_bin; }
   if (bern) { delete bern; }
   long_bin = new std::binomial_distribution<unsigned char>(sizeof(unsigned long)*8, mutate_prob);
@@ -263,6 +307,9 @@ unsigned int ArgStore::sample_binomial(unsigned int n) {
 }
 
 bool ArgStore::sample_bernoulli() {
+  if (!bern) {
+    bern = new std::bernoulli_distribution(mutate_prob);
+  }
   return (*bern)(generator);
 }
 

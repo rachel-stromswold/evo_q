@@ -33,9 +33,6 @@ class ArgStore {
     unsigned int short_bin_n = 0;
 //END REMOVAL CANDIDATE
 
-    ArgStore(ArgStore const&){};
-    ArgStore& operator=(ArgStore const& arg) {return *this;};
-
     unsigned flags;
     size_t pop_size;
     size_t breed_pop_size;
@@ -52,6 +49,8 @@ class ArgStore {
 
   public: 
     ArgStore();
+    ArgStore(const ArgStore& o);
+    ArgStore(ArgStore&& o);
     ~ArgStore();
 
     void initialize_from_args(size_t argc, char** argv);
