@@ -6,6 +6,7 @@ Conv_VarianceCutoff::Conv_VarianceCutoff(_uint N_OBJS, double p_cutoff) :
   max_variance(N_OBJS, -std::numeric_limits<double>::infinity())
 {
   this->N_OBJS = N_OBJS;
+
   cutoff = p_cutoff;
   if (cutoff < MIN_CUTOFF) {
     cutoff = MIN_CUTOFF;
@@ -32,6 +33,7 @@ Conv_RangeCutoff::Conv_RangeCutoff(_uint N_OBJS, double p_cutoff) :
   max_range(N_OBJS, -std::numeric_limits<double>::infinity())
 {
   this->N_OBJS = N_OBJS;
+
   cutoff = p_cutoff;
   if (cutoff < MIN_CUTOFF) {
     cutoff = MIN_CUTOFF;
@@ -102,6 +104,7 @@ uConv_VarianceCutoff::uConv_VarianceCutoff(_uint N_OBJS, Vector<double> p_cutoff
   cutoffs(p_cutoffs)
 {
   this->N_OBJS = N_OBJS;
+
   for (_uint i = 0; i < N_OBJS; ++i) {
     if (cutoffs[i] <= 0) {
       cutoffs[i] = std::numeric_limits<double>::infinity();
@@ -122,6 +125,7 @@ uConv_RangeCutoff::uConv_RangeCutoff(_uint N_OBJS, Vector<double> p_cutoffs) :
   cutoffs(p_cutoffs)
 {
   this->N_OBJS = N_OBJS;
+
   for (_uint i = 0; i < N_OBJS; ++i) {
     if (cutoffs[i] <= 0) {
       cutoffs[i] = std::numeric_limits<double>::infinity();
@@ -143,6 +147,8 @@ uConv_Plateau::uConv_Plateau(_uint N_OBJS, Vector<double> p_fitness_thresholds, 
   fitness_thresholds(p_fitness_thresholds),
   prev_fitness(N_OBJS, -std::numeric_limits<double>::infinity())
 {
+  this->N_OBJS = N_OBJS;
+
   generation_cutoff = p_generation_cutoff;
   gens_without_improvement = 0;
   for (_uint i = 0; i < N_OBJS; ++i) {

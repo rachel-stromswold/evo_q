@@ -730,6 +730,18 @@ public:
     
 //POPULATION_H
     
+struct FitnessStats {
+  double mean;
+  double var;
+  double max;
+  double min;
+};
+
+class ConvergenceCriteria {
+  public:
+    virtual bool evaluate_convergence(FitnessStats* stats) = 0;
+};
+
 class Population {
   private:
     _uint N_BITS;
@@ -782,7 +794,7 @@ class Population {
     void set_n_survivors(_uint new_size);
     void evaluate(Problem* prob);
     void evaluate_async(Problem* prob);
-    bool iterate();
+    bool iterate(ConvergenceCriteria* conv = NULL);
 
     std::shared_ptr<Organism> get_best_organism(size_t i = 0);
     std::shared_ptr<Organism> get_organism(size_t i);
@@ -830,7 +842,7 @@ class Population_NSGAII : public Population {
     //cull first sorts the organisms and selects them based on the ratio of their relative fitness to the total relative fitness
     void cull();
     void breed();
-    bool iterate();
+    bool iterate(ConvergenceCriteria* conv = NULL);
 
     _uint get_n_pareto_fronts() {
       return pareto_fronts.size();
