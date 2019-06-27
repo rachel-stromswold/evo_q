@@ -74,6 +74,7 @@ Conv_Plateau::Conv_Plateau(_uint N_OBJS, double p_fitness_threshold, _uint p_gen
 }
 
 bool Conv_Plateau::evaluate_convergence(FitnessStats* stats) {
+  bool improved = false;
   for (_uint i = 0; i < N_OBJS; ++i) {
     double max_rel = stats[i].max;
     if (stats[i].max > max_fitness[i]) {
@@ -84,13 +85,15 @@ bool Conv_Plateau::evaluate_convergence(FitnessStats* stats) {
     } else {
       max_rel += 1.0;
     }
-    if (max_rel - 1.0 < fitness_threshold &&
-	1.0 - max_rel < fitness_threshold) {
-      gens_without_improvement++;
-    } else {
+    if (max_rel - 1.0 >= fitness_threshold ||
+	1.0 - max_rel >= fitness_threshold) {
+      improved = true;
       gens_without_improvement = 0;
       prev_fitness[i] = stats[i].max;
     }
+  }
+  if (!improved) {
+    gens_without_improvement++;
   }
   if (gens_without_improvement > generation_cutoff) {
     return true;

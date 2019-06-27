@@ -11,6 +11,7 @@
 #define DEF_MAX_COUPLING	  100
 #define DEF_COUP_VAR		    0.25
 #define DEF_COUP_MEAN		    0.0
+#define DEF_CROSSOVER_PROB	0.8
 #define DEF_MUTATE_PROB		  0.1
 #define DEF_HYPER_THRESH    0.8
 #define DEF_NUM_CROSSOVERS  1
@@ -29,7 +30,8 @@ class ArgStore {
 //REMOVAL CANDIDATE
     std::binomial_distribution<unsigned char>* long_bin;
     std::binomial_distribution<unsigned char>* short_bin;
-    std::bernoulli_distribution* bern;
+    std::bernoulli_distribution* bern_mut;
+    std::bernoulli_distribution* bern_cross;
     unsigned int short_bin_n = 0;
 //END REMOVAL CANDIDATE
 
@@ -40,6 +42,7 @@ class ArgStore {
     int num_crossovers;
     double init_coup_var;
     double init_coup_mean;
+    double crossover_prob;
     double mutate_prob;
     double hypermutation_threshold;
     std::string out_fname;
@@ -60,7 +63,8 @@ class ArgStore {
     std::mt19937& get_generator() { return generator; }
 //REMOVAL CANDIDATE
     unsigned int sample_binomial(unsigned int n);
-    bool sample_bernoulli();
+    bool random_mutation();
+    bool random_crossover();
     void print_data();
 //END REMOVAL CANDIDATE
 
@@ -76,6 +80,8 @@ class ArgStore {
     void set_init_coup_var(double x)		{ init_coup_var = x; }
     double get_init_coup_mean() 		{ return init_coup_mean; }
     void set_init_coup_mean(double x) 		{ init_coup_mean = x; }
+    double get_crossover_prob()			{ return crossover_prob; }
+    void set_crossover_prob(double x)		{ crossover_prob = x; }
     double get_mutate_prob()			{ return mutate_prob; }
     void set_mutate_prob(double x)		{ mutate_prob = x; }
     double get_hypermutation_threshold()	{ return hypermutation_threshold; }

@@ -68,7 +68,7 @@ void Organism::reset() {
 
 std::vector<Organism*> Organism::breed(ArgStore* args, Organism* o) {
   if (get_n_bits() != o->get_n_bits()) {
-    error(1, "Cannot breed organsims with a differing number of bits, %d and %d.", get_n_bits(), o->get_n_bits());
+    error(CODE_MISC, "Cannot breed organsims with a differing number of bits, %d and %d.", get_n_bits(), o->get_n_bits());
   }
 //    N_OBJS = N_OBJS*(N_OBJS + 1)/2;
   std::vector<Organism*> children(2);
@@ -77,17 +77,22 @@ std::vector<Organism*> Organism::breed(ArgStore* args, Organism* o) {
   Chromosome gene0(N_BITS, genes);
   Chromosome gene1(N_BITS, o->genes);
 
-  if (args->get_num_crossovers() <= 0) {
-    gene0.exchange_uniform(args, &gene1);
-  } else {
-    std::uniform_int_distribution<size_t> rint( 0, gene0.get_n_bits() - 1 );
-    for (int n = 0; n < args->get_num_crossovers(); ++n) {
-      size_t exch_bit = rint( args->get_generator() );
-      gene0.exchange(&gene1, exch_bit);
+  if (args->random_crossover()) {
+    if (args->get_num_crossovers() <= 0) {
+      gene0.exchange_uniform(args, &gene1);
+    } else {
+      std::uniform_int_distribution<size_t> rint( 0, gene0.get_n_bits() - 1 );
+      for (int n = 0; n < args->get_num_crossovers(); ++n) {
+	size_t exch_bit = rint( args->get_generator() );
+	gene0.exchange(&gene1, exch_bit);
+      }
     }
+    children[0] = new Organism(N_BITS, N_OBJS, gene0, al);
+    children[1] = new Organism(N_BITS, N_OBJS, gene1, al);
+  } else {
+    children[0] = new Organism(*this);
+    children[1] = new Organism(*o);
   }
-  children[0] = new Organism(N_BITS, N_OBJS, gene0, al);
-  children[1] = new Organism(N_BITS, N_OBJS, gene1, al);
 #ifdef MUT_SLOW
   children[0]->genes->slow_mutate(args);
   children[1]->genes->slow_mutate(args);
@@ -170,7 +175,7 @@ void Organism::set_fitness(double val) {
 
 void Organism::set_fitness(_uint i, double val) {
   if (i >= fitness.size()) {
-    error(1, "Attempt to modify invalid fitness index %d, size is %d.", i, fitness.size());
+    error(CODE_ARG_RANGE, "Attempt to modify invalid fitness index %d, size is %d.", i, fitness.size());
   }
   fitness[i] = val;
 }

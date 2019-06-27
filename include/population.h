@@ -64,7 +64,7 @@ class Population {
     //cull in place is slightly faster but less accurate than the standard cull method
     bool cull_in_place();
     //cull first sorts the organisms and selects them based on the ratio of their relative fitness to the total relative fitness
-    bool cull();
+    bool cull(); 
     void breed_shuffle();
     void breed();
     void find_best_organism();
@@ -115,12 +115,12 @@ class Population_NSGAII : public Population {
     std::vector<std::vector<std::shared_ptr<Organism>>> pareto_fronts;
     void hypermutate();
     void update_fitness_ranges(Organism* org, size_t i);
+    _uint generation = 0;
+    void make_fronts(std::vector<std::shared_ptr<Organism>>* cmb_arr);
 
   public:
-    Population_NSGAII(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname = "") :
-      Population(pn_bits, pn_objs, p_map, conf_fname) {}
-    Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname = "") :
-      Population(pn_bits, pn_objs, tmplt, p_map, conf_fname) {}
+    Population_NSGAII(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname = "");
+    Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname = "");
     ~Population_NSGAII();
 
     void evaluate(Problem* prob);
@@ -131,7 +131,8 @@ class Population_NSGAII : public Population {
     //cull first sorts the organisms and selects them based on the ratio of their relative fitness to the total relative fitness
     void cull();
     void breed();
-    bool iterate();
+    void calculate_pop_stats();
+    bool iterate(ConvergenceCriteria* conv = NULL);
 
     _uint get_n_pareto_fronts() {
       return pareto_fronts.size();

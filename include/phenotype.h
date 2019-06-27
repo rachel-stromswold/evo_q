@@ -9,6 +9,15 @@
 
 namespace Genetics {
 
+/**
+ * \brief	This struct is designed as a wrapper for parameters used by a fitness function.
+ * 		Contained are the type, which may be t_int, t_uint, t_real, or t_bitstream for
+ * 		integers, unsigned integers, real values or bitstreams respectively. The
+ * 		internal variables range_lo, range_hi, and factor are only used for real valued
+ * 		parameters where they store the maximum and minimum values that a real value may
+ * 		take and a conversion factor respectively. See the methods get_range_min,
+ * 		get_range_high and get_factor of the class PhenotypeMap for more details.
+ */
 struct VarContainer {
   _uint loc;
   double range_hi;
@@ -19,6 +28,13 @@ struct VarContainer {
   VarContainer() { loc = 0;range_hi = 0; range_lo = 0; factor = 0; type = t_real; }
 };
 
+/**
+ * \brief	A class for managing streams of raw bits and converting them into useful
+ * 		parameters that may be evaluated by a fitness function.
+ *
+ * \note	This class does not actually store the data used by organisms. That task is left
+ * 		to the Chromosome class.
+ */
 class PhenotypeMap {
 private:
   int N_BITS;

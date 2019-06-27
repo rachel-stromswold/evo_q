@@ -98,7 +98,7 @@ Chromosome& Chromosome::operator=(Chromosome& other) {
 
 void Chromosome::exchange(Chromosome* other, size_t k) {
   if (N_BITS != other->get_n_bits()) {
-    error(1, "Cannot exchange chromosomes with a differing number of bits, %d and %d.", get_n_bits(), other->get_n_bits());
+    error(CODE_ARG_INVALID, "Cannot exchange chromosomes with a differing number of bits, %d and %d.", get_n_bits(), other->get_n_bits());
   }
   size_t j = 0;
   size_t k_ind = k/bin_size;
@@ -130,13 +130,13 @@ void Chromosome::exchange(Chromosome* other, size_t k) {
       other->genes[k_ind] |= (myg & o_mask);
     }
   } else {
-    error(1, "tried to copy too many bytes");
+    error(CODE_MISC, "tried to copy too many bytes");
   }
 }
 
 void Chromosome::exchange_uniform(ArgStore* args, Chromosome* other) {
   if (N_BITS != other->get_n_bits()) {
-    error(1, "Cannot exchange chromosomes with a differing number of bits, %d and %d.", get_n_bits(), other->get_n_bits());
+    error(CODE_MISC, "Cannot exchange chromosomes with a differing number of bits, %d and %d.", get_n_bits(), other->get_n_bits());
   }
   std::binomial_distribution<> n_flipped( bin_size, 0.5);
   for (size_t i = 0; i < N; i++) {
@@ -223,14 +223,14 @@ void Chromosome::slow_mutate(ArgStore* args) {
   if (perform_bit_mutation) {
     for (unsigned i = 0; i < N - 1; ++i) {
       for (unsigned j = 0; j < bin_size; ++j) {
-	if ( args->sample_bernoulli() ) {
+	if ( args->random_mutation() ) {
 	  genes[i] = genes[i] ^ (0x01 << j);
 	}
       }
     }
     //we have to do something special for the last long because it isn't filled
     for (unsigned j = 0; j < N_BITS%(bin_size); ++j) {
-      if ( args->sample_bernoulli() ) {
+      if ( args->random_mutation() ) {
 	genes[N-1] = genes[N-1] ^ (0x01 << j);
       }
     }
@@ -254,7 +254,7 @@ void Chromosome::set_to_ulong(PhenotypeMap* al, _uint ind, unsigned long value) 
 
   _uint i2 = loc / (bin_size);
   if (i2 > N) {
-    error(1, "Something has gone wrong, invalid location returned.");
+    error(CODE_ARG_INVALID, "Something has gone wrong, invalid location returned.");
   }
   genes[i2] &= ~(low_mask << off);
   genes[i2] |= (value & low_mask) << off;

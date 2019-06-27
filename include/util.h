@@ -9,20 +9,28 @@
 #include <stdarg.h>
 #include <climits>
 
-//#ifndef USE_CUSTOM_CONTAINERS
+#ifdef USE_EXCEPTIONS
+#include <stdexcept>
+#undef USE_CUSTOM_CONTAINERS
+#endif
+
+#ifndef USE_CUSTOM_CONTAINERS
 #include <vector>
 #include <string>
 #include <sstream>
-//#endif
+#endif
 
 #define PI 3.1415926535897932
 
 #define DEFAULT_STRING_SIZE 8
 #define DEFAULT_PRINT_SIZE  24
 
-#define CODE_ERROR  2
-#define CODE_FATAL  1
-#define CODE_WARN   0
+#define CODE_MISC		5
+#define CODE_ARG_INVALID	4
+#define CODE_ARG_RANGE  	3
+#define CODE_MATH_ERROR  	2
+#define CODE_WARN		1
+#define CODE_NONE		0
 
 namespace Genetics {
 
@@ -33,8 +41,6 @@ typedef double (*FIT_FUNC_PTR)(size_t, char*);
 
 typedef enum Type{t_int, t_uint, t_real, t_bitstream, t_terminator} Type;
 
-void error (int fatal, std::string msg, ...);
-
 unsigned long encodeGray (unsigned long number);
 unsigned long decodeGray (unsigned long code);
 
@@ -43,8 +49,6 @@ size_t getlen_and_clean (char* str);
 unsigned int nChoosek( unsigned int n, unsigned int k );
 
 _uint factorial(_uint n);
-
-std::string read_number(std::string::iterator* it);
 
 //returns whether the array 
 template <class T>
@@ -404,6 +408,13 @@ template<typename T>
 using Vector = std::vector<T>;
 typedef std::string String;
 #endif
+void error (int fatal, String msg, ...);
+String read_number(String::iterator* it);
+
+#ifndef USE_EXCEPTIONS
+bool has_error();
+String get_error();
+#endif
 
 //draw k elements from the integer range from 0 to n useful for sampling from arrays
 class SampleDraw {
@@ -413,13 +424,7 @@ private:
   std::uniform_int_distribution<_uint> dist;
 
 public:
-  SampleDraw(_uint p_n, _uint p_k) : dist(0, nChoosek(p_n-1, p_k-1)*factorial(p_k-1)) {
-    n_ = p_n;
-    k_ = p_k;
-    if (k_ > n_) {
-      error(1, "Cannot initialize sample draw with more samples than the population size.");
-    }
-  }
+  SampleDraw(_uint p_n, _uint p_k);
 
   void reset() { dist.reset(); }
   _uint n() { return n_; }

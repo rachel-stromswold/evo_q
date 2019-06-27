@@ -65,6 +65,25 @@ public:
   ChromosomeTestFixture() : chrom_96_bits_A(96), chrom_96_bits_B(96), chrom_32_bits_A(32), chrom_32_bits_B(32), map_96(96), map_32(32) {}
 };
 
+class TestProblemPenalties : public Genetics::Problem {
+private:
+  bool apply_penalty;
+  double penalty_amt;
+public:
+  TestProblemPenalties(double p_penalty_amt) : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1) {
+    map.initialize(1, Genetics::t_real);
+    bool apply_penalty = true;
+    penalty_amt = p_penalty_amt;
+  }
+  void evaluate_fitness(Genetics::Organism* org) {
+    org->set_fitness(0, 1);
+    if (apply_penalty) {
+      org->apply_penalty(penalty_amt);
+      apply_penalty = false;
+    }
+  }
+};
+
 class TestProblemSingle : public Genetics::Problem {
 public:
   TestProblemSingle() : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1) {
@@ -72,7 +91,7 @@ public:
   }
   void evaluate_fitness(Genetics::Organism* org) {
     double x = org->read_real(0);
-    org->set_fitness(0, x*x);
+    org->set_fitness(0, -(x*x));
   }
 };
 
@@ -83,8 +102,9 @@ public:
   }
   void evaluate_fitness(Genetics::Organism* org) {
     double x = org->read_real(0);
-    org->set_fitness(0, x*x);
-    org->set_fitness(1, (x - 2)*(x - 2));
+    org->set_fitness(0, -x*x);
+    org->set_fitness(1, -(x - 2)*(x - 2));
+    org->apply_penalty(0.0);
   }
 };
 
@@ -97,6 +117,7 @@ TEST_CASE_METHOD( ChromosomeTestFixture, "Ensure that chromosomes are correctly 
   REQUIRE(chrom_32_bits_B.get_n_bits() == 32);
   map_96.initialize(2, Genetics::t_uint);
   map_32.initialize(2, Genetics::t_uint);
+  
   unsigned long mask_96 = ( (unsigned long)1 << (96/2) ) - 1;
   unsigned long mask_32 = ( (unsigned long)1 << (32/2) ) - 1;
 
@@ -399,10 +420,26 @@ TEST_CASE ("Populations are correctly created and data is successfully read", "[
   }
 }
 
+TEST_CASE ("Penalties are applied properly", "[populations]") {
+  double penalty_str = 2.0;
+  TestProblemPenalties prob(penalty_str);
+  Genetics::String conf_file("ga.conf");
+  Genetics::Population pop( NUM_BITS, 1, &(prob.map), conf_file);
+  pop.evaluate(&prob);
+
+  double fit_0 = pop.get_organism(0)->get_fitness(0);
+  for (unsigned i = 1; i < pop.get_offspring_num(); ++i) {
+    double fit_i = pop.get_organism(i)->get_fitness(0);
+    INFO( "i = " << i )
+    REQUIRE( fit_i == 1.0 );
+    REQUIRE( fit_0 < fit_i );
+  }
+}
+
 TEST_CASE ("Simple evolution of a single objective converges to roughly appropriate result", "[populations]") {
   TestProblemSingle prob;
   Genetics::String conf_file("ga.conf");
-  Genetics::Population pop( NUM_BITS, NUM_OBJS, &(prob.map), conf_file);
+  Genetics::Population pop( NUM_BITS, 1, &(prob.map), conf_file);
   for (size_t i = 0; i < 100; ++i) {
     pop.evaluate(&prob);
     pop.iterate();
@@ -414,16 +451,25 @@ TEST_CASE ("Simple evolution of a single objective converges to roughly appropri
 TEST_CASE ("Simple evolution of a multi objective converges to roughly appropriate result", "[populations]") {
   TestProblemMulti prob;
   Genetics::String conf_file("ga.conf");
-  Genetics::Population pop( NUM_BITS, NUM_OBJS, &(prob.map), conf_file);
+  Genetics::Population_NSGAII pop( NUM_BITS, NUM_OBJS, &(prob.map), conf_file);
   bool converged = false;
   while (!converged) {
     pop.evaluate(&prob);
     converged = pop.iterate();
   }
+  int modulo = NUM_OBJS + prob.map.get_num_params() + 1;
   pop.evaluate(&prob);
   Genetics::Vector<Genetics::String> pop_dat = pop.get_pop_data();
-  for (size_t i = 0; i < pop_dat.size(); ++i) {
-    std::cout << "organism " << i << " = " << pop_dat[i] << std::endl;
+  for (size_t i = 0; modulo*(i + 1) - 1 < pop_dat.size(); ++i) {
+    std::cout << "organism " << i
+	      << ", rank = " << pop_dat[modulo*i];
+    for (size_t j = 0; j < prob.map.get_num_params(); ++j) {
+      std::cout << ", x_" << j << " = " << pop_dat[modulo*i + j + 1];
+    }
+    for (size_t j = 0; j < prob.N_OBJS; ++j) {
+      std::cout << ", fitness_" << j << " = " << pop_dat[modulo*i + j + prob.map.get_num_params() + 1];
+    }
+    std::cout << std::endl;
   }
 }
 
@@ -447,15 +493,34 @@ TEST_CASE ("Convergence functions work", "[populations]") {
       REQUIRE( !var_cut.evaluate_convergence(s) );
       INFO("i = " << i << " range_1 = " << s[0].max - s[0].min << " range_2 = " << s[1].max - s[1].min)
       REQUIRE( !range_cut.evaluate_convergence(s) );
-      INFO("i = " << i << " max_1 = " << s[0].max << " max_2 = " << s[1].max)
-      REQUIRE( !plat_cut.evaluate_convergence(s) );
     } else {
       INFO("i = " << i << " var_1 = " << s[0].var << " var_2 = " << s[1].var)
       REQUIRE( var_cut.evaluate_convergence(s) );
       INFO("i = " << i << " range_1 = " << s[0].max - s[0].min << " range_2 = " << s[1].max - s[1].min)
       REQUIRE( range_cut.evaluate_convergence(s) );
-      INFO("i = " << i << " max_1 = " << s[0].max << " max_2 = " << s[1].max)
-      REQUIRE( plat_cut.evaluate_convergence(s) );
     }
+  }
+}
+
+TEST_CASE ("Combine convergence checking and evolution", "[populations]") {
+  TestProblemSingle prob;
+  Genetics::Conv_Plateau plat_cut(1, 0.05, TEST_CONV_GEN / 2);
+  Genetics::String conf_file("ga.conf");
+  Genetics::Population pop( NUM_BITS, 1, &(prob.map), conf_file);
+
+  bool converged = false;
+  int generation = 0;
+  while (!converged) {
+    pop.evaluate(&prob);
+    converged = pop.iterate(&plat_cut);
+    generation++;
+  }
+  std::cout << "Converged after " << generation << " generations\n";
+  pop.evaluate(&prob);
+  Genetics::Vector<Genetics::String> pop_dat = pop.get_pop_data();
+  for (size_t i = 0; 2*i + 1 < pop_dat.size(); ++i) {
+    std::cout << "organism " << i
+	      << ", x1 = " << pop_dat[2*i]
+	      << " fitness = " << pop_dat[2*i + 1] << std::endl;
   }
 }
