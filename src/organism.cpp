@@ -83,8 +83,8 @@ std::vector<Organism*> Organism::breed(ArgStore* args, Organism* o) {
     } else {
       std::uniform_int_distribution<size_t> rint( 0, gene0.get_n_bits() - 1 );
       for (int n = 0; n < args->get_num_crossovers(); ++n) {
-	size_t exch_bit = rint( args->get_generator() );
-	gene0.exchange(&gene1, exch_bit);
+        size_t exch_bit = rint( args->get_generator() );
+        gene0.exchange(&gene1, exch_bit);
       }
     }
     children[0] = new Organism(N_BITS, N_OBJS, gene0, al);

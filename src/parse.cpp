@@ -131,7 +131,7 @@ void ArgStore::initialize_from_file(const char* fname) {
       init_coup_mean = atof(val);
     } else if (strcmp(token, "crossover_probability") == 0) {
       crossover_prob = atof(val);
-    } else if (strcmp(token, "mutatation_probability") == 0) {
+    } else if (strcmp(token, "mutation_probability") == 0) {
       mutate_prob = atof(val);
     } else if (strcmp(token, "hypermutation_threshold") == 0) {
       hypermutation_threshold = atof(val);

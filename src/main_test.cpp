@@ -72,11 +72,12 @@ private:
 public:
   TestProblemPenalties(double p_penalty_amt) : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1) {
     map.initialize(1, Genetics::t_real);
-    bool apply_penalty = true;
+    apply_penalty = true;
     penalty_amt = p_penalty_amt;
   }
   void evaluate_fitness(Genetics::Organism* org) {
     org->set_fitness(0, 1);
+    std::cout << apply_penalty << std::endl;
     if (apply_penalty) {
       org->apply_penalty(penalty_amt);
       apply_penalty = false;
@@ -382,6 +383,32 @@ TEST_CASE ( "Organisms are correctly created and decoded", "[organisms]" ) {
   }
 }
 
+TEST_CASE ("ArgStore successfully parses a file") {
+  TestProblemSingle prob;
+  Genetics::Conv_Plateau plat_cut(1, 0.05, TEST_CONV_GEN / 2);
+  Genetics::String conf_file("ga.conf");
+  Genetics::Population pop( NUM_BITS, 1, &(prob.map), conf_file);
+
+  //ga.conf must be as follows for this to work:
+  /*
+   * population_size: 20
+   * tournament_size: 4
+   * num_generations: 50
+   * num_crossovers: 2
+   * parameter_variance: 0.3
+   * parameter_mean: 0.0
+   * mutation_probability: 0.016
+   * crossover_probability: 0.9
+   */
+  REQUIRE( pop.get_args().get_pop_size() == 20 );
+  REQUIRE( pop.get_args().get_survivors() == 4 );
+  REQUIRE( pop.get_args().get_num_gens() == 50 );
+  REQUIRE( pop.get_args().get_num_crossovers() == 2 );
+  REQUIRE( pop.get_args().get_init_coup_var() == 0.3 );
+  REQUIRE( pop.get_args().get_crossover_prob() == 0.9 );
+  REQUIRE( pop.get_args().get_mutate_prob() == 0.016 ); 
+}
+
 TEST_CASE ("Populations are correctly created and data is successfully read", "[populations]") {
 //  Genetics::ArgStore inst;
   Genetics::String conf_file("ga.conf");
@@ -421,7 +448,7 @@ TEST_CASE ("Populations are correctly created and data is successfully read", "[
 }
 
 TEST_CASE ("Penalties are applied properly", "[populations]") {
-  double penalty_str = 2.0;
+  double penalty_str = 4.0;
   TestProblemPenalties prob(penalty_str);
   Genetics::String conf_file("ga.conf");
   Genetics::Population pop( NUM_BITS, 1, &(prob.map), conf_file);
