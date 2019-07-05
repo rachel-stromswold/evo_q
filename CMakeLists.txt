@@ -27,7 +27,7 @@ if(CMAKE_BUILD_TYPE MATCHES "^[Rr]elease")
 endif()
 
 #set build preprocessor macros
-add_compile_definitions(USE_EXCEPTIONS=1)
+add_definitions(-DUSE_EXCEPTIONS=1)
 
 #include pybind11 for python
 include(FetchContent)
