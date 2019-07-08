@@ -14,6 +14,12 @@
 
 #define DEF_SORT_PARAM	-3
 
+#define FLAG_NONE_SET	0
+#define FLAG_STATS_SET	1
+#define FLAG_DIST_SET	2
+#define FLAG_BEST_FOUND	4
+#define FLAG_FRONTS	8
+
 namespace Genetics {
 
 struct FitnessStats {
@@ -34,6 +40,7 @@ class Population {
     _uint N_PARAMS;
     _uint N_OBJS;
     _uint generation = 0;
+    _uchar calculated_flags = 0;
   protected:
     size_t sort_org_calls = 0;
     size_t carryover_num;//How many of the best individuals carry over to the next generation 
@@ -41,7 +48,7 @@ class Population {
     //OWNED POINTERS
     FitnessStats* pop_stats = NULL;
     //EXTERNALLY MANAGED POINTERS
-    PhenotypeMap* map = NULL;
+    std::shared_ptr<PhenotypeMap> map;
     
     ArgStore args;
     //all offspring from the previous generation
@@ -53,8 +60,8 @@ class Population {
     size_t survivors_num;
     std::vector<std::shared_ptr<Organism>> survivors;
     //guarantee that the best organism appears in the next generation
-    size_t best_organism_ind;
-    std::shared_ptr<Organism> best_organism;
+//    size_t best_organism_ind;
+    Organism best_organism;
     //labels for generating data output
 //    Vector<String> var_labels;
 //    Vector<String> obj_labels;
@@ -68,10 +75,14 @@ class Population {
     void breed_shuffle();
     void breed();
     void find_best_organism();
+    void calculate_distances();
+    void hypermutate();
 
   public:
     Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname = "");
     Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname = "");
+    Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, String conf_fname = "");
+    Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map, String conf_fname = "");
     ~Population();
     Population(Population& o);
     Population& operator=(Population& o);
@@ -95,8 +106,17 @@ class Population {
     Vector<String> get_header();
     Vector<String> get_pop_data();
 
-    double get_min_fitness(_uint i = 0) { return pop_stats[i].min; }
-    double get_max_fitness(_uint i = 0) { return pop_stats[i].max; }
+    FitnessStats get_pop_stats(_uint i = 0) { return pop_stats[i]; }
+//DEPRECATION CANDIDATE
+    double get_min_fitness(_uint i = 0) {
+#warning "get_min_fitness is deprecated, use get_pop_stats instead"
+      return pop_stats[i].min;
+    }
+    double get_max_fitness(_uint i = 0) {
+#warning "get_max_fitness is deprecated, use get_pop_stats instead"
+      return pop_stats[i].max;
+    }
+//END DEPRECATION_CANDIDATE
 
     void set_var_label(_uint ind, String val); 
     void set_obj_label(_uint ind, String val);
@@ -110,6 +130,7 @@ class Population {
 
 class Population_NSGAII : public Population {
   private:
+    _uchar calculated_flags = FLAG_NONE_SET;
     size_t survivors_num;
     //the ngsa alternative to elitism
     std::vector<std::vector<std::shared_ptr<Organism>>> pareto_fronts;
@@ -121,10 +142,12 @@ class Population_NSGAII : public Population {
   public:
     Population_NSGAII(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname = "");
     Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname = "");
+    Population_NSGAII(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, String conf_fname = "");
+    Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map, String conf_fname = "");
     ~Population_NSGAII();
 
     void evaluate(Problem* prob);
-    PhenotypeMap* get_map() { return this->map; }
+    std::shared_ptr<PhenotypeMap> get_map() { return this->map; }
 
     //cull in place is slightly faster but less accurate than the standard cull method
     bool cull_in_place();
@@ -137,10 +160,7 @@ class Population_NSGAII : public Population {
     _uint get_n_pareto_fronts() {
       return pareto_fronts.size();
     }
-    std::vector<std::shared_ptr<Organism>> get_pareto_front(_uint i) {
-      if (pareto_fronts.size() == 0) { error(1, "The population has not yet been evaluated."); }
-      return pareto_fronts[i];
-    }
+    std::vector<std::shared_ptr<Organism>> get_pareto_front(_uint i);
 
     Vector<String> get_header();
     Vector<String> get_pop_data();

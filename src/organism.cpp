@@ -2,13 +2,23 @@
 
 namespace Genetics {
 
+Organism::Organism() : genes(0), fitness(1) {
+  N_BITS = 0;
+  N_OBJS = 0;
+  for (auto it = fitness.begin(); it != fitness.end(); ++it) {
+    *it = -std::numeric_limits<double>::infinity();
+  }
+//  genes = NULL;
+}
+
 Organism::Organism(int pn_bits, int pn_objs, PhenotypeMap* p_al) :
   N_BITS(pn_bits),
   N_OBJS(pn_objs),
   fitness(N_OBJS, (double)0.0),
+  genes(N_BITS),
   al(p_al)
 {
-  genes = new Chromosome(N_BITS);
+//  genes = new Chromosome(N_BITS);
   memset(output_stream, 0, BUF_SIZE);
   reset();
 }
@@ -17,20 +27,45 @@ Organism::Organism(int pn_bits, int pn_objs, Chromosome p_genes, PhenotypeMap* p
   N_BITS(pn_bits),
   N_OBJS(pn_objs),
   fitness(N_OBJS, (double)0.0),
+  genes(p_genes),
   al(p_al)
 {
-  genes = new Chromosome(N_BITS);
-  *genes = p_genes;
+//  genes = new Chromosome(N_BITS);
+//  *genes = p_genes;
   reset();
 }
 
-Organism::~Organism() {
+Organism::Organism(int pn_bits, int pn_objs, std::shared_ptr<PhenotypeMap> p_al) :
+  N_BITS(pn_bits),
+  N_OBJS(pn_objs),
+  fitness(N_OBJS, (double)0.0),
+  genes(N_BITS),
+  al(p_al)
+{
+//  genes = new Chromosome(N_BITS);
+  memset(output_stream, 0, BUF_SIZE);
+  reset();
+}
+
+Organism::Organism(int pn_bits, int pn_objs, Chromosome p_genes, std::shared_ptr<PhenotypeMap> p_al) :
+  N_BITS(pn_bits),
+  N_OBJS(pn_objs),
+  fitness(N_OBJS, (double)0.0),
+  genes(p_genes),
+  al(p_al)
+{
+//  genes = new Chromosome(N_BITS);
+//  *genes = p_genes;
+  reset();
+}
+
+/*Organism::~Organism() {
   if (genes) {
     delete genes;
   }
-}
+}*/
 
-Organism::Organism(const Organism &obj) :
+/*Organism::Organism(const Organism &obj) :
   fitness(obj.fitness),
   misc_data(obj.misc_data)
 {
@@ -38,6 +73,12 @@ Organism::Organism(const Organism &obj) :
   N_OBJS = obj.N_OBJS;
   genes = new Chromosome(*(obj.genes));
   al = obj.al;
+}
+
+Organism Organism::copy() {
+  Organism ret(N_BITS, N_OBJS, al);
+  ret.genes = new Chromosome(*genes);
+  return ret;
 }
 
 Organism::Organism(Organism&& obj) :
@@ -57,6 +98,59 @@ Organism& Organism::operator=(Organism& obj) {
   obj.genes = tmp_genes;
   al = obj.al;
   return *this;
+}*/
+
+Organism Organism::copy() {
+  Organism ret(N_BITS, N_OBJS, genes, al);
+  return ret;
+}
+
+bool Organism::operator==(Organism& obj) {
+  for (_uint i = 0; i < al->get_num_params(); ++i) {
+    Type t = al->get_type(i);
+    if (t == t_real) {
+      if (read_real(i) != obj.read_real(i)) {
+	return false;
+      }
+    } else if (t == t_int) {
+      if (read_int(i) != obj.read_int(i)) {
+	return false;
+      }
+    } else {
+      if (read_uint(i) != obj.read_uint(i)) {
+	return false;
+      }
+    }
+  }
+  return true;
+}
+
+bool Organism::operator!=(Organism& obj) {
+  for (_uint i = 0; i < al->get_num_params(); ++i) {
+    Type t = al->get_type(i);
+    if (t == t_real) {
+      if (read_real(i) != obj.read_real(i)) {
+	return true;
+      }
+    } else if (t == t_int) {
+      if (read_int(i) != obj.read_int(i)) {
+	return true;
+      }
+    } else {
+      if (read_uint(i) != obj.read_uint(i)) {
+	return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool Organism::operator>(Organism& obj) {
+  return !obj.dominates(this);
+}
+
+bool Organism::operator<(Organism& obj) {
+  return obj.dominates(this);
 }
 
 void Organism::reset() {
@@ -74,8 +168,8 @@ std::vector<Organism*> Organism::breed(ArgStore* args, Organism* o) {
   std::vector<Organism*> children(2);
 
   memset(output_stream, 0, BUF_SIZE);
-  Chromosome gene0(N_BITS, genes);
-  Chromosome gene1(N_BITS, o->genes);
+  Chromosome gene0(genes);
+  Chromosome gene1(o->genes);
 
   if (args->random_crossover()) {
     if (args->get_num_crossovers() <= 0) {
@@ -94,17 +188,17 @@ std::vector<Organism*> Organism::breed(ArgStore* args, Organism* o) {
     children[1] = new Organism(*o);
   }
 #ifdef MUT_SLOW
-  children[0]->genes->slow_mutate(args);
-  children[1]->genes->slow_mutate(args);
+  children[0]->genes.slow_mutate(args);
+  children[1]->genes.slow_mutate(args);
 #else
-  children[0]->genes->mutate(args);
-  children[1]->genes->mutate(args);
+  children[0]->genes.mutate(args);
+  children[1]->genes.mutate(args);
 #endif
   return children;
 }
 
 void Organism::randomize(ArgStore* args) {
-  genes->randomize(args);
+  genes.randomize(al.get(), args);
 }
 
 void Organism::randomize(ArgStore* args, Organism* orgtmp) {
@@ -114,7 +208,7 @@ void Organism::randomize(ArgStore* args, Organism* orgtmp) {
 
   double var = args->get_init_coup_var();
   double lvar = var/al->get_num_params();
-  genes->reset();
+  genes.reset();
   for (size_t i = 0; i < al->get_num_params(); i++) {
     Type t = al->get_type(i);
     if (i != high_ind) {
@@ -124,16 +218,16 @@ void Organism::randomize(ArgStore* args, Organism* orgtmp) {
 	double range = al->get_range_max(i) - al->get_range_min(i);
 	std::normal_distribution<double> norm(mean, lvar*range);
 	double x = norm( args->get_generator() );
-	genes->set_to_num(al, i, x);
+	genes.set_to_num(al.get(), i, x);
       } else {
 	_uint max_possible = 1 << al->get_block_length(i);
-	mean = (double)(max_possible - genes->gene_to_int(al, i))/2;
+	mean = (double)(max_possible - genes.gene_to_int(al.get(), i))/2;
 	//scale lvar to lvar*max_possible/2 and set n and p to produce the according mean and variance
 	double p = 1 - lvar*max_possible/(2*mean);
 	int n = (int)mean/p;
 	std::binomial_distribution<int> dist(n, p);
-	int x = dist( args->get_generator() )*2 + genes->gene_to_int(al, i);
-	genes->set_to_int(al, i, x);
+	int x = dist( args->get_generator() )*2 + genes.gene_to_int(al.get(), i);
+	genes.set_to_int(al.get(), i, x);
       }
     }
   }
@@ -143,13 +237,13 @@ void Organism::randomize(ArgStore* args, Organism* orgtmp) {
     double range = al->get_range_max(high_ind) - al->get_range_min(high_ind);
     std::normal_distribution<double> norm(mean, var*range);
     double x = norm( args->get_generator() );
-    genes->set_to_num(al, high_ind, x);
+    genes.set_to_num(al.get(), high_ind, x);
   } else {
     int tmpx = orgtmp->read_int(high_ind);
     _uint max_possible = 1 << al->get_block_length(high_ind);
     std::normal_distribution<double> dist((double)tmpx, var*max_possible);
     int x = (int)dist( args->get_generator() );
-    genes->set_to_int(al, high_ind, x);
+    genes.set_to_int(al.get(), high_ind, x);
     std::cout << " max_possible = " << max_possible << " x = " << x << " orgtmp_x = " << tmpx << "\n";
   }
 }
@@ -181,19 +275,23 @@ void Organism::set_fitness(_uint i, double val) {
 }
 
 void Organism::set_int(_uint i, int value) {
-  genes->set_to_int(al, i, value);
+  genes.set_to_int(al.get(), i, value);
 }
 
 void Organism::set_real(_uint i, double value) {
-  genes->set_to_num(al, i, value);
+  genes.set_to_num(al.get(), i, value);
 }
 
 double Organism::read_real(_uint i) {
-  return genes->gene_to_num(al, i);
+  return genes.gene_to_num(al.get(), i);
 }
 
 int Organism::read_int(_uint i) {
-  return genes->gene_to_int(al, i);
+  return genes.gene_to_int(al.get(), i);
+}
+
+_uint Organism::read_uint(_uint i) {
+  return genes.gene_to_ulong(al.get(), i);
 }
 
 bool Organism::dominates(Organism* other) {

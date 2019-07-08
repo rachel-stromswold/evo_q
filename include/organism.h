@@ -6,6 +6,7 @@
 #include <fstream>
 #include <sstream>
 #include <string.h>
+#include <memory>
 
 #include <unistd.h>
 #include <sys/wait.h>
@@ -31,10 +32,10 @@ struct Result {
 class Problem {
 public:
   _uint N_BITS, N_PARAMS, N_OBJS;
-  PhenotypeMap map;
+  std::shared_ptr<PhenotypeMap> map;
   Vector<Result> result_list;
 //  Problem() {std::cout << "Initializing problem...\n"; }
-  Problem(unsigned n_bits, unsigned n_params, int n_objs) : N_BITS(n_bits), N_PARAMS(n_params), N_OBJS(n_objs), map(n_bits) {}
+  Problem(unsigned n_bits, unsigned n_params, int n_objs) : N_BITS(n_bits), N_PARAMS(n_params), N_OBJS(n_objs), map(std::make_shared<PhenotypeMap>(n_bits)) {}
 
   virtual void evaluate_fitness(Organism* org) {}
   virtual void evaluate_fitness_async(size_t index, Chromosome genes) {}
@@ -49,10 +50,10 @@ private:
   Vector<double> fitness;
   double penalty = 0.0;
   size_t output_len;
-  PhenotypeMap* al;
+  std::shared_ptr<PhenotypeMap> al;
 
 protected:
-  Chromosome* genes;
+  Chromosome genes;
   size_t n_nodes;
 
 public:
@@ -65,13 +66,21 @@ public:
   int rank;
   double distance;
 
+  Organism();
   Organism(int N_BITS, int N_OBJS, PhenotypeMap* p_al);
   Organism(int N_BITS, int N_OBJS, Chromosome p_genes, PhenotypeMap* p_al);
-  Organism(const Organism &obj);
-  Organism(Organism&& obj);
-  ~Organism();
+  Organism(int N_BITS, int N_OBJS, std::shared_ptr<PhenotypeMap> p_al);
+  Organism(int N_BITS, int N_OBJS, Chromosome p_genes, std::shared_ptr<PhenotypeMap> p_al);
+  //Organism(const Organism &obj);
+  //Organism(Organism&& obj);
+  //~Organism();
+  Organism copy();
 
-  Organism& operator=(Organism& obj);
+  //Organism& operator=(Organism& obj);
+  bool operator==(Organism& obj);
+  bool operator!=(Organism& obj);
+  bool operator>(Organism& obj);
+  bool operator<(Organism& obj);
 
   std::vector<Organism*> breed(ArgStore* args, Organism* par1);
   void reset();
@@ -92,8 +101,9 @@ public:
   void set_real(_uint i, double value);
   double read_real(_uint i);
   int read_int(_uint i);
+  _uint read_uint(_uint i);
   bool dominates(Organism* other);
-  String get_chromosome_string(_uint i) { return genes->get_string(al, i); }
+  String get_chromosome_string(_uint i) { return genes.get_string(al.get(), i); }
   char* get_output_stream() { return output_stream; }
   size_t get_output_len() {return output_len; }
   int get_rank() { return rank; }

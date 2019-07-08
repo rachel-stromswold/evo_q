@@ -24,17 +24,56 @@ OrganismWrapper::OrganismWrapper(ge::Organism* p_org, ge::Problem* p_prob) {
   prob = p_prob;
 }
 
+bool OrganismWrapper::check_validity() {
+  if(!org) {
+    throw std::runtime_error("Attempt to access uninitialized organism");
+    return false;
+  }
+  return true;
+}
+
+int OrganismWrapper::get_rank() {
+  check_validity();
+  return org->get_rank();
+}
+double OrganismWrapper::get_fitness() {
+  check_validity();
+  return org->get_fitness();
+}
+py::list OrganismWrapper::get_fitness_list() {
+  py::list ret;
+  for (_uint i = 0; i < org->get_n_objs(); ++i) {
+    ret.append(org->get_fitness(i));
+  }
+  return ret;
+}
+double OrganismWrapper::read_real(_uint ind) {
+  check_validity();
+  return org->read_real(ind);
+}
+int OrganismWrapper::read_int(_uint ind) {
+  check_validity();
+  return org->read_int(ind);
+}
+int OrganismWrapper::read_uint(_uint ind) {
+  check_validity();
+  return org->read_uint(ind);
+}
+
 void OrganismWrapper::set_fitness(double val) {
+  check_validity();
   org->set_fitness(val);
 }
 
 void OrganismWrapper::set_fitness(py::list fit_vals) {
+  check_validity();
   for (size_t i = 0; i < fit_vals.size() && i < org->get_n_objs(); ++i) {
     org->set_fitness(i, fit_vals[i].cast<double>());
   }
 }
 
 py::list OrganismWrapper::get_phenotype() {
+  check_validity();
   py::list ret;
   for (size_t i = 0; i < org->get_n_params(); ++i) {
     Genetics::String s = org->get_chromosome_string(i);
@@ -45,7 +84,7 @@ py::list OrganismWrapper::get_phenotype() {
 
 // ============================= POPULATION_WRAPPER =============================
 
-PopulationWrapper::PopulationWrapper(_uint N_BITS, _uint N_OBJS, Genetics::Problem* p_prob, Genetics::PhenotypeMap* map, ge::String conf_file) {
+PopulationWrapper::PopulationWrapper(_uint N_BITS, _uint N_OBJS, Genetics::Problem* p_prob, std::shared_ptr<Genetics::PhenotypeMap> map, ge::String conf_file) {
   if (N_OBJS <= 1) {
     pop = new ge::Population(N_BITS, N_OBJS, map, conf_file);
     pop_type = POP_SINGLE;
@@ -56,7 +95,7 @@ PopulationWrapper::PopulationWrapper(_uint N_BITS, _uint N_OBJS, Genetics::Probl
   prob = p_prob;
 }
 
-PopulationWrapper::PopulationWrapper(_uint N_BITS, _uint N_OBJS, ge::Problem* p_prob, ge::Organism* tmplt, ge::PhenotypeMap* map, ge::String conf_file)
+PopulationWrapper::PopulationWrapper(_uint N_BITS, _uint N_OBJS, ge::Problem* p_prob, ge::Organism* tmplt, std::shared_ptr<ge::PhenotypeMap> map, ge::String conf_file)
 {
   if (N_OBJS <= 1) {
     pop = new ge::Population(N_BITS, N_OBJS, map, conf_file);
@@ -75,7 +114,11 @@ OrganismWrapper* PopulationWrapper::get_parent(int ind) {
 py::list PopulationWrapper::get_best(_uint i) {
   py::list ret;
   if (pop_type == POP_SINGLE) {
-    ret.append( OrganismWrapper(pop->get_best_organism(), prob) );
+    std::shared_ptr<Genetics::Organism> best = pop->get_best_organism();
+    if (!best) {
+      throw std::runtime_error("Couldn't find best organism, perhaps no evaluations have been performed?");
+    }
+    ret.append( OrganismWrapper(best, prob) );
   } else {
     std::vector<std::shared_ptr<ge::Organism>> par = ((ge::Population_NSGAII*)pop)->get_pareto_front(i);
     for (_uint i = 0; i < par.size(); ++i) {
@@ -105,11 +148,27 @@ py::list PopulationWrapper::get_children() {
   return ret;
 }
 
+void PopulationWrapper::evaluate() {
+  if (pop->get_n_objs() > 1) {
+    ((Genetics::Population_NSGAII*)pop)->evaluate(prob);
+  } else {
+    pop->evaluate(prob);
+  }
+}
+
+void PopulationWrapper::iterate() {
+  if (pop->get_n_objs() > 1) {
+    ((Genetics::Population_NSGAII*)pop)->iterate();
+  } else {
+    pop->iterate();
+  }
+}
+
 // ============================= PYTHON_PROBLEM =============================
 
 void PythonProblem::evaluate_fitness(Genetics::Organism* org) {
   if (!evaluation_set) {
-    ge::error(1, "fitness function must be set before evaluations can be performed");
+    throw std::runtime_error("fitness function must be set before evaluations can be performed");
   }
   py::list fit_vals_list = evaluation_func( OrganismWrapper(org, (Genetics::Problem*)this) );
   if (fit_vals_list.size() < org->get_n_objs()) {
@@ -178,15 +237,15 @@ void PythonProblem::set_phenotype_parameters(py::list param_list) {
       Genetics::error(0, "Unrecognized type specifier %s.", type_str);
     }
   }
-  map.initialize(vc_list);
+  map->initialize(vc_list);
 #ifdef PRINT_DEBUG_DATA
-  std::cout << "map_size = " << map.get_num_params() << "\n";
+  std::cout << "map_size = " << map->get_num_params() << "\n";
 #endif
 }
 
 void PythonProblem::set_template_parameter(unsigned param_ind, py::object o) {
   template_set = true;
-  Genetics::Type t = map.get_type(param_ind);
+  Genetics::Type t = map->get_type(param_ind);
   if (t == Genetics::t_int || t == Genetics::t_bitstream || t == Genetics::t_uint) {
     tmplt_org.set_int(param_ind, o.cast<int>());
   } else if (t == Genetics::t_real) {
@@ -197,12 +256,12 @@ void PythonProblem::set_template_parameter(unsigned param_ind, py::object o) {
 PopulationWrapper* PythonProblem::initialize_population(ge::String conf_file) {
   PopulationWrapper* pop;
   if (template_set) {
-    pop = new PopulationWrapper(N_BITS, N_OBJS, (Genetics::Problem*)this, &tmplt_org, &map, conf_file);
+    pop = new PopulationWrapper(N_BITS, N_OBJS, (Genetics::Problem*)this, &tmplt_org, map, conf_file);
   } else {
-    pop = new PopulationWrapper(N_BITS, N_OBJS, (Genetics::Problem*)this, &map, conf_file);
+    pop = new PopulationWrapper(N_BITS, N_OBJS, (Genetics::Problem*)this, map, conf_file);
   }
 #ifdef PRINT_DEBUG_DATA
-  std::cout << "map_size = " << map.get_num_params() << "\n";
+  std::cout << "map_size = " << map->get_num_params() << "\n";
 #endif
   return pop;
 }
@@ -212,8 +271,10 @@ PYBIND11_MODULE(evo_p, m) {
   py::class_<OrganismWrapper>(m, "Organism")
       .def("get_rank", &OrganismWrapper::get_rank)
       .def("get_fitness",&OrganismWrapper::get_fitness)
+      .def("get_fitness_list",&OrganismWrapper::get_fitness_list)
       .def("read_real", &OrganismWrapper::read_real)
       .def("read_int", &OrganismWrapper::read_int)
+      .def("read_uint", &OrganismWrapper::read_uint)
       .def("set_fitness", (void (OrganismWrapper::*)(double)) &OrganismWrapper::set_fitness)
       .def("set_fitness", (void (OrganismWrapper::*)(py::list)) &OrganismWrapper::set_fitness)
       .def("get_phenotype", &OrganismWrapper::get_phenotype);
@@ -221,6 +282,10 @@ PYBIND11_MODULE(evo_p, m) {
       .def("evaluate", &PopulationWrapper::evaluate)
       .def("iterate", &PopulationWrapper::iterate, py::return_value_policy::take_ownership)
       .def("get_best", &PopulationWrapper::get_best, py::return_value_policy::reference_internal, py::arg("i") = 0)
+      .def("get_max_fitness", &PopulationWrapper::get_max_fitness, py::arg("i") = 0)
+      .def("get_min_fitness", &PopulationWrapper::get_min_fitness, py::arg("i") = 0)
+      .def("get_fitness_range", &PopulationWrapper::get_fitness_range, py::arg("i") = 0)
+      .def("get_fitness_var", &PopulationWrapper::get_fitness_var, py::arg("i") = 0)
       .def("get_parent", &PopulationWrapper::get_parent)
       .def("get_parents", &PopulationWrapper::get_parents)
       .def("get_children", &PopulationWrapper::get_children)
@@ -236,9 +301,12 @@ PYBIND11_MODULE(evo_p, m) {
       .def("set_param_var", &PopulationWrapper::set_init_coup_mean)
       .def("get_mutate_prob", &PopulationWrapper::get_mutate_prob)
       .def("set_mutate_prob", &PopulationWrapper::set_mutate_prob)
-      .def("get_hypermutation_threshold", &PopulationWrapper::get_hypermutation_threshold);
+      .def("get_crossover_prob", &PopulationWrapper::get_crossover_prob)
+      .def("set_crossover_prob", &PopulationWrapper::set_crossover_prob)
+      .def("get_hypermutation_threshold", &PopulationWrapper::get_hypermutation_threshold)
+      .def("set_hypermutation_threshold", &PopulationWrapper::set_hypermutation_threshold);
   py::class_<PythonProblem>(m, "Problem")
-      .def(py::init<std::string, int, int, int>())
+      .def(py::init<int, int, int>())
       .def("initialize_population", &PythonProblem::initialize_population, py::return_value_policy::take_ownership, py::arg("conf_file") = "")
       .def("set_template_parameter", &PythonProblem::set_template_parameter)
       .def("set_parameter_range", &PythonProblem::set_parameter_range)

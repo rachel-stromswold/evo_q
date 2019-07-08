@@ -12,6 +12,7 @@ ArgStore::ArgStore() : generator() {
   crossover_prob = DEF_CROSSOVER_PROB;
   mutate_prob = DEF_MUTATE_PROB;
   hypermutation_threshold = DEF_HYPER_THRESH;
+  replacement_fraction = DEF_REPLACE_FRAC;
   long_bin = NULL;
   short_bin = NULL;
   bern_mut = NULL;
@@ -28,6 +29,7 @@ ArgStore::ArgStore(const ArgStore& o) {
   crossover_prob = o.crossover_prob;
   mutate_prob = o.mutate_prob;
   hypermutation_threshold = o.hypermutation_threshold;
+  replacement_fraction = DEF_REPLACE_FRAC;
   if (o.long_bin) {
     long_bin = new std::binomial_distribution<unsigned char>(*o.long_bin);
   } else {
@@ -62,6 +64,7 @@ ArgStore::ArgStore(ArgStore&& o) {
   crossover_prob = o.crossover_prob;
   mutate_prob = o.mutate_prob;
   hypermutation_threshold = o.hypermutation_threshold;
+  replacement_fraction = o.replacement_fraction;
   //managed pointers dumb copying
   long_bin = o.long_bin;
   short_bin = o.short_bin;
@@ -135,6 +138,8 @@ void ArgStore::initialize_from_file(const char* fname) {
       mutate_prob = atof(val);
     } else if (strcmp(token, "hypermutation_threshold") == 0) {
       hypermutation_threshold = atof(val);
+    } else if (strcmp(token, "replacement_fraction") == 0) {
+      replacement_fraction = atof(val);
     } else if (strcmp(token, "output_file") == 0) {
       out_fname = val;
     } else if (strcmp(token, "seed") == 0) {
@@ -233,6 +238,9 @@ void ArgStore::initialize_from_args(size_t argc, char** argv) {
           test_again = false;
         } else if (strcmp(namestr, "--hyper-mutate-threshold") == 0) {
           hypermutation_threshold = atof( valstr );
+          test_again = false;
+        } else if (strcmp(namestr, "--replacement-fraction") == 0) {
+          replacement_fraction = atof( valstr );
           test_again = false;
         }
       }

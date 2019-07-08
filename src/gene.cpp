@@ -96,6 +96,22 @@ Chromosome& Chromosome::operator=(Chromosome& other) {
   return *this;
 }
 
+bool Chromosome::operator==(Chromosome& other) {
+  if (N_BITS == other.N_BITS) {
+    for (_uint i = 0; i < N_BITS / bin_size; ++i) {
+      if (genes[i] != other.genes[i]) {
+	return false;
+      }
+    }
+    if (N_BITS % bin_size != 0) {
+      unsigned long mask = (1 << (N_BITS % bin_size)) - 1;
+      return (mask & genes[N_BITS / bin_size]) == (mask & other.genes[N_BITS / bin_size]);
+    }
+    return true;
+  }
+  return false;
+}
+
 void Chromosome::exchange(Chromosome* other, size_t k) {
   if (N_BITS != other->get_n_bits()) {
     error(CODE_ARG_INVALID, "Cannot exchange chromosomes with a differing number of bits, %d and %d.", get_n_bits(), other->get_n_bits());
@@ -237,11 +253,27 @@ void Chromosome::slow_mutate(ArgStore* args) {
   }
 }
 
-void Chromosome::randomize(ArgStore* args) {
+void Chromosome::randomize(PhenotypeMap* al, ArgStore* args) {
   std::uniform_int_distribution<unsigned long> dist(0, ULONG_MAX);
   for (size_t i = 0; i < N; i++) {
     genes[i] = dist(args->get_generator());
   }
+  /*std::uniform_real_distribution<double> dist(0, 1.0);
+
+  for (size_t i = 0; i < al->get_num_params(); i++) {
+    Type t = al->get_type(i);
+    double val = dist(args->get_generator());
+    if (t == t_bitstream || t == t_uint || t == t_int) {
+      _uint l = al->get_block_length(i);
+      std::uniform_int_distribution<unsigned int> int_dist(0, 1 << l);
+      set_to_ulong( al, i, int_dist( args->get_generator() ) );
+    } else if (t == t_real) {
+      double max = al->get_range_max(i);
+      double min = al->get_range_min(i);
+      double val = dist( args->get_generator() )*(max - min) + min;
+      set_to_num(al, i, val);
+    }
+  }*/
 }
 
 void Chromosome::set_to_ulong(PhenotypeMap* al, _uint ind, unsigned long value) {

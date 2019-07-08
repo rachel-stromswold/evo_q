@@ -154,7 +154,7 @@ void PhenotypeMap::allocate_locations(_uint n_ints, _uint n_reals, std::vector<_
     n_avail -= *it;
   }
   if (n_avail <= 0 && (n_ints > 0 || n_reals > 0)) {
-    error(1, "Insufficient number of bits in genome representation to store all data.");
+    error(CODE_ARG_INVALID, "Insufficient number of bits in genome representation to store all data.");
   }
   _uint rsize = 2*n_avail/(n_ints+2*n_reals);
   _uint isize = n_avail/(n_ints+2*n_reals);
@@ -166,7 +166,7 @@ void PhenotypeMap::allocate_locations(_uint n_ints, _uint n_reals, std::vector<_
   }
   //since it is possible for the ints and reals to not fill up the allocated space we need to add filler to pad out the genome
   if (isize*n_ints + rsize*n_reals < n_avail) {
-    error(1, "The genome does not make full use of available data, consider reducing the number of allocated bits.");
+    error(CODE_WARN, "The genome does not make full use of available data, consider reducing the number of allocated bits.");
   }
   unsigned long real_mask = ( ((unsigned long)0x01 << rsize) - 1 );
   if (rsize == sto_size) {
@@ -213,10 +213,10 @@ void PhenotypeMap::allocate_locations(_uint n_ints, _uint n_reals, std::vector<_
  */
 void PhenotypeMap::set_range(_uint ind, double min, double max) {
   if (!is_real(ind)) {
-    error(1, "Index %d does not have a real value.");
+    error(CODE_ARG_INVALID, "Index %d does not have a real value.");
   }
   if (min >= max) {
-    error(1, "The maximum value in the range must be strictly greater than the minimum. ind=%d, range=[%f,%f]", ind, min, max);
+    error(CODE_ARG_INVALID, "The maximum value in the range must be strictly greater than the minimum. ind=%d, range=[%f,%f]", ind, min, max);
   }
   vars[ind].range_lo = min;
   vars[ind].range_hi = max;
@@ -237,11 +237,11 @@ void PhenotypeMap::set_range(_uint ind, double min, double max) {
  * 		if the parameter specified by ind is not real
  */
 double PhenotypeMap::get_range_min(_uint ind) {
-  if (ind > n_dims) {
-    error(1, "Attempted to access invalid range minimum index=%d", ind);
+  if (ind >= n_dims) {
+    error(CODE_ARG_INVALID, "Attempted to access invalid range minimum index=%d", ind);
   }
   if (!is_real(ind)) {
-    error(1, "Index %d does not have a real value.");
+    error(CODE_ARG_INVALID, "Index %d does not have a real value.");
   }
   return vars[ind].range_lo;
 }
@@ -255,11 +255,11 @@ double PhenotypeMap::get_range_min(_uint ind) {
  * 		if the parameter specified by ind is not real
  */
 double PhenotypeMap::get_range_max(_uint ind) {
-  if (ind > n_dims) {
-    error(1, "Attempted to access invalid range maximum index=%d", ind);
+  if (ind >= n_dims) {
+    error(CODE_ARG_INVALID, "Attempted to access invalid range maximum index=%d", ind);
   }
   if (!is_real(ind)) {
-    error(1, "Index %d does not have a real value.");
+    error(CODE_ARG_INVALID, "Index %d does not have a real value.");
   }
   return vars[ind].range_hi;
 }
@@ -275,8 +275,8 @@ double PhenotypeMap::get_range_max(_uint ind) {
  * \returns	The block of bits allocated to a given parameter
  */
 void PhenotypeMap::get_block(_uint ind, _uint* loc, _uint* len) {
-  if (ind > n_dims) {
-    error(1, "Attempted to access invalid block index=%d", ind);
+  if (ind >= n_dims) {
+    error(CODE_ARG_INVALID, "Attempted to access invalid block index=%d", ind);
   }
   if (loc != NULL) {
     *loc = vars[ind].loc;
@@ -295,8 +295,8 @@ void PhenotypeMap::get_block(_uint ind, _uint* loc, _uint* len) {
  * \returns	The starting bit of the block allocated to a given parameter
  */
 _uint PhenotypeMap::get_block_location(_uint ind) {
-  if (ind > n_dims) {
-    error(1, "Attempted to access invalid block index=%d", ind);
+  if (ind >= n_dims) {
+    error(CODE_ARG_INVALID, "Attempted to access invalid block index=%d", ind);
   }
 
   return vars[ind].loc;
@@ -311,8 +311,8 @@ _uint PhenotypeMap::get_block_location(_uint ind) {
  * \returns	The length of the block allocated to a given parameter
  */
 unsigned int PhenotypeMap::get_block_length(_uint ind) {
-  if (ind > n_dims) {
-    error(1, "Attempted to access invalid block index=%d", ind);
+  if (ind >= n_dims) {
+    error(CODE_ARG_INVALID, "Attempted to access invalid block index=%d", ind);
   }
 
   return vars[ind+1].loc - vars[ind].loc;
@@ -415,7 +415,7 @@ unsigned long PhenotypeMap::get_high_mask(_uint ind) {
  */
 double PhenotypeMap::get_factor(_uint ind) {
   if (!is_real(ind)) {
-    error(1, "Attempt to access real conversion factor for index that is not real valued. index = %d", ind);
+    error(CODE_ARG_INVALID, "Attempt to access real conversion factor for index that is not real valued. index = %d", ind);
     return 1.0;
   }
   return vars[ind].factor;
@@ -425,8 +425,8 @@ double PhenotypeMap::get_factor(_uint ind) {
  * \returns	True if the parameter at index ind is real valued (t_real) and false otherwise.
  */
 bool PhenotypeMap::is_real(_uint ind) {
-  if (ind > n_dims) {
-    error(1, "Invalid index %d", ind);
+  if (ind >= n_dims) {
+    error(CODE_ARG_INVALID, "Invalid index %d", ind);
     return false;
   }
   return vars[ind].type == t_real;
@@ -436,8 +436,8 @@ bool PhenotypeMap::is_real(_uint ind) {
  * \returns	True if the parameter at index ind is integer valued (t_int) and false otherwise.
  */
 bool PhenotypeMap::is_int(_uint ind) {
-  if (ind > n_dims) {
-    error(1, "Invalid index %d", ind);
+  if (ind >= n_dims) {
+    error(CODE_ARG_INVALID, "Invalid index %d", ind);
     return false;
   }
   return vars[ind].type == t_int;
@@ -447,8 +447,8 @@ bool PhenotypeMap::is_int(_uint ind) {
  * \returns	True if the parameter at index ind stores an unsigned integer (t_uint) and false otherwise.
  */
 bool PhenotypeMap::is_uint(_uint ind) {
-  if (ind > n_dims) {
-    error(1, "Invalid index %d", ind);
+  if (ind >= n_dims) {
+    error(CODE_ARG_INVALID, "Invalid index %d", ind);
     return false;
   }
   return vars[ind].type == t_uint;
@@ -458,8 +458,8 @@ bool PhenotypeMap::is_uint(_uint ind) {
  * \returns	True if the parameter at index ind stores a bitstream (t_bitstream) and false otherwise.
  */
 bool PhenotypeMap::is_bitstream(_uint ind) {
-  if (ind > n_dims) {
-    error(1, "Invalid index %d", ind);
+  if (ind >= n_dims) {
+    error(CODE_ARG_INVALID, "Invalid index %d", ind);
     return false;
   }
   return vars[ind].type == t_bitstream;

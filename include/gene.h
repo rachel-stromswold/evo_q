@@ -46,6 +46,7 @@ public:
   unsigned int get_N() { return N; }
   unsigned int get_n_bits() { return N_BITS; }
   Chromosome& operator=(Chromosome& other);
+  bool operator==(Chromosome& other);
 
   void reset();
 
@@ -55,7 +56,7 @@ public:
   void mutate(ArgStore* args);
   void slow_mutate(ArgStore* args);
   //set the gene to a new completely random value
-  void randomize(ArgStore* args);
+  void randomize(PhenotypeMap* al, ArgStore* args);
   //sets the gene to encode the value specified by min, max
   void set_to_num(PhenotypeMap* al, _uint ind, double value);
   void set_to_int(PhenotypeMap* al, _uint ind, int value);

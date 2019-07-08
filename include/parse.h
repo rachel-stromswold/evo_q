@@ -14,6 +14,7 @@
 #define DEF_CROSSOVER_PROB	0.8
 #define DEF_MUTATE_PROB		  0.1
 #define DEF_HYPER_THRESH    0.8
+#define DEF_REPLACE_FRAC	0.5
 #define DEF_NUM_CROSSOVERS  1
 
 //flags
@@ -41,10 +42,13 @@ class ArgStore {
     size_t num_gens;
     int num_crossovers;
     double init_coup_var;
+//REMOVAL_CANDIDATE
     double init_coup_mean;
+//END REMOVAL CANDIDATE
     double crossover_prob;
     double mutate_prob;
     double hypermutation_threshold;
+    double replacement_fraction;
     std::string out_fname;
 
     bool activate = true;
@@ -86,6 +90,8 @@ class ArgStore {
     void set_mutate_prob(double x)		{ mutate_prob = x; }
     double get_hypermutation_threshold()	{ return hypermutation_threshold; }
     void set_hypermutation_threshold(double x)	{ hypermutation_threshold = x; }
+    double get_replacement_fraction()		{ return replacement_fraction; }
+    void set_replacement_fraction(double x)	{ replacement_fraction = x; }
     bool wait_for_con()				{ return flags & WAIT_CON; }
     void set_wait_for_con(bool b = true)	{ flags |= WAIT_CON * ((_uint)b); }
     bool verbose()				{ return flags & VERBOSE; }

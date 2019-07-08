@@ -71,7 +71,7 @@ private:
   double penalty_amt;
 public:
   TestProblemPenalties(double p_penalty_amt) : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1) {
-    map.initialize(1, Genetics::t_real);
+    map->initialize(1, Genetics::t_real);
     apply_penalty = true;
     penalty_amt = p_penalty_amt;
   }
@@ -88,7 +88,7 @@ public:
 class TestProblemSingle : public Genetics::Problem {
 public:
   TestProblemSingle() : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1) {
-    map.initialize(1, Genetics::t_real);
+    map->initialize(1, Genetics::t_real);
   }
   void evaluate_fitness(Genetics::Organism* org) {
     double x = org->read_real(0);
@@ -99,7 +99,7 @@ public:
 class TestProblemMulti : public Genetics::Problem {
 public:
   TestProblemMulti() : Genetics::Problem(NUM_BITS, NUM_CHROMS, NUM_OBJS) {
-    map.initialize(NUM_CHROMS, Genetics::t_real);
+    map->initialize(NUM_CHROMS, Genetics::t_real);
   }
   void evaluate_fitness(Genetics::Organism* org) {
     double x = org->read_real(0);
@@ -339,15 +339,15 @@ TEST_CASE( "Ensure that phenotype mappings are set up properly", "[PhenotypeMapp
 // =============================== POPULATION TEST CASES ===============================
 
 TEST_CASE ( "Organisms are correctly created and decoded", "[organisms]" ) {
-  Genetics::PhenotypeMap map_16(16);
-  Genetics::PhenotypeMap map_32(32);
-  Genetics::Organism template_16_bits_1_params(16, 1, &map_16);
-  Genetics::Organism template_32_bits_2_params(32, 2, &map_32);
+  std::shared_ptr<Genetics::PhenotypeMap> map_16 = std::make_shared<Genetics::PhenotypeMap>(16);
+  std::shared_ptr<Genetics::PhenotypeMap> map_32 = std::make_shared<Genetics::PhenotypeMap>(32);
+  Genetics::Organism template_16_bits_1_params(16, 1, map_16);
+  Genetics::Organism template_32_bits_2_params(32, 2, map_32);
   LCG generator;
 
   SECTION ( "The organism correctly sets and reads unsigned integers" ) {
-    map_16.initialize(1, Genetics::t_uint);
-    map_32.initialize(2, Genetics::t_uint);
+    map_16->initialize(1, Genetics::t_uint);
+    map_32->initialize(2, Genetics::t_uint);
     for (int i = 0; i < N_TRIALS; ++i) {
       int val = i - N_TRIALS/2;
       template_16_bits_1_params.set_int(0, val);
@@ -363,8 +363,8 @@ TEST_CASE ( "Organisms are correctly created and decoded", "[organisms]" ) {
     }
   }
   SECTION ( "The organism correctly sets and read reals" ) {
-    map_16.initialize(1, Genetics::t_real);
-    map_32.initialize(2, Genetics::t_real);
+    map_16->initialize(1, Genetics::t_real);
+    map_32->initialize(2, Genetics::t_real);
     for (int i = 0; i < N_TRIALS; ++i) {
       double val = generator.random_real();
       template_16_bits_1_params.set_real(0, val);
@@ -387,7 +387,7 @@ TEST_CASE ("ArgStore successfully parses a file") {
   TestProblemSingle prob;
   Genetics::Conv_Plateau plat_cut(1, 0.05, TEST_CONV_GEN / 2);
   Genetics::String conf_file("ga.conf");
-  Genetics::Population pop( NUM_BITS, 1, &(prob.map), conf_file);
+  Genetics::Population pop( NUM_BITS, 1, prob.map, conf_file);
 
   //ga.conf must be as follows for this to work:
   /*
@@ -413,13 +413,13 @@ TEST_CASE ("Populations are correctly created and data is successfully read", "[
 //  Genetics::ArgStore inst;
   Genetics::String conf_file("ga.conf");
 //  inst.initialize_from_file(conf_file.c_str());
-  Genetics::PhenotypeMap map(NUM_BITS);
-  map.initialize(NUM_CHROMS, Genetics::t_real);
-  map.set_range(0, -10, 10);
-  Genetics::Organism tmplt(NUM_BITS, NUM_OBJS, &map);
+  std::shared_ptr<Genetics::PhenotypeMap> map = std::make_shared<Genetics::PhenotypeMap>(NUM_BITS);
+  map->initialize(NUM_CHROMS, Genetics::t_real);
+  map->set_range(0, -10, 10);
+  Genetics::Organism tmplt(NUM_BITS, NUM_OBJS, map);
   tmplt.set_real(0, 4.6);
-  Genetics::Population pop_none(NUM_BITS, NUM_OBJS, &tmplt, &map, conf_file);
-  Genetics::Population pop_tmplt(NUM_BITS, NUM_OBJS, &map, conf_file);
+  Genetics::Population pop_none(NUM_BITS, NUM_OBJS, &tmplt, map, conf_file);
+  Genetics::Population pop_tmplt(NUM_BITS, NUM_OBJS, map, conf_file);
 
   SECTION ( "The header is read correctly" ) {
     Genetics::Vector<Genetics::String> pop_dat = pop_none.get_header();
@@ -451,7 +451,7 @@ TEST_CASE ("Penalties are applied properly", "[populations]") {
   double penalty_str = 4.0;
   TestProblemPenalties prob(penalty_str);
   Genetics::String conf_file("ga.conf");
-  Genetics::Population pop( NUM_BITS, 1, &(prob.map), conf_file);
+  Genetics::Population pop( NUM_BITS, 1, prob.map, conf_file);
   pop.evaluate(&prob);
 
   double fit_0 = pop.get_organism(0)->get_fitness(0);
@@ -466,7 +466,7 @@ TEST_CASE ("Penalties are applied properly", "[populations]") {
 TEST_CASE ("Simple evolution of a single objective converges to roughly appropriate result", "[populations]") {
   TestProblemSingle prob;
   Genetics::String conf_file("ga.conf");
-  Genetics::Population pop( NUM_BITS, 1, &(prob.map), conf_file);
+  Genetics::Population pop( NUM_BITS, 1, prob.map, conf_file);
   for (size_t i = 0; i < 100; ++i) {
     pop.evaluate(&prob);
     pop.iterate();
@@ -478,23 +478,24 @@ TEST_CASE ("Simple evolution of a single objective converges to roughly appropri
 TEST_CASE ("Simple evolution of a multi objective converges to roughly appropriate result", "[populations]") {
   TestProblemMulti prob;
   Genetics::String conf_file("ga.conf");
-  Genetics::Population_NSGAII pop( NUM_BITS, NUM_OBJS, &(prob.map), conf_file);
+  Genetics::Population_NSGAII pop( NUM_BITS, NUM_OBJS, prob.map, conf_file);
   bool converged = false;
   while (!converged) {
     pop.evaluate(&prob);
     converged = pop.iterate();
   }
-  int modulo = NUM_OBJS + prob.map.get_num_params() + 1;
+  int modulo = NUM_OBJS + prob.map->get_num_params() + 1;
   pop.evaluate(&prob);
   Genetics::Vector<Genetics::String> pop_dat = pop.get_pop_data();
+  size_t num_params = prob.map->get_num_params();
   for (size_t i = 0; modulo*(i + 1) - 1 < pop_dat.size(); ++i) {
     std::cout << "organism " << i
 	      << ", rank = " << pop_dat[modulo*i];
-    for (size_t j = 0; j < prob.map.get_num_params(); ++j) {
+    for (size_t j = 0; j < num_params; ++j) {
       std::cout << ", x_" << j << " = " << pop_dat[modulo*i + j + 1];
     }
     for (size_t j = 0; j < prob.N_OBJS; ++j) {
-      std::cout << ", fitness_" << j << " = " << pop_dat[modulo*i + j + prob.map.get_num_params() + 1];
+      std::cout << ", fitness_" << j << " = " << pop_dat[modulo*i + j + num_params + 1];
     }
     std::cout << std::endl;
   }
@@ -533,7 +534,7 @@ TEST_CASE ("Combine convergence checking and evolution", "[populations]") {
   TestProblemSingle prob;
   Genetics::Conv_Plateau plat_cut(1, 0.05, TEST_CONV_GEN / 2);
   Genetics::String conf_file("ga.conf");
-  Genetics::Population pop( NUM_BITS, 1, &(prob.map), conf_file);
+  Genetics::Population pop( NUM_BITS, 1, prob.map, conf_file);
 
   bool converged = false;
   int generation = 0;

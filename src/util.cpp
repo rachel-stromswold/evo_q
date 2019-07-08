@@ -83,6 +83,7 @@ void error (int code_class, String msg, ...) {
       last_str = &(message[i]);
     }
   }
+  iss << last_str << "\n";
   //fprintf(stderr, "%s", last_str);
   va_end(vl);
   //fprintf(stderr, "\n");
