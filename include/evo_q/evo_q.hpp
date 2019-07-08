@@ -21,9 +21,12 @@
 #define DEFAULT_STRING_SIZE 8
 #define DEFAULT_PRINT_SIZE  24
 
-#define CODE_ERROR  2
-#define CODE_FATAL  1
-#define CODE_WARN   0
+#define CODE_MISC		5
+#define CODE_ARG_INVALID	4
+#define CODE_ARG_RANGE  	3
+#define CODE_MATH_ERROR  	2
+#define CODE_WARN		1
+#define CODE_NONE		0
 
 //UTIL_H
 #define DEF_POP_SIZE            20
@@ -44,6 +47,11 @@
 //POPULATION_H
 #define BUF_SIZE      50
 #define DEF_SORT_PARAM    -3
+#define FLAG_NONE_SET	0
+#define FLAG_STATS_SET	1
+#define FLAG_DIST_SET	2
+#define FLAG_BEST_FOUND	4
+#define FLAG_FRONTS	8
 
 namespace Genetics {
 //UTIL_H
@@ -646,26 +654,26 @@ class ArgStore {
     
 //ORGANISM_H
     
-    class Organism;
-    
-    struct Result {
-        size_t index;
-        Vector<double> fit_vals;
-        String misc_str;
-    };
-    
-    class Problem {
-    public:
-        _uint N_BITS, N_PARAMS, N_OBJS;
-        PhenotypeMap map;
-        Vector<Result> result_list;
-        //  Problem() {std::cout << "Initializing problem...\n"; }
-        Problem(unsigned n_bits, unsigned n_params, int n_objs) : N_BITS(n_bits), N_PARAMS(n_params), N_OBJS(n_objs), map(n_bits) {}
-        
-        virtual void evaluate_fitness(Organism* org) {}
-        virtual void evaluate_fitness_async(size_t index, Chromosome genes) {}
-    };
-    
+class Organism;
+
+struct Result {
+  size_t index;
+  Vector<double> fit_vals;
+  String misc_str;
+};
+
+class Problem {
+public:
+  _uint N_BITS, N_PARAMS, N_OBJS;
+  std::shared_ptr<PhenotypeMap> map;
+  Vector<Result> result_list;
+//  Problem() {std::cout << "Initializing problem...\n"; }
+  Problem(unsigned n_bits, unsigned n_params, int n_objs) : N_BITS(n_bits), N_PARAMS(n_params), N_OBJS(n_objs), map(std::make_shared<PhenotypeMap>(n_bits)) {}
+
+  virtual void evaluate_fitness(Organism* org) {}
+  virtual void evaluate_fitness_async(size_t index, Chromosome genes) {}
+};
+
 class Organism {
 private:
   _uint N_BITS;
@@ -673,12 +681,12 @@ private:
 
   char output_stream[BUF_SIZE];
   Vector<double> fitness;
-  double penalty;
+  double penalty = 0.0;
   size_t output_len;
-  PhenotypeMap* al;
+  std::shared_ptr<PhenotypeMap> al;
 
 protected:
-  Chromosome* genes;
+  Chromosome genes;
   size_t n_nodes;
 
 public:
@@ -691,13 +699,21 @@ public:
   int rank;
   double distance;
 
+  Organism();
   Organism(int N_BITS, int N_OBJS, PhenotypeMap* p_al);
   Organism(int N_BITS, int N_OBJS, Chromosome p_genes, PhenotypeMap* p_al);
-  Organism(const Organism &obj);
-  Organism(Organism&& obj);
-  ~Organism();
+  Organism(int N_BITS, int N_OBJS, std::shared_ptr<PhenotypeMap> p_al);
+  Organism(int N_BITS, int N_OBJS, Chromosome p_genes, std::shared_ptr<PhenotypeMap> p_al);
+  //Organism(const Organism &obj);
+  //Organism(Organism&& obj);
+  //~Organism();
+  Organism copy();
 
-  Organism& operator=(Organism& obj);
+  //Organism& operator=(Organism& obj);
+  bool operator==(Organism& obj);
+  bool operator!=(Organism& obj);
+  bool operator>(Organism& obj);
+  bool operator<(Organism& obj);
 
   std::vector<Organism*> breed(ArgStore* args, Organism* par1);
   void reset();
@@ -718,8 +734,9 @@ public:
   void set_real(_uint i, double value);
   double read_real(_uint i);
   int read_int(_uint i);
+  _uint read_uint(_uint i);
   bool dominates(Organism* other);
-  String get_chromosome_string(_uint i) { return genes->get_string(al, i); }
+  String get_chromosome_string(_uint i) { return genes.get_string(al.get(), i); }
   char* get_output_stream() { return output_stream; }
   size_t get_output_len() {return output_len; }
   int get_rank() { return rank; }
@@ -747,14 +764,16 @@ class Population {
     _uint N_BITS;
     _uint N_PARAMS;
     _uint N_OBJS;
+    _uint generation = 0;
+    _uchar calculated_flags = 0;
   protected:
     size_t sort_org_calls = 0;
     size_t carryover_num;//How many of the best individuals carry over to the next generation 
+
     //OWNED POINTERS
-    double* max_fitness = NULL;
-    double* min_fitness = NULL;
+    FitnessStats* pop_stats = NULL;
     //EXTERNALLY MANAGED POINTERS
-    PhenotypeMap* map = NULL;
+    std::shared_ptr<PhenotypeMap> map;
     
     ArgStore args;
     //all offspring from the previous generation
@@ -766,8 +785,8 @@ class Population {
     size_t survivors_num;
     std::vector<std::shared_ptr<Organism>> survivors;
     //guarantee that the best organism appears in the next generation
-    size_t best_organism_ind;
-    std::shared_ptr<Organism> best_organism;
+//    size_t best_organism_ind;
+    Organism best_organism;
     //labels for generating data output
 //    Vector<String> var_labels;
 //    Vector<String> obj_labels;
@@ -777,19 +796,24 @@ class Population {
     //cull in place is slightly faster but less accurate than the standard cull method
     bool cull_in_place();
     //cull first sorts the organisms and selects them based on the ratio of their relative fitness to the total relative fitness
-    bool cull();
+    bool cull(); 
     void breed_shuffle();
     void breed();
     void find_best_organism();
+    void calculate_distances();
+    void hypermutate();
 
   public:
     Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname = "");
     Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname = "");
+    Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, String conf_fname = "");
+    Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map, String conf_fname = "");
     ~Population();
     Population(Population& o);
     Population& operator=(Population& o);
     Population(Population&& o);
 
+    void set_convergence_type(ConvergenceCriteria* conv);
     void resize_population(_uint new_size);
     void set_n_survivors(_uint new_size);
     void evaluate(Problem* prob);
@@ -807,8 +831,17 @@ class Population {
     Vector<String> get_header();
     Vector<String> get_pop_data();
 
-    double get_min_fitness(_uint i = 0) { return min_fitness[i]; }
-    double get_max_fitness(_uint i = 0) { return max_fitness[i]; }
+    FitnessStats get_pop_stats(_uint i = 0) { return pop_stats[i]; }
+//DEPRECATION CANDIDATE
+    double get_min_fitness(_uint i = 0) {
+#warning "get_min_fitness is deprecated, use get_pop_stats instead"
+      return pop_stats[i].min;
+    }
+    double get_max_fitness(_uint i = 0) {
+#warning "get_max_fitness is deprecated, use get_pop_stats instead"
+      return pop_stats[i].max;
+    }
+//END DEPRECATION_CANDIDATE
 
     void set_var_label(_uint ind, String val); 
     void set_obj_label(_uint ind, String val);
@@ -822,35 +855,37 @@ class Population {
 
 class Population_NSGAII : public Population {
   private:
+    _uchar calculated_flags = FLAG_NONE_SET;
     size_t survivors_num;
     //the ngsa alternative to elitism
     std::vector<std::vector<std::shared_ptr<Organism>>> pareto_fronts;
     void hypermutate();
+    void update_fitness_ranges(Organism* org, size_t i);
+    _uint generation = 0;
+    void make_fronts(std::vector<std::shared_ptr<Organism>>* cmb_arr);
 
   public:
-    Population_NSGAII(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname) :
-      Population(pn_bits, pn_objs, p_map, conf_fname) {}
-    Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname) :
-      Population(pn_bits, pn_objs, tmplt, p_map, conf_fname) {}
+    Population_NSGAII(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname = "");
+    Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname = "");
+    Population_NSGAII(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, String conf_fname = "");
+    Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map, String conf_fname = "");
     ~Population_NSGAII();
 
     void evaluate(Problem* prob);
-    PhenotypeMap* get_map() { return this->map; }
+    std::shared_ptr<PhenotypeMap> get_map() { return this->map; }
 
     //cull in place is slightly faster but less accurate than the standard cull method
     bool cull_in_place();
     //cull first sorts the organisms and selects them based on the ratio of their relative fitness to the total relative fitness
     void cull();
     void breed();
+    void calculate_pop_stats();
     bool iterate(ConvergenceCriteria* conv = NULL);
 
     _uint get_n_pareto_fronts() {
       return pareto_fronts.size();
     }
-    std::vector<std::shared_ptr<Organism>> get_pareto_front(_uint i) {
-      if (pareto_fronts.size() == 0) { error(1, "The population has not yet been evaluated."); }
-      return pareto_fronts[i];
-    }
+    std::vector<std::shared_ptr<Organism>> get_pareto_front(_uint i);
 
     Vector<String> get_header();
     Vector<String> get_pop_data();
