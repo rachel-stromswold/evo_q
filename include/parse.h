@@ -6,7 +6,7 @@
 
 #define DEF_POP_SIZE		    20
 #define DEF_BREED_POP_SIZE	6
-#define DEF_NUM_GENS		    10
+#define DEF_NUM_GENS		    50
 #define DEF_COUPLING_BITS	  16
 #define DEF_MAX_COUPLING	  100
 #define DEF_COUP_VAR		    0.25
@@ -98,7 +98,7 @@ class ArgStore {
     void set_verbose(bool b = true)		{ flags |= VERBOSE * ((_uint)b); }
     std::string get_out_fname() 		{ return out_fname; }
 };
-    
+
 }
 
 #endif //PARSE_H

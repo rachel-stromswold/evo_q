@@ -20,6 +20,16 @@
 #define FLAG_BEST_FOUND	4
 #define FLAG_FRONTS	8
 
+#if __cplusplus >= 201402L
+#define DEPRECATED(msg) [[ deprecated(msg) ]]
+#elif defined(__GNUC__)
+#define DEPRECATED(msg) __attribute__ ((deprecated(msg)))
+#elif defined(_MSC_VER)
+#define DEPRECATED(msg) __declspec(deprecated(msg))
+#else
+#define DEPRECATED(msg) 
+#endif
+
 namespace Genetics {
 
 struct FitnessStats {
@@ -107,16 +117,12 @@ class Population {
     Vector<String> get_pop_data();
 
     FitnessStats get_pop_stats(_uint i = 0) { return pop_stats[i]; }
-//DEPRECATION CANDIDATE
-    double get_min_fitness(_uint i = 0) {
-#warning "get_min_fitness is deprecated, use get_pop_stats instead"
+    DEPRECATED("get_min_fitness is deprecated, use get_pop_stats instead") double get_min_fitness(_uint i = 0) {
       return pop_stats[i].min;
     }
-    double get_max_fitness(_uint i = 0) {
-#warning "get_max_fitness is deprecated, use get_pop_stats instead"
+    DEPRECATED("get_max_fitness is deprecated, use get_pop_stats instead") double get_max_fitness(_uint i = 0) {
       return pop_stats[i].max;
     }
-//END DEPRECATION_CANDIDATE
 
     void set_var_label(_uint ind, String val); 
     void set_obj_label(_uint ind, String val);

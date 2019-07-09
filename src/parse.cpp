@@ -122,7 +122,7 @@ void ArgStore::initialize_from_file(const char* fname) {
     val = strtok_r(NULL, ":=", &saveptr);
     if (strcmp(token, "population_size") == 0) {
       pop_size = atoi(val);
-    } else if (strcmp(token, "tournament_size") == 0 || strcmp(str, "breed_pop_size:") == 0){
+    } else if (strcmp(token, "tournament_size") == 0 || strcmp(token, "breed_pop_size") == 0){
       breed_pop_size = atoi(val);
     } else if (strcmp(token, "num_generations") == 0) {
       num_gens = atoi(val);

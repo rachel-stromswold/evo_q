@@ -162,12 +162,18 @@ uConv_Plateau::uConv_Plateau(_uint N_OBJS, Vector<double> p_fitness_thresholds, 
 }
 
 bool uConv_Plateau::evaluate_convergence(FitnessStats* stats) {
+  bool improved = false;
   for (_uint i = 0; i < N_OBJS; ++i) {
-    if (stats[i].max - prev_fitness[i] < fitness_thresholds[i] &&
-	prev_fitness[i] - stats[i].max < fitness_thresholds[i]) {
-      gens_without_improvement++;
-    } else {
-      gens_without_improvement = 0;
+    if (stats[i].max - prev_fitness[i] > fitness_thresholds[i]) {
+      improved = true;
+      break;
+    }
+  }
+  if (!improved) {
+    gens_without_improvement++;
+  } else {
+    gens_without_improvement = 0;
+    for (_uint i = 0; i < N_OBJS; ++i) {
       prev_fitness[i] = stats[i].max;
     }
   }

@@ -540,12 +540,10 @@ class ArgStore {
 //REMOVAL CANDIDATE
     std::binomial_distribution<unsigned char>* long_bin;
     std::binomial_distribution<unsigned char>* short_bin;
-    std::bernoulli_distribution* bern;
+    std::bernoulli_distribution* bern_mut;
+    std::bernoulli_distribution* bern_cross;
     unsigned int short_bin_n = 0;
 //END REMOVAL CANDIDATE
-
-    ArgStore(ArgStore const&){};
-    ArgStore& operator=(ArgStore const& arg) {return *this;};
 
     unsigned flags;
     size_t pop_size;
@@ -553,9 +551,13 @@ class ArgStore {
     size_t num_gens;
     int num_crossovers;
     double init_coup_var;
+//REMOVAL_CANDIDATE
     double init_coup_mean;
+//END REMOVAL CANDIDATE
+    double crossover_prob;
     double mutate_prob;
     double hypermutation_threshold;
+    double replacement_fraction;
     std::string out_fname;
 
     bool activate = true;
@@ -563,6 +565,8 @@ class ArgStore {
 
   public: 
     ArgStore();
+    ArgStore(const ArgStore& o);
+    ArgStore(ArgStore&& o);
     ~ArgStore();
 
     void initialize_from_args(size_t argc, char** argv);
@@ -572,7 +576,8 @@ class ArgStore {
     std::mt19937& get_generator() { return generator; }
 //REMOVAL CANDIDATE
     unsigned int sample_binomial(unsigned int n);
-    bool sample_bernoulli();
+    bool random_mutation();
+    bool random_crossover();
     void print_data();
 //END REMOVAL CANDIDATE
 
@@ -581,17 +586,21 @@ class ArgStore {
     size_t get_survivors()			{ return breed_pop_size; }
     void set_survivors(size_t n)		{ breed_pop_size = n; }
     size_t get_num_gens() 			{ return num_gens; }
-    void set_num_gens(size_t n) 		{ num_gens; }
+    void set_num_gens(size_t n) 		{ num_gens = n; }
     int get_num_crossovers() 			{ return num_crossovers; }
     void set_num_crossovers(int n) 		{ num_crossovers = n; }
     double get_init_coup_var()			{ return init_coup_var; }
     void set_init_coup_var(double x)		{ init_coup_var = x; }
     double get_init_coup_mean() 		{ return init_coup_mean; }
     void set_init_coup_mean(double x) 		{ init_coup_mean = x; }
+    double get_crossover_prob()			{ return crossover_prob; }
+    void set_crossover_prob(double x)		{ crossover_prob = x; }
     double get_mutate_prob()			{ return mutate_prob; }
     void set_mutate_prob(double x)		{ mutate_prob = x; }
     double get_hypermutation_threshold()	{ return hypermutation_threshold; }
     void set_hypermutation_threshold(double x)	{ hypermutation_threshold = x; }
+    double get_replacement_fraction()		{ return replacement_fraction; }
+    void set_replacement_fraction(double x)	{ replacement_fraction = x; }
     bool wait_for_con()				{ return flags & WAIT_CON; }
     void set_wait_for_con(bool b = true)	{ flags |= WAIT_CON * ((_uint)b); }
     bool verbose()				{ return flags & VERBOSE; }
