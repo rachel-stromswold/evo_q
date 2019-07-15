@@ -385,7 +385,7 @@ TEST_CASE ( "Organisms are correctly created and decoded", "[organisms]" ) {
 
 TEST_CASE ("ArgStore successfully parses a file") {
   TestProblemSingle prob;
-  Genetics::Conv_Plateau plat_cut(1, 0.05, TEST_CONV_GEN / 2);
+  Genetics::Conv_Plateau plat_cut(0.05, TEST_CONV_GEN / 2);
   Genetics::String conf_file("ga.conf");
   Genetics::Population pop( NUM_BITS, 1, prob.map, conf_file);
 
@@ -502,9 +502,9 @@ TEST_CASE ("Simple evolution of a multi objective converges to roughly appropria
 }
 
 TEST_CASE ("Convergence functions work", "[populations]") {
-  Genetics::Conv_VarianceCutoff var_cut(2, 0.011);
-  Genetics::Conv_RangeCutoff range_cut(2, 0.11);
-  Genetics::Conv_Plateau plat_cut(2, 0.1, TEST_CONV_GEN / 2);
+  Genetics::Conv_VarianceCutoff var_cut(0.011);
+  Genetics::Conv_RangeCutoff range_cut(0.11);
+  Genetics::Conv_Plateau plat_cut(0.1, TEST_CONV_GEN / 2);
   Genetics::FitnessStats s[2];
   //note that 1/n - 1/(n+1) = 1/(n^2 + n) < 1/10 => n^2 + n > 10 => n >= 3
   for (unsigned i = 1; i < TEST_CONV_GEN + 1; ++i) {
@@ -518,21 +518,21 @@ TEST_CASE ("Convergence functions work", "[populations]") {
     s[1].min = 1.0 - 2.0 / (i*i);
     if (i < TEST_CONV_GEN) {
       INFO("i = " << i << " var_1 = " << s[0].var << " var_2 = " << s[1].var)
-      REQUIRE( !var_cut.evaluate_convergence(s) );
+      REQUIRE( !var_cut.evaluate_convergence(2, s) );
       INFO("i = " << i << " range_1 = " << s[0].max - s[0].min << " range_2 = " << s[1].max - s[1].min)
-      REQUIRE( !range_cut.evaluate_convergence(s) );
+      REQUIRE( !range_cut.evaluate_convergence(2, s) );
     } else {
       INFO("i = " << i << " var_1 = " << s[0].var << " var_2 = " << s[1].var)
-      REQUIRE( var_cut.evaluate_convergence(s) );
+      REQUIRE( var_cut.evaluate_convergence(2, s) );
       INFO("i = " << i << " range_1 = " << s[0].max - s[0].min << " range_2 = " << s[1].max - s[1].min)
-      REQUIRE( range_cut.evaluate_convergence(s) );
+      REQUIRE( range_cut.evaluate_convergence(2, s) );
     }
   }
 }
 
 TEST_CASE ("Combine convergence checking and evolution", "[populations]") {
   TestProblemSingle prob;
-  Genetics::Conv_Plateau plat_cut(1, 0.05, TEST_CONV_GEN / 2);
+  Genetics::Conv_Plateau plat_cut(0.05, TEST_CONV_GEN / 2);
   Genetics::String conf_file("ga.conf");
   Genetics::Population pop( NUM_BITS, 1, prob.map, conf_file);
 

@@ -28,6 +28,18 @@ private:
     std::string message = "";
 };
 
+class ConvergenceWrapper : public ge::ConvergenceCriteria {
+  //using ConvergenceCriteria::ConvergenceCriteria;
+  bool evaluate_convergence(ge::FitnessStats* stats) {
+    PYBIND11_OVERLOAD_PURE(
+	bool,			/** return type **/
+	ge::ConvergenceCriteria,/** parent class**/
+	evaluate_convergence,	/** function to override**/
+	stats			/** argument(s) **/
+    );
+  }
+};
+
 class PythonProblem;
 
 class OrganismWrapper {
@@ -64,6 +76,7 @@ public:
   PopulationWrapper(_uint N_BITS, _uint N_OBJS, ge::Problem* p_prob, ge::Organism* tmplt, std::shared_ptr<ge::PhenotypeMap> map, ge::String conf_file);
   void evaluate();
   void iterate();
+  void run(ge::ConvergenceCriteria* convp);
   OrganismWrapper* get_parent(int ind);
   py::list get_best(_uint i = 0);
   py::list get_parents();

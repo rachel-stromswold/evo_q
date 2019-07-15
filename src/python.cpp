@@ -164,6 +164,25 @@ void PopulationWrapper::iterate() {
   }
 }
 
+void PopulationWrapper::run(ge::ConvergenceCriteria* convp) {
+  /*ConvergenceCriteria* convp = NULL;
+  if (conv != NULL) {
+    convp = conv->get();
+  }*/
+  size_t gen = 0;
+  bool converged = false;
+  while ( !converged && gen < pop->get_args().get_num_gens() ) {
+    if (pop->get_n_objs() > 1) {
+      converged = ((Genetics::Population_NSGAII*)pop)->iterate(convp);
+      ((Genetics::Population_NSGAII*)pop)->evaluate(prob);
+    } else {
+      converged = pop->iterate(convp);
+      pop->evaluate(prob);
+    }
+    ++gen;
+  }
+}
+
 // ============================= PYTHON_PROBLEM =============================
 
 void PythonProblem::evaluate_fitness(Genetics::Organism* org) {
@@ -281,6 +300,7 @@ PYBIND11_MODULE(evo_p, m) {
   py::class_<PopulationWrapper>(m, "Population")
       .def("evaluate", &PopulationWrapper::evaluate)
       .def("iterate", &PopulationWrapper::iterate, py::return_value_policy::take_ownership)
+      .def("run", &PopulationWrapper::run)
       .def("get_best", &PopulationWrapper::get_best, py::return_value_policy::reference_internal, py::arg("i") = 0)
       .def("get_max_fitness", &PopulationWrapper::get_max_fitness, py::arg("i") = 0)
       .def("get_min_fitness", &PopulationWrapper::get_min_fitness, py::arg("i") = 0)

@@ -11,23 +11,23 @@ Population::Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String
     args.initialize_from_file(conf_fname.c_str());
   }
   pop_stats = (FitnessStats*)malloc(sizeof(FitnessStats)*N_OBJS);
-  this->survivors_num = args.get_survivors();
-  this->offspring_num = args.get_pop_size();
-  if (this->offspring_num % 2 == 0) {
-    this->offspring_num++;
+  survivors_num = args.get_survivors();
+  offspring_num = args.get_pop_size();
+  if (offspring_num % 2 == 0) {
+    offspring_num++;
   }
   //we need to keep the old and new generation in separate arrays to avoid overwriting data
-  this->offspring.insert(this->offspring.end(), this->offspring_num, std::shared_ptr<Organism>(NULL)); 
+  offspring.insert(offspring.end(), offspring_num, std::shared_ptr<Organism>(NULL)); 
 
   //initally fill up the offspring randomly
-  for (size_t i = 0; i < this->offspring_num; ++i) {
-    this->old_gen.push_back(std::make_shared<Organism>(N_BITS, N_OBJS, map));
-    this->old_gen[i]->randomize(&args);
+  for (size_t i = 0; i < offspring_num; ++i) {
+    old_gen.push_back(std::make_shared<Organism>(N_BITS, N_OBJS, map));
+    old_gen[i]->randomize(&args);
   }
 
   for (_uint i = 0; i < N_OBJS; ++i) {
-    this->pop_stats[i].max = -std::numeric_limits<double>::infinity();
-    this->pop_stats[i].min = std::numeric_limits<double>::infinity();
+    pop_stats[i].max = -std::numeric_limits<double>::infinity();
+    pop_stats[i].min = std::numeric_limits<double>::infinity();
   }
 
   N_PARAMS = map->get_num_params();
@@ -663,7 +663,7 @@ bool Population::iterate(ConvergenceCriteria* conv) {
   generation++;
   if (conv) {
   //TODO: implement a binary private member variable that tracks whether sorting needs to be performed for the sake of efficiency
-    return conv->evaluate_convergence(pop_stats);
+    return conv->evaluate_convergence(1, pop_stats);
   } else {
     return (generation < args.get_num_gens());
   }
@@ -1104,7 +1104,7 @@ bool Population_NSGAII::iterate(ConvergenceCriteria* conv) {
   breed();
   if (conv) {
     calculate_pop_stats();
-    return conv->evaluate_convergence(pop_stats);
+    return conv->evaluate_convergence(get_n_objs(), pop_stats);
   } else {
     generation++;
     return (generation > args.get_num_gens());
