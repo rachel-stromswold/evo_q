@@ -76,12 +76,16 @@ bool Conv_Plateau::evaluate_convergence(_uint N_OBJS, FitnessStats* stats) {
       max_fitness[i] = stats[i].max;
     }
     if (prev_fitness[i] != 0) {
-      max_rel /= prev_fitness[i];
+      //ensure that max_rel is greater than or equal to 1
+      if (stats[i].max < 0) {
+	max_rel = prev_fitness[i] / stats[i].max;
+      } else {
+	max_rel /= prev_fitness[i];
+      }
     } else {
-      max_rel += 1.0;
+      max_rel = 1.0;
     }
-    if (max_rel - 1.0 >= fitness_threshold ||
-	1.0 - max_rel >= fitness_threshold) {
+    if (max_rel - 1.0 >= fitness_threshold) {
       improved = true;
       gens_without_improvement = 0;
       prev_fitness[i] = stats[i].max;

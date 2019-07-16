@@ -4,7 +4,7 @@
 #include "population.h"
 
 #ifndef MIN_CUTOFF
-#define MIN_CUTOFF	0.01
+#define MIN_CUTOFF	0.0001
 #endif
 
 namespace Genetics {
