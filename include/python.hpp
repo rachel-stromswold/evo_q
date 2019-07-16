@@ -4,6 +4,7 @@
 #include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
 #include "population.h"
+#include "convergence.h"
 
 #define POP_SINGLE	1
 #define POP_NSGAII	2
@@ -30,12 +31,13 @@ private:
 
 class ConvergenceWrapper : public ge::ConvergenceCriteria {
   //using ConvergenceCriteria::ConvergenceCriteria;
-  bool evaluate_convergence(ge::FitnessStats* stats) {
+  bool evaluate_convergence(_uint N_OBJS, ge::FitnessStats* stats) {
     PYBIND11_OVERLOAD_PURE(
 	bool,			/** return type **/
 	ge::ConvergenceCriteria,/** parent class**/
 	evaluate_convergence,	/** function to override**/
-	stats			/** argument(s) **/
+	N_OBJS,			/** argument(s) **/
+	stats
     );
   }
 };
@@ -69,14 +71,14 @@ private:
   ge::Problem* prob;
   size_t parent_ind;
   size_t child_ind;
-  unsigned char pop_type;
+//  unsigned char pop_type;
 
 public:
   PopulationWrapper(_uint N_BITS, _uint N_OBJS, ge::Problem* p_prob, std::shared_ptr<ge::PhenotypeMap> map, ge::String conf_file);
   PopulationWrapper(_uint N_BITS, _uint N_OBJS, ge::Problem* p_prob, ge::Organism* tmplt, std::shared_ptr<ge::PhenotypeMap> map, ge::String conf_file);
   void evaluate();
   void iterate();
-  void run(ge::ConvergenceCriteria* convp);
+  py::dict run(ge::ConvergenceCriteria* convp, bool store_intermediate);
   OrganismWrapper* get_parent(int ind);
   py::list get_best(_uint i = 0);
   py::list get_parents();

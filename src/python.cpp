@@ -87,10 +87,10 @@ py::list OrganismWrapper::get_phenotype() {
 PopulationWrapper::PopulationWrapper(_uint N_BITS, _uint N_OBJS, Genetics::Problem* p_prob, std::shared_ptr<Genetics::PhenotypeMap> map, ge::String conf_file) {
   if (N_OBJS <= 1) {
     pop = new ge::Population(N_BITS, N_OBJS, map, conf_file);
-    pop_type = POP_SINGLE;
+//    pop_type = POP_SINGLE;
   } else {
     pop = new ge::Population_NSGAII(N_BITS, N_OBJS, map, conf_file);
-    pop_type = POP_NSGAII;
+//    pop_type = POP_NSGAII;
   }
   prob = p_prob;
 }
@@ -99,10 +99,10 @@ PopulationWrapper::PopulationWrapper(_uint N_BITS, _uint N_OBJS, ge::Problem* p_
 {
   if (N_OBJS <= 1) {
     pop = new ge::Population(N_BITS, N_OBJS, map, conf_file);
-    pop_type = POP_SINGLE;
+//    pop_type = POP_SINGLE;
   } else {
     pop = new ge::Population_NSGAII(N_BITS, N_OBJS, map, conf_file);
-    pop_type = POP_NSGAII;
+//    pop_type = POP_NSGAII;
   }
   prob = p_prob;
 }
@@ -113,7 +113,7 @@ OrganismWrapper* PopulationWrapper::get_parent(int ind) {
 
 py::list PopulationWrapper::get_best(_uint i) {
   py::list ret;
-  if (pop_type == POP_SINGLE) {
+  if (pop->get_n_objs() <= 1) {
     std::shared_ptr<Genetics::Organism> best = pop->get_best_organism();
     if (!best) {
       throw std::runtime_error("Couldn't find best organism, perhaps no evaluations have been performed?");
@@ -164,23 +164,85 @@ void PopulationWrapper::iterate() {
   }
 }
 
-void PopulationWrapper::run(ge::ConvergenceCriteria* convp) {
+py::dict PopulationWrapper::run(ge::ConvergenceCriteria* criteria, bool store_intermediate) {
   /*ConvergenceCriteria* convp = NULL;
   if (conv != NULL) {
     convp = conv->get();
   }*/
   size_t gen = 0;
   bool converged = false;
+  py::list solutions;
+  py::list fitnesses;
   while ( !converged && gen < pop->get_args().get_num_gens() ) {
     if (pop->get_n_objs() > 1) {
-      converged = ((Genetics::Population_NSGAII*)pop)->iterate(convp);
+      converged = ((Genetics::Population_NSGAII*)pop)->iterate(criteria);
       ((Genetics::Population_NSGAII*)pop)->evaluate(prob);
+      if (store_intermediate) {
+	//update the returned dictionary
+	py::list solutions_gen;
+	py::list fitnesses_gen;
+	std::vector<std::shared_ptr<ge::Organism>> par = ((ge::Population_NSGAII*)pop)->get_pareto_front(0);
+	for (_uint i = 0; i < par.size(); ++i) {
+	  solutions_gen.append( OrganismWrapper(par[i], prob) );
+	  py::list fitness_i;
+	  for (_uint j = 0; j < pop->get_n_objs(); ++j) {
+	    fitness_i.append( par[i]->get_fitness(j) );
+	  }
+	  fitnesses_gen.append( fitness_i );
+	}
+	solutions.append(solutions_gen);
+	fitnesses.append(fitnesses_gen);
+      }
     } else {
-      converged = pop->iterate(convp);
+      converged = pop->iterate(criteria);
       pop->evaluate(prob);
+
+      if (store_intermediate) {
+	//update the returned dictionary
+	std::shared_ptr<ge::Organism> best = pop->get_best_organism();
+	if (!best) {
+	  throw std::runtime_error("Couldn't find best organism after running.");
+	} else {
+	  solutions.append( OrganismWrapper(best, prob) );
+	  fitnesses.append( best->get_fitness() );
+	}
+      }
     }
     ++gen;
   }
+
+  py::dict ret;
+  ret["Generations"]=gen;
+  if (store_intermediate) {
+    ret["Solution"] = solutions;
+    ret["Fitness"] = fitnesses;
+  } else {
+    if (pop->get_n_objs() <= 1) {
+      std::shared_ptr<ge::Organism> best = pop->get_best_organism();
+      if (!best) {
+	throw std::runtime_error("Couldn't find best organism after running.");
+      } else {
+	ret["Solution"] = OrganismWrapper(best, prob);
+	ret["Fitness"] = best->get_fitness();
+      }
+    } else {
+      py::list solutions;
+      py::list fitnesses;
+      std::vector<std::shared_ptr<ge::Organism>> par = ((ge::Population_NSGAII*)pop)->get_pareto_front(0);
+      for (_uint i = 0; i < par.size(); ++i) {
+	solutions.append( OrganismWrapper(par[i], prob) );
+	py::list fitness_i;
+	for (_uint j = 0; j < pop->get_n_objs(); ++j) {
+	  fitness_i.append( par[i]->get_fitness(j) );
+	}
+	fitnesses.append( fitness_i );
+      }
+      ret["Solution"] = solutions;
+      ret["Fitness"] = fitnesses;
+    }
+  }
+ 
+  return ret;
 }
 
 // ============================= PYTHON_PROBLEM =============================
@@ -297,10 +359,23 @@ PYBIND11_MODULE(evo_p, m) {
       .def("set_fitness", (void (OrganismWrapper::*)(double)) &OrganismWrapper::set_fitness)
       .def("set_fitness", (void (OrganismWrapper::*)(py::list)) &OrganismWrapper::set_fitness)
       .def("get_phenotype", &OrganismWrapper::get_phenotype);
+  py::class_<Genetics::ConvergenceCriteria, ConvergenceWrapper> conv(m, "ConvergenceCriteria");
+  conv
+      .def(py::init<>())
+      .def("evaluate_convergence", &Genetics::ConvergenceCriteria::evaluate_convergence);
+  py::class_<Genetics::Conv_VarianceCutoff>(m, "VarianceCutoff", conv)
+      .def(py::init<double>())
+      .def("evaluate_convergence", &Genetics::Conv_VarianceCutoff::evaluate_convergence);
+  py::class_<Genetics::Conv_RangeCutoff>(m, "RangeCutoff", conv)
+      .def(py::init<double>())
+      .def("evaluate_convergence", &Genetics::Conv_RangeCutoff::evaluate_convergence);
+  py::class_<Genetics::Conv_Plateau>(m, "PlateauCutoff", conv)
+      .def(py::init<double, Genetics::_uint>())
+      .def("evaluate_convergence", &Genetics::Conv_Plateau::evaluate_convergence);
   py::class_<PopulationWrapper>(m, "Population")
       .def("evaluate", &PopulationWrapper::evaluate)
       .def("iterate", &PopulationWrapper::iterate, py::return_value_policy::take_ownership)
-      .def("run", &PopulationWrapper::run)
+      .def("run", &PopulationWrapper::run, py::arg("criteria") = NULL, py::arg("store_intermediate") = false)
       .def("get_best", &PopulationWrapper::get_best, py::return_value_policy::reference_internal, py::arg("i") = 0)
       .def("get_max_fitness", &PopulationWrapper::get_max_fitness, py::arg("i") = 0)
       .def("get_min_fitness", &PopulationWrapper::get_min_fitness, py::arg("i") = 0)
