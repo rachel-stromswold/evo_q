@@ -422,9 +422,10 @@ private:
   _uint n_;
   _uint k_;
   std::uniform_int_distribution<_uint> dist;
+  bool replace;
 
 public:
-  SampleDraw(_uint p_n, _uint p_k);
+  SampleDraw(_uint p_n, _uint p_k, bool replace=false);
 
   void reset() { dist.reset(); }
   _uint n() { return n_; }
@@ -434,23 +435,27 @@ public:
   Vector<_uint> operator()(Generator& g) {
     Vector<_uint> ret(k_, 0);
     for (_uint i = 0; i < k_; ++i) {
-      _uint x = dist( g ) % (n_ - i);
-      bool append = true;
-      for (_uint j = 0; j < i; ++j) {
-        if (x >= ret[j]) {
-          ++x;
-        } else {
-          //move everything up to maintain a proper sorting
-          for (_uint l = i; l > j; --l) {
-            ret[l] = ret[l - 1];
-          }
-          ret[j] = x;
-          append = false;
-          break;
-        }
-      }
-      if (append) {
-        ret[i] = x;
+      if (replace) {
+	ret[i] = dist( g) % n_;
+      } else {
+	_uint x = dist( g ) % (n_ - i);
+	bool append = true;
+	for (_uint j = 0; j < i; ++j) {
+	  if (x >= ret[j]) {
+	    ++x;
+	  } else {
+	    //move everything up to maintain a proper sorting
+	    for (_uint l = i; l > j; --l) {
+	      ret[l] = ret[l - 1];
+	    }
+	    ret[j] = x;
+	    append = false;
+	    break;
+	  }
+	}
+	if (append) {
+	  ret[i] = x;
+	}
       }
     }
     return ret;

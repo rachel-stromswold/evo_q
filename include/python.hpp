@@ -106,6 +106,7 @@ public:
   void set_crossover_prob(double x)	{ pop->get_args().set_crossover_prob(x); }
   double get_hypermutation_threshold()	{ return pop->get_args().get_hypermutation_threshold(); }
   void set_hypermutation_threshold(double x)	{ pop->get_args().set_hypermutation_threshold(x); }
+  void set_selection(std::string str);
 //  std::shared_ptr<OrganismWrapper>
 
 //  const PopulationWrapper* get_begin() { parent_ind = 0; return this; }

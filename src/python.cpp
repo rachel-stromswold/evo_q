@@ -245,6 +245,18 @@ py::dict PopulationWrapper::run(ge::ConvergenceCriteria* criteria, bool store_in
   return ret;
 }
 
+void PopulationWrapper::set_selection(std::string str) {
+  if (str == "tournament") {
+    pop->get_args().set_selection_type(SELECT_TOURNAMENT);
+  } else if (str == "roulette") {
+    pop->get_args().set_selection_type(SELECT_ROULETTE);
+  } else if (str == "roulette-pool") {
+    pop->get_args().set_selection_type(SELECT_ROULETTE_POOL);
+  } else {
+    std::cerr << "Unrecognized selection type " << str << std::endl;
+  }
+}
+
 // ============================= PYTHON_PROBLEM =============================
 
 void PythonProblem::evaluate_fitness(Genetics::Organism* org) {
@@ -399,7 +411,8 @@ PYBIND11_MODULE(evo_p, m) {
       .def("get_crossover_prob", &PopulationWrapper::get_crossover_prob)
       .def("set_crossover_prob", &PopulationWrapper::set_crossover_prob)
       .def("get_hypermutation_threshold", &PopulationWrapper::get_hypermutation_threshold)
-      .def("set_hypermutation_threshold", &PopulationWrapper::set_hypermutation_threshold);
+      .def("set_hypermutation_threshold", &PopulationWrapper::set_hypermutation_threshold)
+      .def("set_selection_type", &PopulationWrapper::set_selection);
   py::class_<PythonProblem>(m, "Problem")
       .def(py::init<int, int, int>())
       .def("initialize_population", &PythonProblem::initialize_population, py::return_value_policy::take_ownership, py::arg("conf_file") = "")

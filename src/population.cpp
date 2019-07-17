@@ -310,21 +310,51 @@ void Population::evaluate(Problem* prob) {
     pop_stats[0].max = old_gen[0]->get_fitness(0);
     pop_stats[0].min = pop_stats[0].max;
    
-    for (size_t i = 1; i < this->offspring_num; ++i) {
-      old_gen[i]->apply_penalty(0);
-      if ( args.verbose() ) {
-        std::cout << "Now evaluating organism " << i << std::endl;
+    //calculate averages for organisms that appear twice in the population
+    if ( args.average_multiples() ) {
+      for (size_t i = 0; i < this->offspring_num; ++i) {
+	Vector<_uint> identical_set;
+	double avg_fit = 0.0;
+	for (size_t j = 0; j < this->offspring_num; ++j) {
+	  if ( i == j || *(old_gen[j]) == *(old_gen[i]) ) {
+	    identical_set.push_back(j);
+	    old_gen[j]->evaluate_fitness(prob);
+	    avg_fit += old_gen[j]->get_fitness(0);
+	  }
+	}
+	for (auto it = identical_set.begin(); it != identical_set.end(); ++it) {
+	  old_gen[*it]->set_fitness(0, avg_fit / identical_set.size());
+	}
       }
-      old_gen[i]->evaluate_fitness(prob);
+    } else {
+      for (size_t i = 1; i < this->offspring_num; ++i) {
+	old_gen[i]->apply_penalty(0);
+	if ( args.verbose() ) {
+	  std::cout << "Now evaluating organism " << i << std::endl;
+	}
 
-      // update the max and min fitnesses if we need to
-      if (old_gen[i]->get_fitness(0) > pop_stats[0].max && !old_gen[i]->penalized()) {
-        pop_stats[0].max = old_gen[i]->get_fitness(0);
-        best_org_ind = i;
-      }
+	bool found_identical = false;
+	for (size_t j = 0; j < i; ++j) {
+	  if (args.skip_multiples() && *(old_gen[j]) == *(old_gen[i]) ) {
+	    old_gen[i]->set_fitness( 0, old_gen[j]->get_fitness() );
+	    found_identical = true;
+	    break;
+	  } else if (args.perturb_multiples()) {
+	    old_gen[i]->mutate(&args);
+	  } else {
+	    old_gen[i]->evaluate_fitness(prob);
+	  }
+	}
 
-      if (old_gen[i]->get_fitness(0) < pop_stats[0].min) {
-        pop_stats[0].min = old_gen[i]->get_fitness(0);
+	// update the max and min fitnesses if we need to
+	if (old_gen[i]->get_fitness(0) > pop_stats[0].max && !old_gen[i]->penalized()) {
+	  pop_stats[0].max = old_gen[i]->get_fitness(0);
+	  best_org_ind = i;
+	}
+
+	if (old_gen[i]->get_fitness(0) < pop_stats[0].min) {
+	  pop_stats[0].min = old_gen[i]->get_fitness(0);
+	}
       }
     }
   } else {
@@ -643,9 +673,52 @@ void Population::breed() {
   offspring.swap(old_gen);
 }
 
+void Population::tournament_selection() {
+  _uint arena_size = args.get_survivors();
+  SampleDraw sampler(offspring_num, arena_size, args.tournament_replacement());
+  std::uniform_int_distribution<_uint> selector(0, offspring_num - 1);
+  std::vector<Organism*> children;
+
+  for (size_t i = 0; 2*i + 1 < offspring_num; ++i) {
+    Organism *first_parent, *second_parent;
+    std::vector<_uint> t1 = sampler( args.get_generator() );
+    std::vector<_uint> t2 = sampler( args.get_generator() );
+    first_parent = old_gen[t1[0]].get();
+    second_parent = old_gen[t2[0]].get();
+    for (size_t j = 1; j < t1.size(); ++j) {
+      if (old_gen[t1[j]]->get_fitness() > first_parent->get_fitness()) {
+        first_parent = old_gen[t1[0]].get();
+      }
+      if (old_gen[t2[j]]->get_fitness() > second_parent->get_fitness()) {
+        second_parent = old_gen[t2[0]].get();
+      }
+    }
+    //ensure that we don't use the same parent twice with reasonable probability
+    if (first_parent == second_parent) {
+      second_parent = old_gen[selector( args.get_generator() )].get();
+    }
+
+    children = first_parent->breed(&args, second_parent);
+    offspring[2*i] = std::shared_ptr<Organism>(children[0]);
+    offspring[2*i + 1] = std::shared_ptr<Organism>(children[1]);
+  }
+  if (offspring_num % 2 == 1) {
+    offspring[offspring_num - 1] = std::make_shared<Organism>(best_organism);
+  } else {
+    offspring[0] = std::make_shared<Organism>(best_organism);
+  }
+  old_gen.swap(offspring);
+  calculated_flags &= !FLAG_FRONTS;
+}
+
 bool Population::iterate(ConvergenceCriteria* conv) {
-  if (cull_in_place()) {
-    return true;
+  if (args.use_tournament()) {
+    tournament_selection();
+  } else {
+    if (cull_in_place()) {
+      return true;
+    }
+    breed();
   }
   find_best_organism();
   //check for hypermutation
@@ -659,7 +732,6 @@ bool Population::iterate(ConvergenceCriteria* conv) {
       break;
     }
   }
-  breed();
   generation++;
   if (conv) {
   //TODO: implement a binary private member variable that tracks whether sorting needs to be performed for the sake of efficiency

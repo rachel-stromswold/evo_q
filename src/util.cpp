@@ -188,7 +188,8 @@ String read_number(String::iterator* it) {
   return ret;
 }
 
-SampleDraw::SampleDraw(_uint p_n, _uint p_k) : dist(0, nChoosek(p_n-1, p_k-1)*factorial(p_k-1)) {
+SampleDraw::SampleDraw(_uint p_n, _uint p_k, bool replace) : dist(0, nChoosek(p_n-1, p_k-1)*factorial(p_k-1)) {
+  this->replace = replace;
   n_ = p_n;
   k_ = p_k;
   if (k_ > n_) {

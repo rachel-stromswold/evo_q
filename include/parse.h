@@ -20,6 +20,16 @@
 //flags
 #define WAIT_CON		1
 #define VERBOSE			2
+#define MULTIPLES_NONE		3
+#define MULTIPLES_SKIP		4
+#define MULTIPLES_PERTURB	8
+#define MULTIPLES_AVG		16
+
+//selection types
+#define SELECT_ROULETTE		0
+#define SELECT_TOURNAMENT	1
+#define SELECT_USE_REPLACE	3
+#define SELECT_ROULETTE_POOL	4
 
 #define BUF_SIZE		50
 
@@ -52,6 +62,7 @@ class ArgStore {
     std::string out_fname;
 
     bool activate = true;
+    _uchar selection_type = SELECT_ROULETTE;
     int seed = 0;
 
   public: 
@@ -71,6 +82,16 @@ class ArgStore {
     bool random_crossover();
     void print_data();
 //END REMOVAL CANDIDATE
+
+    bool skip_multiples() { return flags & MULTIPLES_SKIP; }
+    bool average_multiples() { return flags & MULTIPLES_AVG; }
+    bool perturb_multiples() { return flags & MULTIPLES_PERTURB; }
+
+    void set_selection_type(_uchar val);
+    bool use_roulette() { return selection_type == SELECT_ROULETTE; }
+    bool use_tournament() { return selection_type & SELECT_TOURNAMENT; }
+    bool use_roulette_pool() { return selection_type == SELECT_ROULETTE_POOL; }
+    bool tournament_replacement() { return selection_type & SELECT_USE_REPLACE; }
 
     size_t get_pop_size()			{ return pop_size; }
     void set_pop_size(size_t n)			{ pop_size = n; }

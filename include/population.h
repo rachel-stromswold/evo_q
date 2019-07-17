@@ -84,6 +84,7 @@ class Population {
     bool cull(); 
     void breed_shuffle();
     void breed();
+    void tournament_selection();
     void find_best_organism();
     void calculate_distances();
     void hypermutate();

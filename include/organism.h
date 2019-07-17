@@ -83,6 +83,7 @@ public:
   bool operator<(Organism& obj);
 
   std::vector<Organism*> breed(ArgStore* args, Organism* par1);
+  void mutate(ArgStore* args);
   void reset();
   void randomize(ArgStore* args);
   void randomize(ArgStore* args, Organism* orgtmp);

@@ -78,4 +78,6 @@ target_link_libraries( ${APP_EXE}
                        evo_q )
 
 enable_testing()
+configure_file(tests/test.py test.py COPYONLY)
+configure_file(tests/ga.conf ga.conf COPYONLY)
 add_test(NAME evo_q_test COMMAND ${APP_EXE})

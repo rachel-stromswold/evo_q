@@ -120,10 +120,17 @@ void ArgStore::initialize_from_file(const char* fname) {
   while ( retval > 0) {
     token = strtok_r(str, ":=", &saveptr);
     val = strtok_r(NULL, ":=", &saveptr);
+    while ( val[0] != 0 && (val[0] == ' ' || val[0] == '\t') ) {
+      ++val;
+    }
     if (strcmp(token, "population_size") == 0) {
       pop_size = atoi(val);
-    } else if (strcmp(token, "tournament_size") == 0 || strcmp(token, "breed_pop_size") == 0){
+    } else if (strcmp(token, "tournament_size") == 0){
       breed_pop_size = atoi(val);
+      selection_type = SELECT_TOURNAMENT | SELECT_USE_REPLACE;
+    } else if (strcmp(token, "breed_pop_size") == 0) {
+      breed_pop_size = atoi(val);
+      selection_type = SELECT_ROULETTE;
     } else if (strcmp(token, "num_generations") == 0) {
       num_gens = atoi(val);
     } else if (strcmp(token, "num_crossovers") == 0) {
@@ -140,6 +147,25 @@ void ArgStore::initialize_from_file(const char* fname) {
       hypermutation_threshold = atof(val);
     } else if (strcmp(token, "replacement_fraction") == 0) {
       replacement_fraction = atof(val);
+    } else if (strcmp(token, "handle_multiples") == 0) {
+      flags = flags & MULTIPLES_NONE;
+      if (strcmp(val, "average") == 0) {
+	flags = flags | MULTIPLES_AVG;
+      } else if (strcmp(val, "skip") == 0) {
+	flags = flags | MULTIPLES_SKIP;
+      } else if (strcmp(val, "perturb") == 0) {
+	flags = flags | MULTIPLES_PERTURB;
+      }
+    } else if (strcmp(token, "selection_type") == 0) {
+      if (strcmp(val, "roulette") == 0) {
+	selection_type = SELECT_ROULETTE;
+      } else if (strcmp(val, "tournament") == 0) {
+	selection_type = SELECT_TOURNAMENT | SELECT_USE_REPLACE;
+      } else if (strcmp(val, "tournament-no-replace") == 0) {
+	selection_type = SELECT_TOURNAMENT;
+      } else if (strcmp(val, "roulette-pool") == 0) {
+	selection_type = SELECT_ROULETTE_POOL;
+      }
     } else if (strcmp(token, "output_file") == 0) {
       out_fname = val;
     } else if (strcmp(token, "seed") == 0) {
@@ -172,6 +198,12 @@ void ArgStore::initialize_from_file(const char* fname) {
   bern_mut = new std::bernoulli_distribution(mutate_prob);
   bern_cross = new std::bernoulli_distribution(crossover_prob);
   fclose(fp);
+}
+
+void ArgStore::set_selection_type(_uchar val) {
+  if (val == SELECT_ROULETTE || val == SELECT_TOURNAMENT || val == SELECT_ROULETTE_POOL) {
+    selection_type = val;
+  }
 }
 
 void ArgStore::initialize() {

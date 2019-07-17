@@ -197,6 +197,14 @@ std::vector<Organism*> Organism::breed(ArgStore* args, Organism* o) {
   return children;
 }
 
+void Organism::mutate(ArgStore* args) {
+#ifdef MUT_SLOW
+  genes.slow_mutate(args);
+#else
+  genes.mutate(args);
+#endif
+}
+
 void Organism::randomize(ArgStore* args) {
   genes.randomize(al.get(), args);
 }
