@@ -277,7 +277,11 @@ void Organism::set_fitness(double val) {
 
 void Organism::set_fitness(_uint i, double val) {
   if (i >= fitness.size()) {
-    error(CODE_ARG_RANGE, "Attempt to modify invalid fitness index %d, size is %d.", i, fitness.size());
+    if (i < N_OBJS) {
+      fitness.resize(N_OBJS);
+    } else {
+      error(CODE_ARG_RANGE, "Attempt to modify invalid fitness index %d, size is %d.", i, fitness.size());
+    }
   }
   fitness[i] = val;
 }

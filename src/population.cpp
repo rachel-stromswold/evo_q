@@ -334,16 +334,20 @@ void Population::evaluate(Problem* prob) {
 	}
 
 	bool found_identical = false;
-	for (size_t j = 0; j < i; ++j) {
-	  if (args.skip_multiples() && *(old_gen[j]) == *(old_gen[i]) ) {
-	    old_gen[i]->set_fitness( 0, old_gen[j]->get_fitness() );
-	    found_identical = true;
-	    break;
-	  } else if (args.perturb_multiples()) {
-	    old_gen[i]->mutate(&args);
-	  } else {
-	    old_gen[i]->evaluate_fitness(prob);
+	if (args.skip_multiples() || args.perturb_multiples()) {
+	  //look for duplicates of the current organism
+	  for (size_t j = 0; j < i; ++j) {
+	    //handle them
+	    if (args.skip_multiples() && *(old_gen[j]) == *(old_gen[i]) ) {
+	      old_gen[i]->set_fitness( 0, old_gen[j]->get_fitness() );
+	      found_identical = true;
+	      break;
+	    } else if (args.perturb_multiples()) {
+	      old_gen[i]->mutate(&args);
+	    }
 	  }
+	} else {
+	  old_gen[i]->evaluate_fitness(prob);
 	}
 
 	// update the max and min fitnesses if we need to

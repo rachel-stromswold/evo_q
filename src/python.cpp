@@ -173,6 +173,13 @@ py::dict PopulationWrapper::run(ge::ConvergenceCriteria* criteria, bool store_in
   bool converged = false;
   py::list solutions;
   py::list fitnesses;
+  //perform initial evaluation of individuals
+  if (pop->get_n_objs() > 1) {
+    ((Genetics::Population_NSGAII*)pop)->evaluate(prob);
+  } else {
+    pop->evaluate(prob);
+  }
+  //iterate over generations until we hit a cap or meet convergence criteria
   while ( !converged && gen < pop->get_args().get_num_gens() ) {
     if (pop->get_n_objs() > 1) {
       converged = ((Genetics::Population_NSGAII*)pop)->iterate(criteria);

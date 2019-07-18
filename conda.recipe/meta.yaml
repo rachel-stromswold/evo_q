@@ -1,0 +1,28 @@
+{% set name = "evo_p" %}
+{% set version = "0.6" %}
+
+package:
+  name: "{{ name|lower }}"
+  version: "{{ version }}"
+
+requirements:
+  build:
+    - python
+    - setuptools
+  host:
+    - python
+  run:
+    - python
+
+about:
+  home: https://github.com/sam-stromswold/evo_q
+  license: GPL
+  license_family: GPL
+  license_file:
+  summary: A suite of tools for evolutionary strategies and other population based optimization methods
+  doc_url:
+  dev_url:
+
+extra:
+  recipe-maintainers:
+    - sam-stromswold
