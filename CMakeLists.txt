@@ -66,18 +66,23 @@ include_directories(
 #    add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
 #endif()
 
-pybind11_add_module(evo_p src/util.cpp src/phenotype.cpp src/parse.cpp src/gene.cpp src/organism.cpp src/population.cpp src/convergence.cpp src/python.cpp)
+pybind11_add_module(evo_q src/util.cpp src/phenotype.cpp src/parse.cpp src/gene.cpp src/organism.cpp src/population.cpp src/convergence.cpp src/python.cpp)
 
-add_library( evo_q SHARED
-             src/util.cpp src/phenotype.cpp src/parse.cpp src/gene.cpp src/organism.cpp src/population.cpp src/convergence.cpp)
+if(NOT BUILD_PYTHON)
+  add_library( evo_q SHARED
+	       src/util.cpp src/phenotype.cpp src/parse.cpp src/gene.cpp src/organism.cpp src/population.cpp src/convergence.cpp)
 
-set(APP_EXE main_test)
-add_executable( ${APP_EXE}
-                src/main_test.cpp )
-target_link_libraries( ${APP_EXE}
-                       evo_q )
+  set(APP_EXE main_test)
+  add_executable( ${APP_EXE}
+		  src/main_test.cpp )
+  target_link_libraries( ${APP_EXE}
+			 evo_q )
+endif()
 
 enable_testing()
 configure_file(tests/test.py test.py COPYONLY)
 configure_file(tests/ga.conf ga.conf COPYONLY)
-add_test(NAME evo_q_test COMMAND ${APP_EXE})
+
+if(NOT BUILD_PYTHON)
+  add_test(NAME evo_q_test COMMAND ${APP_EXE})
+endif()

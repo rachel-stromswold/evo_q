@@ -4,14 +4,12 @@ import sys
 import platform
 import subprocess
 from pathlib import Path
-import numpy
 
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 from distutils.version import LooseVersion
-import cffi_practice as cp
 
-__name__    = evo_q
+__name__    = 'evo_q'
 __version__ = '0.6'
 __author__  = 'Samantha Stromswold'
 __email__   = 'samstromsw@gmail.com'
@@ -40,20 +38,14 @@ class CMakeBuild(build_ext):
             self.build_extension(ext)
 
     def build_extension(self, ext):
-        cp_paths = cp.get_paths()
         cmake_path=str(Path(sys.exec_prefix) / Path('share/cmake/pybind11'))
-        xtensor_path=str(Path(sys.exec_prefix) / Path('share/cmake/xtensor'))
-        numpy_path=numpy.get_include()
-        cmake_path=cmake_path + ";" + xtensor_path
         extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
         print('pha names: ',ext.name,extdir)
-        cmake_args = ['-DNUMPY_INCLUDE=' + numpy_path,
-              '-DCONDA_CMAKE=' + cmake_path,
-              '-DCFFI_INCLUDE=' + cp_paths['includedir'],
-              '-DCFFI_LIB=' + cp_paths['libfile'],
+        cmake_args = ['-DCONDA_CMAKE=' + cmake_path,
               '-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + extdir,
               '-DCMAKE_MODULE_NAME=' + ext.name,
-              '-DPYTHON_EXECUTABLE=' + sys.executable]
+              '-DPYTHON_EXECUTABLE=' + sys.executable,
+              '-DBUILD_PYTHON=True']
         print(f"calling cmake with {' '.join(cmake_args)}")
         cfg = 'Debug' if self.debug else 'Release'
         build_args = ['--config', cfg]
