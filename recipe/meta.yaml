@@ -1,4 +1,4 @@
-{% set name = "evo_p" %}
+{% set name = "evo_q" %}
 {% set version = "0.6" %}
 
 package:

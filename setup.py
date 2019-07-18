@@ -1,120 +1,89 @@
+import os
+import re
+import sys
+import platform
+import subprocess
+from pathlib import Path
+import numpy
+
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
-import sys
-import setuptools
+from distutils.version import LooseVersion
+import cffi_practice as cp
 
-import os.path
-my_path = os.path.abspath(__file__)
-
-__version__ = '0.0.1'
-
-
-class get_pybind_include(object):
-    """Helper class to determine the pybind11 include path
-
-    The purpose of this class is to postpone importing pybind11
-    until it is actually installed, so that the ``get_include()``
-    method can be invoked. """
-
-    def __init__(self, user=False):
-        self.user = user
-
-    def __str__(self):
-        import pybind11
-        return pybind11.get_include(self.user)
+__name__    = evo_q
+__version__ = '0.6'
+__author__  = 'Samantha Stromswold'
+__email__   = 'samstromsw@gmail.com'
 
 
-pybind_dir = get_pybind_include()
-pybind_include = get_pybind_include(user=True)
-
-ext_modules = [
-    Extension(
-        'evo_p',
-        ['src/util.cpp', 'src/phenotype.cpp', 'src/parse.cpp', 'src/gene.cpp', 'src/organism.cpp', 'src/population.cpp', 'src/convergence.cpp', 'src/python.cpp'],
-        include_dirs=[
-            'include',
-            # Path to pybind11 headers
-            pybind_dir,
-            pybind_include
-        ],
-        language='c++'
-    ),
-]
+class CMakeExtension(Extension):
+    def __init__(self, name, sourcedir=''):
+        Extension.__init__(self, name, sources=[])
+        self.sourcedir = os.path.abspath(sourcedir)
 
 
-# As of Python 3.6, CCompiler has a `has_flag` method.
-# cf http://bugs.python.org/issue26689
-def has_flag(compiler, flagname):
-    """Return a boolean indicating whether a flag name is supported on
-    the specified compiler.
-    """
-    import tempfile
-    with tempfile.NamedTemporaryFile('w', suffix='.cpp') as f:
-        f.write('int main (int argc, char **argv) { return 0; }')
+class CMakeBuild(build_ext):
+    def run(self):
         try:
-            compiler.compile([f.name], extra_postargs=[flagname])
-        except setuptools.distutils.errors.CompileError:
-            return False
-    return True
+            out = subprocess.check_output(['cmake', '--version'])
+        except OSError:
+            raise RuntimeError("CMake must be installed to build the following extensions: " +
+                               ", ".join(e.name for e in self.extensions))
 
+        if platform.system() == "Windows":
+            cmake_version = LooseVersion(re.search(r'version\s*([\d.]+)', out.decode()).group(1))
+            if cmake_version < '3.1.0':
+                raise RuntimeError("CMake >= 3.1.0 is required on Windows")
 
-def cpp_flag(compiler):
-    """Return the -std=c++[11/14/17] compiler flag.
-
-    The newer version is prefered over c++11 (when it is available).
-    """
-    flags = ['-std=c++17', '-std=c++14', '-std=c++11']
-
-    for flag in flags:
-        if has_flag(compiler, flag): return flag
-
-    raise RuntimeError('Unsupported compiler -- at least C++11 support '
-                       'is needed!')
-
-
-class BuildExt(build_ext):
-    """A custom build extension for adding compiler-specific options."""
-    c_opts = {
-        'msvc': ['/EHsc'],
-        'unix': [],
-    }
-    l_opts = {
-        'msvc': [],
-        'unix': [],
-    }
-
-    if sys.platform == 'darwin':
-        darwin_opts = ['-stdlib=libc++', '-mmacosx-version-min=10.7']
-        c_opts['unix'] += darwin_opts
-        l_opts['unix'] += darwin_opts
-
-    def build_extensions(self):
-        ct = self.compiler.compiler_type
-        opts = self.c_opts.get(ct, [])
-        link_opts = self.l_opts.get(ct, [])
-        if ct == 'unix':
-            opts.append('-DVERSION_INFO="%s"' % self.distribution.get_version())
-            opts.append(cpp_flag(self.compiler))
-            if has_flag(self.compiler, '-fvisibility=hidden'):
-                opts.append('-fvisibility=hidden')
-        elif ct == 'msvc':
-            opts.append('/DVERSION_INFO=\\"%s\\"' % self.distribution.get_version())
         for ext in self.extensions:
-            ext.extra_compile_args = opts
-            ext.extra_link_args = link_opts
-        build_ext.build_extensions(self)
+            self.build_extension(ext)
+
+    def build_extension(self, ext):
+        cp_paths = cp.get_paths()
+        cmake_path=str(Path(sys.exec_prefix) / Path('share/cmake/pybind11'))
+        xtensor_path=str(Path(sys.exec_prefix) / Path('share/cmake/xtensor'))
+        numpy_path=numpy.get_include()
+        cmake_path=cmake_path + ";" + xtensor_path
+        extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
+        print('pha names: ',ext.name,extdir)
+        cmake_args = ['-DNUMPY_INCLUDE=' + numpy_path,
+              '-DCONDA_CMAKE=' + cmake_path,
+              '-DCFFI_INCLUDE=' + cp_paths['includedir'],
+              '-DCFFI_LIB=' + cp_paths['libfile'],
+              '-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + extdir,
+              '-DCMAKE_MODULE_NAME=' + ext.name,
+              '-DPYTHON_EXECUTABLE=' + sys.executable]
+        print(f"calling cmake with {' '.join(cmake_args)}")
+        cfg = 'Debug' if self.debug else 'Release'
+        build_args = ['--config', cfg]
+
+        if platform.system() == "Windows":
+            cmake_args += ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}'.format(cfg.upper(), extdir)]
+            if sys.maxsize > 2**32:
+                cmake_args += ['-A', 'x64']
+            build_args += ['--', '/m']
+        else:
+            cmake_args += ['-DCMAKE_BUILD_TYPE=' + cfg]
+            build_args += ['--', '-j2']
+
+        env = os.environ.copy()
+        env['CXXFLAGS'] = '{} -DVERSION_INFO=\\"{}\\"'.format(env.get('CXXFLAGS', ''),
+                                                              self.distribution.get_version())
+        if not os.path.exists(self.build_temp):
+            os.makedirs(self.build_temp)
+        subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
+        subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
 
 setup(
-    name='evo_p',
+    name=__name__,
     version=__version__,
-    author='Samantha Stromswold',
-    author_email='samstromsw@gmail.com',
+    author=__author__,
+    author_email=__email__,
     url='https://github.com/sam-stromswold/evo_q',
     description='A suite of tools for evolutionary strategies and other population based optimization methods',
     long_description='',
-    ext_modules=ext_modules,
-    install_requires=['pybind11>=2.3'],
-    setup_requires=['pybind11>=2.3'],
-    cmdclass={'build_ext': BuildExt},
+    ext_modules=[CMakeExtension('cpp_thread_tools')],
+    cmdclass={'build_ext': CMakeBuild},
     zip_safe=False,
 )
