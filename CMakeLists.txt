@@ -66,7 +66,9 @@ include_directories(
 #    add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
 #endif()
 
-pybind11_add_module(evo_q src/util.cpp src/phenotype.cpp src/parse.cpp src/gene.cpp src/organism.cpp src/population.cpp src/convergence.cpp src/python.cpp)
+if(BUILD_PYTHON)
+  pybind11_add_module(evo_q src/util.cpp src/phenotype.cpp src/parse.cpp src/gene.cpp src/organism.cpp src/population.cpp src/convergence.cpp src/python.cpp)
+endif()
 
 if(NOT BUILD_PYTHON)
   add_library( evo_q SHARED

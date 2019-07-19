@@ -366,7 +366,7 @@ PopulationWrapper* PythonProblem::initialize_population(ge::String conf_file) {
   return pop;
 }
 
-PYBIND11_MODULE(evo_p, m) {
+PYBIND11_MODULE(evo_q, m) {
   m.doc() = "pybind11 example plugin";
   py::class_<OrganismWrapper>(m, "Organism")
       .def("get_rank", &OrganismWrapper::get_rank)
