@@ -102,6 +102,9 @@ Organism& Organism::operator=(Organism& obj) {
 
 Organism Organism::copy() {
   Organism ret(N_BITS, N_OBJS, genes, al);
+  for (_uint i = 0; i < N_OBJS; ++i) {
+    ret.set_fitness(i, get_fitness(i));
+  }
   return ret;
 }
 
