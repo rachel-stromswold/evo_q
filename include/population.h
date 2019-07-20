@@ -19,6 +19,7 @@
 #define FLAG_DIST_SET	2
 #define FLAG_BEST_FOUND	4
 #define FLAG_FRONTS	8
+#define VALID_BEST	16
 
 #if __cplusplus >= 201402L
 #define DEPRECATED(msg) [[ deprecated(msg) ]]
@@ -88,6 +89,7 @@ class Population {
     void find_best_organism();
     void calculate_distances();
     void hypermutate();
+    void set_best_organism(_uint i);
 
   public:
     Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname = "");

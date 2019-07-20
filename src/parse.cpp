@@ -13,6 +13,7 @@ ArgStore::ArgStore() : generator() {
   mutate_prob = DEF_MUTATE_PROB;
   hypermutation_threshold = DEF_HYPER_THRESH;
   replacement_fraction = DEF_REPLACE_FRAC;
+  flags = 0;
   long_bin = NULL;
   short_bin = NULL;
   bern_mut = NULL;
@@ -29,6 +30,7 @@ ArgStore::ArgStore(const ArgStore& o) {
   crossover_prob = o.crossover_prob;
   mutate_prob = o.mutate_prob;
   hypermutation_threshold = o.hypermutation_threshold;
+  flags = o.flags;
   replacement_fraction = DEF_REPLACE_FRAC;
   if (o.long_bin) {
     long_bin = new std::binomial_distribution<unsigned char>(*o.long_bin);
@@ -65,6 +67,7 @@ ArgStore::ArgStore(ArgStore&& o) {
   mutate_prob = o.mutate_prob;
   hypermutation_threshold = o.hypermutation_threshold;
   replacement_fraction = o.replacement_fraction;
+  flags = o.flags;
   //managed pointers dumb copying
   long_bin = o.long_bin;
   short_bin = o.short_bin;

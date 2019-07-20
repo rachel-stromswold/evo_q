@@ -23,7 +23,7 @@
 #define MULTIPLES_NONE		3
 #define MULTIPLES_SKIP		4
 #define MULTIPLES_PERTURB	8
-#define MULTIPLES_AVG		16
+#define MULTIPLES_AVG		12
 
 //selection types
 #define SELECT_ROULETTE		0

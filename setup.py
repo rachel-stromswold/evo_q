@@ -77,5 +77,5 @@ setup(
     long_description='',
     ext_modules=[CMakeExtension('cpp_thread_tools')],
     cmdclass={'build_ext': CMakeBuild},
-    zip_safe=False,
+    zip_safe=False
 )

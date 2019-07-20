@@ -300,30 +300,60 @@ void Population::set_n_survivors(_uint new_size) {
   args.set_survivors(new_size);
 }
 
+void Population::set_best_organism(_uint i) {
+  pop_stats[0].max = old_gen[i]->get_fitness(0);
+  Organism tmp_org = old_gen[i]->copy();
+  if (tmp_org > best_organism) {
+    best_organism = tmp_org;
+    for (_uint j = 0; j < N_OBJS; ++j) {
+      best_organism.set_fitness( j, old_gen[i]->get_fitness(j) );
+    }
+  }
+  calculated_flags |= VALID_BEST;
+}
+
 void Population::evaluate(Problem* prob) {
-  size_t best_org_ind = 0;
   if (N_OBJS == 1) {
     // we need to do the first loop once to initialize the minimum
     old_gen[0]->evaluate_fitness(prob);
 //    best_organism_ind = 0;
 
-    pop_stats[0].max = old_gen[0]->get_fitness(0);
-    pop_stats[0].min = pop_stats[0].max;
+    if ( (calculated_flags & VALID_BEST) == 0 ) {
+      set_best_organism(0);
+    }
+    pop_stats[0].max = best_organism.get_fitness(0);
+    pop_stats[0].min = old_gen[0]->get_fitness(0);
    
     //calculate averages for organisms that appear twice in the population
     if ( args.average_multiples() ) {
       for (size_t i = 0; i < this->offspring_num; ++i) {
+	old_gen[i]->apply_penalty(0);
+      }
+
+      for (size_t i = 0; i < this->offspring_num; ++i) {
 	Vector<_uint> identical_set;
 	double avg_fit = 0.0;
+	bool apply_averages = true;
 	for (size_t j = 0; j < this->offspring_num; ++j) {
 	  if ( i == j || *(old_gen[j]) == *(old_gen[i]) ) {
-	    identical_set.push_back(j);
-	    old_gen[j]->evaluate_fitness(prob);
-	    avg_fit += old_gen[j]->get_fitness(0);
+	    //ensure that we only calculate the identical set once
+	    if (i < j) {
+	      apply_averages = false;
+	    } else {
+	      identical_set.push_back(j);
+	      old_gen[j]->evaluate_fitness(prob);
+	      avg_fit += old_gen[j]->get_fitness(0);
+	    }
 	  }
 	}
-	for (auto it = identical_set.begin(); it != identical_set.end(); ++it) {
-	  old_gen[*it]->set_fitness(0, avg_fit / identical_set.size());
+	//don't recalculate if we don't have to
+	if (apply_averages) {
+	  for (auto it = identical_set.begin(); it != identical_set.end(); ++it) {
+	    old_gen[*it]->set_fitness(0, avg_fit / identical_set.size());
+	  }
+	  if (old_gen[i]->get_fitness(0) > best_organism.get_fitness(0) && !old_gen[i]->penalized()) {
+	    set_best_organism(i);
+	  }
 	}
       }
     } else {
@@ -344,6 +374,7 @@ void Population::evaluate(Problem* prob) {
 	      break;
 	    } else if (args.perturb_multiples()) {
 	      old_gen[i]->mutate(&args);
+	      old_gen[i]->evaluate_fitness(prob);
 	    }
 	  }
 	} else {
@@ -351,9 +382,8 @@ void Population::evaluate(Problem* prob) {
 	}
 
 	// update the max and min fitnesses if we need to
-	if (old_gen[i]->get_fitness(0) > pop_stats[0].max && !old_gen[i]->penalized()) {
-	  pop_stats[0].max = old_gen[i]->get_fitness(0);
-	  best_org_ind = i;
+	if (old_gen[i]->get_fitness(0) > best_organism.get_fitness(0) && !old_gen[i]->penalized()) {
+	  set_best_organism(i);
 	}
 
 	if (old_gen[i]->get_fitness(0) < pop_stats[0].min) {
@@ -364,10 +394,10 @@ void Population::evaluate(Problem* prob) {
   } else {
     //TODO: figure out what the default behavior should be
   }
-  Organism tmp_org = old_gen[best_org_ind]->copy();
+/*  Organism tmp_org = old_gen[best_org_ind]->copy();
   if ( tmp_org > best_organism ) {
     best_organism = tmp_org;
-  }
+  }*/
   double penalty_fact;
   if (pop_stats[0].max > 0) {
     penalty_fact = pop_stats[0].min;
@@ -389,20 +419,17 @@ void Population::evaluate(Problem* prob) {
 }
 
 void Population::find_best_organism() {
-  size_t best_org_ind = 0;
   for (int j = 0; j < N_OBJS; ++j) {
-    pop_stats[j].max = old_gen[0]->get_fitness(j);
-    pop_stats[j].min = old_gen[0]->get_fitness(j);
-    pop_stats[j].mean = old_gen[0]->get_fitness(j) / offspring_num;
-//    best_organism_ind = 0;
+    pop_stats[j].max = best_organism.get_fitness(j);
+    pop_stats[j].min = best_organism.get_fitness(j);
+    pop_stats[j].mean = best_organism.get_fitness(j) / offspring_num;
     for (size_t i = 1; i < offspring_num; ++i) {
       double fitness_i = old_gen[i]->get_fitness(j);
       if (fitness_i > pop_stats[j].max) {
-	pop_stats[j].max = fitness_i;
+	//TODO: make this usefully track multiple objectives
 	if (j == 0) {
-	  best_org_ind = i;
+	  set_best_organism(i);
 	}
-//	best_organism_ind = i;
       }
       if (fitness_i < pop_stats[j].min) {
 	pop_stats[j].min = fitness_i;
@@ -414,17 +441,6 @@ void Population::find_best_organism() {
     for (size_t i = 0; i < offspring_num; ++i) {
       double fitness_i = old_gen[i]->get_fitness(j);
       pop_stats[j].var += (fitness_i - pop_stats[j].mean)*(fitness_i - pop_stats[j].mean);
-    }
-  }
-
-  Organism tmp_org = old_gen[best_org_ind]->copy();
-  if ( tmp_org > best_organism ) {
-    best_organism = tmp_org;
-    for (_uint i = 0; i < N_OBJS; ++i) {
-      best_organism.set_fitness(i, tmp_org.get_fitness(i));
-      for (_uint i = 0; i < N_OBJS; ++i) {
-	best_organism.set_fitness(i, tmp_org.get_fitness(i));
-      }
     }
   }
   
@@ -716,14 +732,6 @@ void Population::tournament_selection() {
 }
 
 bool Population::iterate(ConvergenceCriteria* conv) {
-  if (args.use_tournament()) {
-    tournament_selection();
-  } else {
-    if (cull_in_place()) {
-      return true;
-    }
-    breed();
-  }
   find_best_organism();
   //check for hypermutation
   for (_uint i = 0; i < N_OBJS; ++i) {
@@ -736,6 +744,14 @@ bool Population::iterate(ConvergenceCriteria* conv) {
       break;
     }
   }
+  if (args.use_tournament()) {
+    tournament_selection();
+  } else {
+    if (cull_in_place()) {
+      return true;
+    }
+    breed();
+  } 
   generation++;
   if (conv) {
   //TODO: implement a binary private member variable that tracks whether sorting needs to be performed for the sake of efficiency
@@ -747,24 +763,16 @@ bool Population::iterate(ConvergenceCriteria* conv) {
 }
 
 std::shared_ptr<Organism> Population::get_best_organism(size_t i) {
-/*  if (best_organism_ind >= old_gen.size()) {
+  if ( (calculated_flags & FLAG_BEST_FOUND) == 0 ) {
     find_best_organism();
-  }*/
-  if ( !(calculated_flags & FLAG_BEST_FOUND) ) {
-    find_best_organism();
-/*    if (!best_organism_current) {
-      error(CODE_MISC, "Couldn't find best organism, perhaps no evaluations have been performed?");
-    }*/
   }
   if (i == 0) {
-//    return old_gen[best_organism_ind];
     std::shared_ptr<Organism> tmp_org = std::make_shared<Organism>(best_organism);
     for (_uint i = 0; i < N_OBJS; ++i) {
       tmp_org->set_fitness(i, pop_stats[i].max);
     }
     return tmp_org;
   } else {
-    //TODO: implement a binary private member variable that tracks whether sorting needs to be performed for the sake of efficiency
     sort_orgs(0, &old_gen);
     return old_gen[i];
   }
