@@ -314,18 +314,9 @@ void Population::set_best_organism(_uint i) {
 
 void Population::evaluate(Problem* prob) {
   if (N_OBJS == 1) {
-    // we need to do the first loop once to initialize the minimum
-    /*if (args.noise_compensate()) {
-      old_gen[0]->evaluate_fitness_noisy(prob);
-    } else {
-      old_gen[0]->evaluate_fitness(prob);
-    }*/
-//    best_organism_ind = 0;
-
     size_t i = 0;
     if ( best_organism.valid() ) {
       if ( args.noise_compensate() ) {
-	//set_best_organism(0);
 	best_organism.evaluate_fitness_noisy(prob);
       }
       pop_stats[0].max = best_organism.get_fitness(0);
@@ -345,7 +336,6 @@ void Population::evaluate(Problem* prob) {
       } while( old_gen[i]->penalized() );
       set_best_organism(i - 1);
       alltime_best_organism = best_organism.copy();
-      //pop_stats[0].max = old_gen[0]->get_fitness(0);
     }
     pop_stats[0].min = best_organism.get_fitness(0);
    
@@ -407,12 +397,17 @@ void Population::evaluate(Problem* prob) {
 	    } else if (args.perturb_multiples()) {
 	      old_gen[i]->mutate(&args);
 	      old_gen[i]->evaluate_fitness(prob);
+	      for (_uint j = 0; j < args.noise_compensate(); ++j) {
+		old_gen[i]->evaluate_fitness_noisy(prob);
+	      }
 	    }
 	  }
 	} else {
 	  old_gen[i]->evaluate_fitness(prob);
+	  for (_uint j = 0; j < args.noise_compensate(); ++j) {
+	    old_gen[i]->evaluate_fitness_noisy(prob);
+	  }
 	}
-
 	// update the max and min fitnesses if we need to
 	if (old_gen[i]->get_fitness(0) > best_organism.get_fitness(0) && !old_gen[i]->penalized()) {
 	  //check the organism again to make sure this isn't a fluke

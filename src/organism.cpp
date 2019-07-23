@@ -279,7 +279,8 @@ void Organism::evaluate_fitness_noisy(Problem* prob) {
   }
   prob->evaluate_fitness(this);
   for (_uint i = 0; i < N_OBJS; ++i) {
-    fitness[i] = (n_evaluations*prev_fitness[i] + fitness[i]) / (n_evaluations + 1);
+    //fitness[i] = (n_evaluations*prev_fitness[i] + fitness[i]) / (n_evaluations + 1);
+    fitness[i] = (prev_fitness[i] + fitness[i]) / 2;
   }
   ++n_evaluations;
 }
