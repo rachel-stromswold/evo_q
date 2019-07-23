@@ -73,6 +73,7 @@ class Population {
     //guarantee that the best organism appears in the next generation
 //    size_t best_organism_ind;
     Organism best_organism;
+    Organism alltime_best_organism;
     //labels for generating data output
 //    Vector<String> var_labels;
 //    Vector<String> obj_labels;

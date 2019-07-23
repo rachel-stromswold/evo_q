@@ -20,10 +20,11 @@
 //flags
 #define WAIT_CON		1
 #define VERBOSE			2
-#define MULTIPLES_NONE		3
-#define MULTIPLES_SKIP		4
-#define MULTIPLES_PERTURB	8
-#define MULTIPLES_AVG		12
+#define NOISE_COMPENSATE	4
+#define MULTIPLES_NONE		7
+#define MULTIPLES_SKIP		8
+#define MULTIPLES_PERTURB	16
+#define MULTIPLES_AVG		24
 
 //selection types
 #define SELECT_ROULETTE		0
@@ -64,6 +65,7 @@ class ArgStore {
     bool activate = true;
     _uchar selection_type = SELECT_ROULETTE;
     int seed = 0;
+    _uint noise_compensation_runs = 0;
 
   public: 
     ArgStore();
@@ -86,6 +88,8 @@ class ArgStore {
     bool skip_multiples() { return flags & MULTIPLES_SKIP; }
     bool average_multiples() { return flags & MULTIPLES_AVG; }
     bool perturb_multiples() { return flags & MULTIPLES_PERTURB; }
+    _uint noise_compensate() { return noise_compensation_runs; }
+    void set_noise_compensation(_uint val);
 
     void set_selection_type(_uchar val);
     bool use_roulette() { return selection_type == SELECT_ROULETTE; }

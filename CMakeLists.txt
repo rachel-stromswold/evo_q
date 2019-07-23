@@ -4,7 +4,7 @@ set (CMAKE_CXX_STANDARD 11)
 set(CMAKE_BUILD_TYPE Debug)
 
 #uncomment if you want to build a .so file that can be imported without building a package
-#set(BUILD_PYTHON True)
+set(BUILD_PYTHON True)
 
 # check if Doxygen is installed
 if(CMAKE_BUILD_TYPE MATCHES "^[Rr]elease")

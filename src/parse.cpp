@@ -150,6 +150,8 @@ void ArgStore::initialize_from_file(const char* fname) {
       hypermutation_threshold = atof(val);
     } else if (strcmp(token, "replacement_fraction") == 0) {
       replacement_fraction = atof(val);
+    } else if (strcmp(token, "noise_compensation_runs") == 0) {
+      noise_compensation_runs = atoi(val);
     } else if (strcmp(token, "handle_multiples") == 0) {
       flags = flags & MULTIPLES_NONE;
       if (strcmp(val, "average") == 0) {
@@ -201,6 +203,11 @@ void ArgStore::initialize_from_file(const char* fname) {
   bern_mut = new std::bernoulli_distribution(mutate_prob);
   bern_cross = new std::bernoulli_distribution(crossover_prob);
   fclose(fp);
+}
+
+void ArgStore::set_noise_compensation(_uint val) {
+  noise_compensation_runs = (val > 0)? val : 0;
+  flags = (val > 0)? flags | NOISE_COMPENSATE: flags | (~NOISE_COMPENSATE);
 }
 
 void ArgStore::set_selection_type(_uchar val) {

@@ -86,13 +86,28 @@ Chromosome::~Chromosome() {
   }
 }
 
-Chromosome& Chromosome::operator=(Chromosome& other) {
+void Chromosome::swap(Chromosome& other) {
+  _uint tmp_n_bits = N_BITS;
+  _uint tmp_n_bytes = N_BYTES;
+  _uint tmp_n = N;
   N_BITS = other.N_BITS;
   N_BYTES = other.N_BYTES;
   N = other.N;
+  other.N_BITS = tmp_n_bits;
+  other.N_BYTES = tmp_n_bytes;
+  other.N = tmp_n;
   unsigned long* tmp = genes;
   genes = other.genes;
   other.genes = tmp;
+}
+
+Chromosome& Chromosome::operator=(Chromosome& other) {
+  swap(other);
+  return *this;
+}
+
+Chromosome& Chromosome::operator=(Chromosome&& other) {
+  other.swap(*this);
   return *this;
 }
 

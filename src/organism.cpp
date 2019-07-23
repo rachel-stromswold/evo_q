@@ -100,11 +100,24 @@ Organism& Organism::operator=(Organism& obj) {
   return *this;
 }*/
 
+void Organism::swap(Organism& obj) {
+  _uint tmp_n_evaluations = n_evaluations;
+  n_evaluations = obj.n_evaluations;
+  obj.n_evaluations = n_evaluations;
+  fitness.swap(obj.fitness);
+}
+
+/*Organism& Organism::operator=(Organism& obj) {
+  swap(obj);
+  return *this;
+}*/
+
 Organism Organism::copy() {
   Organism ret(N_BITS, N_OBJS, genes, al);
   for (_uint i = 0; i < N_OBJS; ++i) {
     ret.set_fitness(i, get_fitness(i));
   }
+  ret.n_evaluations = n_evaluations;
   return ret;
 }
 
@@ -259,8 +272,21 @@ void Organism::randomize(ArgStore* args, Organism* orgtmp) {
   }
 }
 
+void Organism::evaluate_fitness_noisy(Problem* prob) {
+  double* prev_fitness = (double*)malloc(sizeof(double)*N_OBJS);
+  for (_uint i = 0; i < N_OBJS; ++i) {
+    prev_fitness[i] = fitness[i];
+  }
+  prob->evaluate_fitness(this);
+  for (_uint i = 0; i < N_OBJS; ++i) {
+    fitness[i] = (n_evaluations*prev_fitness[i] + fitness[i]) / (n_evaluations + 1);
+  }
+  ++n_evaluations;
+}
+
 void Organism::evaluate_fitness(Problem* prob) {
   prob->evaluate_fitness(this);
+  ++n_evaluations;
 }
 
 double Organism::get_fitness(unsigned int i) {

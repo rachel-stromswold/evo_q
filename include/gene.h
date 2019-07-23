@@ -45,7 +45,9 @@ public:
 
   unsigned int get_N() { return N; }
   unsigned int get_n_bits() { return N_BITS; }
+  void swap(Chromosome& other);
   Chromosome& operator=(Chromosome& other);
+  Chromosome& operator=(Chromosome&& other);
   bool operator==(Chromosome& other);
 
   void reset();

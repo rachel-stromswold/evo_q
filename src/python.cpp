@@ -419,6 +419,7 @@ PYBIND11_MODULE(evo_q, m) {
       .def("set_crossover_prob", &PopulationWrapper::set_crossover_prob)
       .def("get_hypermutation_threshold", &PopulationWrapper::get_hypermutation_threshold)
       .def("set_hypermutation_threshold", &PopulationWrapper::set_hypermutation_threshold)
+      .def("set_noise_compensation", &PopulationWrapper::set_noise_compensation, py::arg("val") = 2)
       .def("set_selection_type", &PopulationWrapper::set_selection);
   py::class_<PythonProblem>(m, "Problem")
       .def(py::init<int, int, int>())
