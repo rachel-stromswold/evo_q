@@ -386,40 +386,46 @@ TEST_CASE ( "Organisms are correctly created and decoded", "[organisms]" ) {
 TEST_CASE ("ArgStore successfully parses a file") {
   TestProblemSingle prob;
   Genetics::Conv_Plateau plat_cut(0.05, TEST_CONV_GEN / 2);
-  Genetics::String conf_file("ga.conf");
-  Genetics::Population pop( NUM_BITS, 1, prob.map, conf_file);
+  Genetics::ArgStore args;
+  args.initialize_from_file("ga.conf");
+  Genetics::Population pop( NUM_BITS, 1, prob.map, args);
 
   //ga.conf must be as follows for this to work:
   /*
-   * population_size: 20
-   * tournament_size: 4
+   * population_size: 50
+   * tournament_size: 2
    * num_generations: 50
    * num_crossovers: 2
    * parameter_variance: 0.3
    * parameter_mean: 0.0
    * mutation_probability: 0.016
    * crossover_probability: 0.9
+   * hypermutation_threshold: 1.0
+   * output_file: output.csv
    */
-  REQUIRE( pop.get_args().get_pop_size() == 20 );
-  REQUIRE( pop.get_args().get_survivors() == 4 );
+  REQUIRE( pop.get_args().get_pop_size() == 50 );
+  REQUIRE( pop.get_args().get_survivors() == 2 );
   REQUIRE( pop.get_args().get_num_gens() == 50 );
   REQUIRE( pop.get_args().get_num_crossovers() == 2 );
   REQUIRE( pop.get_args().get_init_coup_var() == 0.3 );
   REQUIRE( pop.get_args().get_crossover_prob() == 0.9 );
-  REQUIRE( pop.get_args().get_mutate_prob() == 0.016 ); 
+  REQUIRE( pop.get_args().get_mutate_prob() == 0.016 );
+  REQUIRE( pop.get_args().get_hypermutation_threshold() == 1.0 );
+  REQUIRE( pop.get_args().get_out_fname() == "output.csv" );
 }
 
 TEST_CASE ("Populations are correctly created and data is successfully read", "[populations]") {
 //  Genetics::ArgStore inst;
-  Genetics::String conf_file("ga.conf");
+  Genetics::ArgStore args;
+  args.initialize_from_file("ga.conf");
 //  inst.initialize_from_file(conf_file.c_str());
   std::shared_ptr<Genetics::PhenotypeMap> map = std::make_shared<Genetics::PhenotypeMap>(NUM_BITS);
   map->initialize(NUM_CHROMS, Genetics::t_real);
   map->set_range(0, -10, 10);
   Genetics::Organism tmplt(NUM_BITS, NUM_OBJS, map);
   tmplt.set_real(0, 4.6);
-  Genetics::Population pop_none(NUM_BITS, NUM_OBJS, &tmplt, map, conf_file);
-  Genetics::Population pop_tmplt(NUM_BITS, NUM_OBJS, map, conf_file);
+  Genetics::Population pop_none(NUM_BITS, NUM_OBJS, &tmplt, map, args);
+  Genetics::Population pop_tmplt(NUM_BITS, NUM_OBJS, map, args);
 
   SECTION ( "The header is read correctly" ) {
     Genetics::Vector<Genetics::String> pop_dat = pop_none.get_header();
@@ -450,8 +456,9 @@ TEST_CASE ("Populations are correctly created and data is successfully read", "[
 TEST_CASE ("Penalties are applied properly", "[populations]") {
   double penalty_str = 4.0;
   TestProblemPenalties prob(penalty_str);
-  Genetics::String conf_file("ga.conf");
-  Genetics::Population pop( NUM_BITS, 1, prob.map, conf_file);
+  Genetics::ArgStore args;
+  args.initialize_from_file("ga.conf");
+  Genetics::Population pop( NUM_BITS, 1, prob.map, args);
   pop.evaluate(&prob);
 
   double fit_0 = pop.get_organism(0)->get_fitness(0);
@@ -465,8 +472,9 @@ TEST_CASE ("Penalties are applied properly", "[populations]") {
 
 TEST_CASE ("Simple evolution of a single objective converges to roughly appropriate result", "[populations]") {
   TestProblemSingle prob;
-  Genetics::String conf_file("ga.conf");
-  Genetics::Population pop( NUM_BITS, 1, prob.map, conf_file);
+  Genetics::ArgStore args;
+  args.initialize_from_file("ga.conf");
+  Genetics::Population pop( NUM_BITS, 1, prob.map, args);
   for (size_t i = 0; i < 100; ++i) {
     pop.evaluate(&prob);
     pop.iterate();
@@ -477,8 +485,9 @@ TEST_CASE ("Simple evolution of a single objective converges to roughly appropri
 
 TEST_CASE ("Simple evolution of a multi objective converges to roughly appropriate result", "[populations]") {
   TestProblemMulti prob;
-  Genetics::String conf_file("ga.conf");
-  Genetics::Population_NSGAII pop( NUM_BITS, NUM_OBJS, prob.map, conf_file);
+  Genetics::ArgStore args;
+  args.initialize_from_file("ga.conf");
+  Genetics::Population_NSGAII pop( NUM_BITS, NUM_OBJS, prob.map, args);
   bool converged = false;
   while (!converged) {
     pop.evaluate(&prob);
@@ -533,8 +542,9 @@ TEST_CASE ("Convergence functions work", "[populations]") {
 TEST_CASE ("Combine convergence checking and evolution", "[populations]") {
   TestProblemSingle prob;
   Genetics::Conv_Plateau plat_cut(0.05, TEST_CONV_GEN / 2);
-  Genetics::String conf_file("ga.conf");
-  Genetics::Population pop( NUM_BITS, 1, prob.map, conf_file);
+  Genetics::ArgStore args;
+  args.initialize_from_file("ga.conf");
+  Genetics::Population pop( NUM_BITS, 1, prob.map, args);
 
   bool converged = false;
   int generation = 0;

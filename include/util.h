@@ -416,6 +416,8 @@ bool has_error();
 String get_error();
 #endif
 
+char* clean_c_str(char* src);
+
 //draw k elements from the integer range from 0 to n useful for sampling from arrays
 class SampleDraw {
 private:

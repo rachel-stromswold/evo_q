@@ -2,14 +2,12 @@
 
 namespace Genetics {
 
-Population::Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname) :
+/*Population::Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, ArgStore p_args) :
   N_BITS(pn_bits),
   N_OBJS(pn_objs),
-  map(p_map)
+  map(p_map),
+  args( const_cast<const ArgStore&>(p_args) )
 {
-  if (conf_fname != "") {
-    args.initialize_from_file(conf_fname.c_str());
-  }
   pop_stats = (FitnessStats*)malloc(sizeof(FitnessStats)*N_OBJS);
   survivors_num = args.get_survivors();
   offspring_num = args.get_pop_size();
@@ -44,14 +42,12 @@ Population::Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String
   calculated_flags = FLAG_NONE_SET;
 }
 
-Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname) :
+Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, ArgStore p_args) :
   N_BITS(pn_bits),
   N_OBJS(pn_objs),
-  map(p_map)
+  map(p_map),
+  args(p_args)
 {
-  if (conf_fname != "") {
-    args.initialize_from_file(conf_fname.c_str());
-  }
   pop_stats = (FitnessStats*)malloc(sizeof(FitnessStats)*N_OBJS);
   this->survivors_num = args.get_survivors();
   this->offspring_num = args.get_pop_size();
@@ -88,58 +84,43 @@ Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeM
   }
 
   calculated_flags = FLAG_NONE_SET;
+}*/
+
+Population::Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map) :
+  N_BITS(pn_bits),
+  N_OBJS(pn_objs)
+{
+  map = p_map;
+  createOrganisms(NULL);
+}
+
+Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map) :
+  N_BITS(pn_bits),
+  N_OBJS(pn_objs)
+{
+  map = p_map;
+  createOrganisms(tmplt);
 }
  
-Population::Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, String conf_fname) :
+Population::Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args) :
   N_BITS(pn_bits),
-  N_OBJS(pn_objs)
+  N_OBJS(pn_objs),
+  args(p_args)
 {
-  if (conf_fname != "") {
-    args.initialize_from_file(conf_fname.c_str());
-  }
   map = p_map;
-  pop_stats = (FitnessStats*)malloc(sizeof(FitnessStats)*N_OBJS);
-  this->survivors_num = args.get_survivors();
-  this->offspring_num = args.get_pop_size();
-  if (this->offspring_num % 2 == 0) {
-    this->offspring_num++;
-  }
-  //we need to keep the old and new generation in separate arrays to avoid overwriting data
-  this->offspring.insert(this->offspring.end(), this->offspring_num, std::shared_ptr<Organism>(NULL)); 
-
-  //initally fill up the offspring randomly
-  for (size_t i = 0; i < this->offspring_num; ++i) {
-    this->old_gen.push_back(std::make_shared<Organism>(N_BITS, N_OBJS, map));
-    this->old_gen[i]->randomize(&args);
-  }
-
-  for (_uint i = 0; i < N_OBJS; ++i) {
-    this->pop_stats[i].max = -std::numeric_limits<double>::infinity();
-    this->pop_stats[i].min = std::numeric_limits<double>::infinity();
-  }
-
-  N_PARAMS = map->get_num_params();
-  var_labels = (char**)malloc(sizeof(char*)*N_PARAMS);
-  for (_uint j = 0; j < map->get_num_params(); ++j) {
-    var_labels[j] = (char*)malloc(sizeof(char)*OUT_BUF_SIZE);
-    snprintf(var_labels[j], OUT_BUF_SIZE, "x_%d", j);
-  }
-  obj_labels = (char**)malloc(sizeof(char*)*N_OBJS);
-  for (_uint j = 0; j < N_OBJS; ++j) {
-    obj_labels[j] = (char*)malloc(sizeof(char)*OUT_BUF_SIZE);
-    snprintf(obj_labels[j], OUT_BUF_SIZE - 1, "f_%d(x)", j);
-  }
-  calculated_flags = FLAG_NONE_SET;
+  createOrganisms(NULL);
 }
 
-Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map, String conf_fname) :
+Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args) :
   N_BITS(pn_bits),
-  N_OBJS(pn_objs)
+  N_OBJS(pn_objs),
+  args(p_args)
 {
-  if (conf_fname != "") {
-    args.initialize_from_file(conf_fname.c_str());
-  }
   map = p_map;
+  createOrganisms(tmplt);
+}
+
+void Population::createOrganisms(Organism* tmplt) {
   pop_stats = (FitnessStats*)malloc(sizeof(FitnessStats)*N_OBJS);
   this->survivors_num = args.get_survivors();
   this->offspring_num = args.get_pop_size();
@@ -147,20 +128,25 @@ Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::share
     this->offspring_num++;
   }
   //we need to keep the old and new generation in separate arrays to avoid overwriting data
-  this->offspring.insert(this->offspring.end(), this->offspring_num, NULL);
-
-  this->old_gen.push_back(std::make_shared<Organism>(*tmplt));
-  //initally fill up the offspring randomly
-  for (size_t i = 1; i < this->offspring_num; ++i) {
-    this->old_gen.push_back( std::make_shared<Organism>(N_BITS, N_OBJS, map) );
-    this->old_gen.back()->randomize(&args, tmplt);
+  this->offspring.insert(this->offspring.end(), this->offspring_num, std::shared_ptr<Organism>(NULL));
+  if (tmplt) {
+    this->old_gen.push_back(std::make_shared<Organism>(*tmplt));
+    //initally fill up the offspring randomly
+    for (size_t i = 1; i < this->offspring_num; ++i) {
+      this->old_gen.push_back( std::make_shared<Organism>(N_BITS, N_OBJS, map) );
+      this->old_gen.back()->randomize(&args, tmplt);
+    }
+  } else {
+    //initally fill up the offspring randomly
+    for (size_t i = 0; i < this->offspring_num; ++i) {
+      this->old_gen.push_back(std::make_shared<Organism>(N_BITS, N_OBJS, map));
+      this->old_gen[i]->randomize(&args);
+    }
   }
-
   for (_uint i = 0; i < N_OBJS; ++i) {
     this->pop_stats[i].max = -std::numeric_limits<double>::infinity();
     this->pop_stats[i].min = std::numeric_limits<double>::infinity();
   }
-
   char buf[OUT_BUF_SIZE];
 //  var_labels.resize(map->get_num_params());
   N_PARAMS = map->get_num_params();
@@ -962,8 +948,8 @@ Vector<String> Population::get_pop_data() {
 
 // =============================== POPULATION_NGSAII ===============================
 
-Population_NSGAII::Population_NSGAII(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname) :
-Population(pn_bits, pn_objs, p_map, conf_fname) {
+/*Population_NSGAII::Population_NSGAII(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, ArgStore p_args) :
+Population(pn_bits, pn_objs, p_map, p_args) {
   if (offspring_num % 2 == 1) {
     offspring_num--;
   }
@@ -978,10 +964,10 @@ Population(pn_bits, pn_objs, tmplt, p_map, conf_fname) {
   }
   old_gen.resize(offspring_num);
   offspring.resize(offspring_num);
-}
+}*/
 
-Population_NSGAII::Population_NSGAII(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, String conf_fname) :
-Population(pn_bits, pn_objs, p_map, conf_fname) {
+Population_NSGAII::Population_NSGAII(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map) :
+Population(pn_bits, pn_objs, p_map) {
   if (offspring_num % 2 == 1) {
     offspring_num--;
   }
@@ -989,8 +975,26 @@ Population(pn_bits, pn_objs, p_map, conf_fname) {
   offspring.resize(offspring_num);
 }
 
-Population_NSGAII::Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map, String conf_fname) :
-Population(pn_bits, pn_objs, tmplt, p_map, conf_fname) {
+Population_NSGAII::Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map) :
+Population(pn_bits, pn_objs, tmplt, p_map) {
+  if (offspring_num % 2 == 1) {
+    offspring_num--;
+  }
+  old_gen.resize(offspring_num);
+  offspring.resize(offspring_num);
+}
+
+Population_NSGAII::Population_NSGAII(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args) :
+Population(pn_bits, pn_objs, p_map, p_args) {
+  if (offspring_num % 2 == 1) {
+    offspring_num--;
+  }
+  old_gen.resize(offspring_num);
+  offspring.resize(offspring_num);
+}
+
+Population_NSGAII::Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args) :
+Population(pn_bits, pn_objs, tmplt, p_map, p_args) {
   if (offspring_num % 2 == 1) {
     offspring_num--;
   }

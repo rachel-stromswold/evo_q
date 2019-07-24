@@ -20,7 +20,7 @@ ArgStore::ArgStore() : generator() {
   bern_cross = NULL;
 }
 
-ArgStore::ArgStore(const ArgStore& o) {
+ArgStore::ArgStore(const ArgStore& o) : out_fname(o.out_fname) {
   pop_size = o.pop_size;
   breed_pop_size = o.breed_pop_size;
   num_gens = o.num_gens;
@@ -172,6 +172,7 @@ void ArgStore::initialize_from_file(const char* fname) {
 	selection_type = SELECT_ROULETTE_POOL;
       }
     } else if (strcmp(token, "output_file") == 0) {
+      val = clean_c_str(val);
       out_fname = val;
     } else if (strcmp(token, "seed") == 0) {
       seed = atoi(val);

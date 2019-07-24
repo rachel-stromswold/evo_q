@@ -60,7 +60,7 @@ class ArgStore {
     double mutate_prob;
     double hypermutation_threshold;
     double replacement_fraction;
-    std::string out_fname;
+    String out_fname;
 
     bool activate = true;
     _uchar selection_type = SELECT_ROULETTE;
@@ -121,7 +121,7 @@ class ArgStore {
     void set_wait_for_con(bool b = true)	{ flags |= WAIT_CON * ((_uint)b); }
     bool verbose()				{ return flags & VERBOSE; }
     void set_verbose(bool b = true)		{ flags |= VERBOSE * ((_uint)b); }
-    std::string get_out_fname() 		{ return out_fname; }
+    String get_out_fname() 			{ return out_fname; }
 };
 
 }

@@ -355,10 +355,14 @@ void PythonProblem::set_template_parameter(unsigned param_ind, py::object o) {
 
 PopulationWrapper* PythonProblem::initialize_population(ge::String conf_file) {
   PopulationWrapper* pop;
+  ArgStore args;
+  if (conf_file != "") {
+    args.initialize_from_file(conf_file.c_str());
+  }
   if (template_set) {
-    pop = new PopulationWrapper(N_BITS, N_OBJS, (Genetics::Problem*)this, &tmplt_org, map, conf_file);
+    pop = new PopulationWrapper(N_BITS, N_OBJS, (Genetics::Problem*)this, &tmplt_org, map, args);
   } else {
-    pop = new PopulationWrapper(N_BITS, N_OBJS, (Genetics::Problem*)this, map, conf_file);
+    pop = new PopulationWrapper(N_BITS, N_OBJS, (Genetics::Problem*)this, map, args);
   }
 #ifdef PRINT_DEBUG_DATA
   std::cout << "map_size = " << map->get_num_params() << "\n";

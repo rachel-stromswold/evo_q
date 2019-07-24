@@ -126,6 +126,20 @@ String get_error() {
 }
 #endif
 
+char* clean_c_str(char* str) {
+  size_t l = strlen(str);
+  while (l > 0 && (str[l - 1] == ' ' || str[l - 1] == '\t' || str[l - 1] == '\n')) {
+    str[l - 1] = 0;
+    --l;
+  }
+  size_t i = 0;
+  while (l > 0 && str[i] != 0 && (str[i] == ' ' || str[i] == '\t')) {
+    ++i;
+    --l;
+  }
+  return str + i;
+}
+
 unsigned long decodeGray (unsigned long code) {
   unsigned long mask = code >> 1;
   unsigned long ret = code;
