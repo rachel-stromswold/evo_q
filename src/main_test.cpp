@@ -1,8 +1,11 @@
 //#include "../include/evo_q.hpp"
 #include "../include/convergence.h"
+#define CATCH_CONFIG_ENABLE_BENCHMARKING
 #define CATCH_CONFIG_MAIN
 #include "../include/catch.hpp"
 #define N_TRIALS 100
+#include <chrono>
+#include <thread>
 
 #define NUM_BITS	16
 #define NUM_OBJS  	2
@@ -10,6 +13,7 @@
 
 #define M_RANGE		2.0
 #define TEST_CONV_GEN	10
+#define SLEEP_TIME	1000
 
 #define APPROX(a,b) ((a-b < 0.01 && a-b >= 0) || (b-a < 0.01 && b-a >= 0))
 
@@ -77,7 +81,6 @@ public:
   }
   void evaluate_fitness(Genetics::Organism* org) {
     org->set_fitness(0, 1);
-    std::cout << apply_penalty << std::endl;
     if (apply_penalty) {
       org->apply_penalty(penalty_amt);
       apply_penalty = false;
@@ -106,6 +109,18 @@ public:
     org->set_fitness(0, -x*x);
     org->set_fitness(1, -(x - 2)*(x - 2));
     org->apply_penalty(0.0);
+  }
+};
+
+class TestProblemSlow : public Genetics::Problem {
+public:
+  TestProblemSlow() : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1) {
+    map->initialize(1, Genetics::t_real);
+  }
+  void evaluate_fitness(Genetics::Organism* org) {
+    std::this_thread::sleep_for( std::chrono::milliseconds(SLEEP_TIME) );
+    double x = org->read_real(0);
+    org->set_fitness(0, -(x*x));
   }
 };
 
@@ -429,6 +444,12 @@ TEST_CASE ("Populations are correctly created and data is successfully read", "[
 
   SECTION ( "The header is read correctly" ) {
     Genetics::Vector<Genetics::String> pop_dat = pop_none.get_header();
+    for (unsigned i = 0; i < pop_dat.size() / 3; ++i) {
+      REQUIRE( pop_dat[i*3] == "x_0");
+      REQUIRE( pop_dat[i*3 + 1] == "f_0(x)" );
+      REQUIRE( pop_dat[i*3 + 2] == "f_1(x)" );
+    }
+#ifdef PRINT_GARBAGE
     for (Genetics::Vector<Genetics::String>::iterator it = pop_dat.begin(); it != pop_dat.end(); ++it) {
       printf("%s ", it->c_str());
     }
@@ -438,18 +459,24 @@ TEST_CASE ("Populations are correctly created and data is successfully read", "[
       printf("%s ", it->c_str());
     }
     printf("\n");
+#endif
   }
   SECTION ( "The population data is read correctly" ) {
     Genetics::Vector<Genetics::String> pop_dat = pop_none.get_pop_data();
+    Genetics::Vector<Genetics::String> pop_dat2 = pop_tmplt.get_pop_data();
+    REQUIRE( pop_dat.size() % 3 == 0 );
+    REQUIRE( pop_dat.size() == pop_dat2.size() );
+
+#ifdef PRINT_GARBAGE
     for (Genetics::Vector<Genetics::String>::iterator it = pop_dat.begin(); it != pop_dat.end(); ++it) {
       printf("%s ", it->c_str());
     }
     printf("\n");
-    Genetics::Vector<Genetics::String> pop_dat2 = pop_tmplt.get_pop_data();
     for (Genetics::Vector<Genetics::String>::iterator it = pop_dat2.begin(); it != pop_dat2.end(); ++it) {
       printf("%s ", it->c_str());
     }
     printf("\n");
+#endif
   }
 }
 
@@ -496,6 +523,8 @@ TEST_CASE ("Simple evolution of a multi objective converges to roughly appropria
   int modulo = NUM_OBJS + prob.map->get_num_params() + 1;
   pop.evaluate(&prob);
   Genetics::Vector<Genetics::String> pop_dat = pop.get_pop_data();
+  REQUIRE( pop_dat.size() == pop.get_header().size() );
+#ifdef PRINT_GARBAGE
   size_t num_params = prob.map->get_num_params();
   for (size_t i = 0; modulo*(i + 1) - 1 < pop_dat.size(); ++i) {
     std::cout << "organism " << i
@@ -508,6 +537,7 @@ TEST_CASE ("Simple evolution of a multi objective converges to roughly appropria
     }
     std::cout << std::endl;
   }
+#endif
 }
 
 TEST_CASE ("Convergence functions work", "[populations]") {
@@ -555,10 +585,69 @@ TEST_CASE ("Combine convergence checking and evolution", "[populations]") {
   }
   std::cout << "Converged after " << generation << " generations\n";
   pop.evaluate(&prob);
+  double mean_x, mean_fit, var_x, var_fit;
+  mean_x = 0.0;mean_fit = 0.0;var_x = 0.0;var_fit = 0.0;
   Genetics::Vector<Genetics::String> pop_dat = pop.get_pop_data();
   for (size_t i = 0; 2*i + 1 < pop_dat.size(); ++i) {
-    std::cout << "organism " << i
-	      << ", x1 = " << pop_dat[2*i]
-	      << " fitness = " << pop_dat[2*i + 1] << std::endl;
+    double f = atof( pop_dat[2*i + 1].c_str() );
+    double x = atof( pop_dat[2*i].c_str() );
+    mean_fit += f / pop_dat.size();
+    mean_x += x / pop_dat.size();
   }
+  for (size_t i = 0; 2*i + 1 < pop_dat.size(); ++i) {
+    double f = atof( pop_dat[2*i + 1].c_str() );
+    double x = atof( pop_dat[2*i].c_str() );
+    var_fit += (f - mean_fit)*(f - mean_fit)/ (pop_dat.size() + 1);
+    var_x += (x - mean_x)*(x - mean_x) / (pop_dat.size() + 1);
+#ifdef PRINT_GARBAGE
+    std::cout << "organism " << i
+	      << " x = " << pop_dat[2*i]
+	      << " fitness = " << pop_dat[2*i + 1] << std::endl;
+#endif
+  }
+  std::cout << "x1 = " << mean_x << "\u00B1" << var_x
+	    << ", fitness = " << mean_fit << "\u00B1" << var_fit << std::endl;
+}
+
+TEST_CASE ("timing info with and without parallelization", "[populations]") {
+  TestProblemSingle prob;
+  Genetics::Conv_Plateau plat_cut(0.05, TEST_CONV_GEN / 2);
+  Genetics::ArgStore args_async;
+  Genetics::ArgStore args_serial;
+  args_async.set_async(true);
+  args_serial.set_async(false);
+
+  double serial_mean = 0.0;double async_mean = 0.0;
+  double serial_var = 0.0;double async_var = 0.0;
+  double serial_times[N_TRIALS];
+  double async_times[N_TRIALS];
+  for (unsigned i = 0; i < N_TRIALS; ++i) {
+    //evaluate serial
+    auto t_start = std::chrono::high_resolution_clock::now();
+      Genetics::Population pop_serial( NUM_BITS, 1, prob.map, args_serial);
+      pop_serial.run(&prob);
+    auto t_end = std::chrono::high_resolution_clock::now();
+    serial_times[i] = std::chrono::duration<double, std::milli>(t_end - t_start).count();
+    serial_mean += serial_times[i] / N_TRIALS;
+
+    //evaluate async
+    t_start = std::chrono::high_resolution_clock::now();
+      Genetics::Population pop_async( NUM_BITS, 1, prob.map, args_async);
+      pop_async.run(&prob);
+    t_end = std::chrono::high_resolution_clock::now();
+    async_times[i] = std::chrono::duration<double, std::milli>(t_end - t_start).count();
+    async_mean += async_times[i] / N_TRIALS;
+  }
+
+  for (unsigned i = 0; i < N_TRIALS; ++i) {
+    serial_var += (serial_times[i] - serial_mean)*(serial_times[i] - serial_mean) / (N_TRIALS - 1);
+    async_var += (async_times[i] - async_mean)*(async_times[i] - async_mean) / (N_TRIALS - 1);
+  }
+  std::cout << "Benchmark\t\tnumber of trials\telapsed time\n";
+  std::cout << std::fixed << std::setprecision(2) << "Serial evaluation\t"
+	    << N_TRIALS << "\t\t\t" << serial_mean << "\u00B1" << sqrt(serial_var)
+	    << "\n";
+  std::cout << std::fixed << std::setprecision(2) << "Parallel evaluation\t"
+	    << N_TRIALS << "\t\t\t" << async_mean << "\u00B1" << sqrt(async_var)
+	    << "\n";
 }

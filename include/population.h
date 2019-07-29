@@ -5,6 +5,7 @@
 #include <vector>
 #include <fstream>
 #include <memory>
+#include <omp.h>
 
 #define NUM_GENES	10
 #define NUM_CARRY	1
@@ -85,6 +86,7 @@ class Population {
     //cull first sorts the organisms and selects them based on the ratio of their relative fitness to the total relative fitness
     bool cull(); 
     void breed_shuffle();
+    void check_improvement(Problem* prob);
     void breed();
     void tournament_selection();
     void find_best_organism();

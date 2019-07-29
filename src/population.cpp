@@ -300,7 +300,7 @@ void Population::set_best_organism(_uint i) {
 
 void Population::evaluate(Problem* prob) {
   if (N_OBJS == 1) {
-    size_t i = 0;
+    size_t start_i = 0;
     if ( best_organism.valid() ) {
       if ( args.noise_compensate() ) {
 	best_organism.evaluate_fitness_noisy(prob);
@@ -309,29 +309,28 @@ void Population::evaluate(Problem* prob) {
     } else {
       //iterate until we find an organism that isn't penalized and set it to be the best
       do {
-	if (i == offspring_num) {
+	if (start_i == offspring_num) {
 	  error(CODE_MISC, "All organisms in population had applied penalty.");
 	}
-	old_gen[i]->apply_penalty(0);
+	old_gen[start_i]->apply_penalty(0);
 	if ( args.noise_compensate() ) {
-	  old_gen[i]->evaluate_fitness_noisy(prob);
+	  old_gen[start_i]->evaluate_fitness_noisy(prob);
 	} else {
-	  old_gen[i]->evaluate_fitness(prob);
+	  old_gen[start_i]->evaluate_fitness(prob);
 	}
-	++i;
-      } while( old_gen[i]->penalized() );
-      set_best_organism(i - 1);
+	++start_i;
+      } while( old_gen[start_i]->penalized() );
+      set_best_organism(start_i - 1);
       alltime_best_organism = best_organism.copy();
     }
     pop_stats[0].min = best_organism.get_fitness(0);
    
+    for (_uint i = start_i; i < this->offspring_num; ++i) {
+      old_gen[i]->apply_penalty(0);
+    }
     //calculate averages for organisms that appear twice in the population
     if ( args.average_multiples() ) {
-      for (; i < this->offspring_num; ++i) {
-	old_gen[i]->apply_penalty(0);
-      }
-
-      for (; i < this->offspring_num; ++i) {
+      for (_uint i = start_i; i < this->offspring_num; ++i) {
 	Vector<_uint> identical_set;
 	double avg_fit = 0.0;
 	bool apply_averages = true;
@@ -361,12 +360,14 @@ void Population::evaluate(Problem* prob) {
 	    if ( old_gen[i]->get_fitness(0) > best_organism.get_fitness(0) ) {
 	      set_best_organism(i);
 	    }
+	    if (old_gen[i]->get_fitness(0) < pop_stats[0].min) {
+	      pop_stats[0].min = old_gen[i]->get_fitness(0);
+	    }
 	  }
 	}
       }
     } else {
-      for (; i < this->offspring_num; ++i) {
-	old_gen[i]->apply_penalty(0);
+      for (_uint i = start_i; i < offspring_num; ++i) {
 	if ( args.verbose() ) {
 	  std::cout << "Now evaluating organism " << i << std::endl;
 	}
@@ -383,7 +384,7 @@ void Population::evaluate(Problem* prob) {
 	    } else if (args.perturb_multiples()) {
 	      old_gen[i]->mutate(&args);
 	      old_gen[i]->evaluate_fitness(prob);
-	      for (_uint j = 0; j < args.noise_compensate(); ++j) {
+	      for (_uint k = 0; k < args.noise_compensate(); ++k) {
 		old_gen[i]->evaluate_fitness_noisy(prob);
 	      }
 	    }
@@ -412,10 +413,138 @@ void Population::evaluate(Problem* prob) {
   } else {
     //TODO: figure out what the default behavior should be
   }
-/*  Organism tmp_org = old_gen[best_org_ind]->copy();
-  if ( tmp_org > best_organism ) {
-    best_organism = tmp_org;
-  }*/
+  check_improvement(prob);
+}
+
+void Population::evaluate_async(Problem* prob) {
+  if (N_OBJS == 1) { 
+    for (_uint i = 0; i < offspring_num; ++i) {
+      old_gen[i]->apply_penalty(0);
+    }
+    //calculate averages for organisms that appear twice in the population
+    if ( args.average_multiples() ) {
+#pragma omp parallel for
+      for (_uint i = 0; i < offspring_num; ++i) {
+	Vector<_uint> identical_set;
+	double avg_fit = 0.0;
+	bool apply_averages = true;
+	for (_uint j = 0; j < offspring_num; ++j) {
+	  if ( i == j || *(old_gen[j]) == *(old_gen[i]) ) {
+	    identical_set.push_back(j);
+	    //ensure that we only calculate the identical set once
+	    if (i < j) {
+	      apply_averages = false;
+	    }
+	  }
+	}
+
+#pragma omp parallel for
+	for (_uint j = 0; j < identical_set.size(); ++j) {
+	  for (_uint k = 0; k < args.noise_compensate() + 1; ++k) {
+	    old_gen[i]->evaluate_fitness_noisy(prob);
+	  }
+	}
+	
+	//don't recalculate if we don't have to
+	if (apply_averages) {
+	  for (auto it = identical_set.begin(); it != identical_set.end(); ++it) {
+	    old_gen[*it]->set_fitness(0, old_gen[i]->get_fitness(0));
+	  }
+	  if (old_gen[i]->get_fitness(0) > best_organism.get_fitness(0) && !old_gen[i]->penalized()) {
+	      set_best_organism(i);
+	  }
+	}
+      }
+    } else {
+      Vector<_uint*> skip_set;
+      for (_uint i = 0; i < this->offspring_num; ++i) {
+	if (args.skip_multiples()) {
+	  for (size_t j = 0; j < i; ++j) {
+	    if (*(old_gen[j]) == *(old_gen[i])) {
+	      _uint* tmp = (_uint*)malloc(sizeof(_uint)*2);
+	      tmp[0] = j; tmp[1] = i;
+	      skip_set.push_back(tmp);
+	    }
+	  }
+	} else if (args.perturb_multiples()) {
+	  for (size_t j = 0; j < i; ++j) {
+	    if (*(old_gen[j]) == *(old_gen[i])) {
+	      old_gen[j]->mutate(&args);
+	    }
+	  }
+	}
+      }
+
+#pragma omp parallel for
+      for (_uint i = 0; i < offspring_num; ++i) {
+	_uint j = 0;
+	for (; j < skip_set.size(); ++j) {
+	  if ( skip_set[j][0] == i ) { break; }
+	}
+	if (j >= skip_set.size()) {
+	  if ( args.verbose() ) {
+	    std::cout << "Now evaluating organism " << i << std::endl;
+	  }
+	  old_gen[i]->evaluate_fitness(prob);
+	  for (_uint k = 0; k < args.noise_compensate(); ++k) {
+	    old_gen[i]->evaluate_fitness_noisy(prob);
+	  }
+	}
+      }
+
+      _uint first_valid_i = 0;
+      if ( best_organism.valid() ) {
+	if ( args.noise_compensate() ) {
+	  best_organism.evaluate_fitness_noisy(prob);
+	}
+	pop_stats[0].max = best_organism.get_fitness(0);
+	pop_stats[0].min = best_organism.get_fitness(0);
+      } else {
+	//iterate until we find an organism that isn't penalized and set it to be the best
+	do {
+	  if (first_valid_i == offspring_num) {
+	    error(CODE_MISC, "All organisms in population had applied penalty.");
+	  }
+	  ++first_valid_i;
+	} while( old_gen[first_valid_i]->penalized() );
+	set_best_organism(first_valid_i - 1);
+	alltime_best_organism = best_organism.copy();
+	pop_stats[0].max = old_gen[first_valid_i]->get_fitness(0);
+	pop_stats[0].min = old_gen[first_valid_i]->get_fitness(0);
+      }
+
+      //this can't be parallelized easily
+      for (_uint i = 0; i < offspring_num; ++i) {
+	_uint j = 0;
+	for (; j < skip_set.size(); ++j) {
+	  if ( skip_set[j][0] == i ) { break; }
+	}
+	//if we are in the skip set, then set fitness accordingly
+	if (j < skip_set.size()) {
+	  uint prev_ind = skip_set[j][1];
+	  old_gen[i]->set_fitness(0, old_gen[prev_ind]->get_fitness(0));
+	  old_gen[i]->apply_penalty(old_gen[prev_ind]->get_penalty());
+	} else if (old_gen[i]->get_fitness(0) > best_organism.get_fitness(0) && !old_gen[i]->penalized()) {
+	  //check the organism again to make sure this isn't a fluke
+	  for (_uint j = 0; j < args.noise_compensate(); ++j) {
+	    old_gen[i]->evaluate_fitness_noisy(prob);
+	    best_organism.evaluate_fitness_noisy(prob);
+	  }
+	  set_best_organism(i);
+	  if (old_gen[i]->get_fitness(0) < pop_stats[0].min) {
+	    pop_stats[0].min = old_gen[i]->get_fitness(0);
+	  }
+	}
+      }
+
+      //free allocated memory
+      for (_uint j = 0; j < skip_set.size(); ++j) {
+	free(skip_set[j]);
+      }
+    }
+  } else {
+    //TODO: figure out what the default behavior should be
+  }
   double penalty_fact;
   if (pop_stats[0].max > 0) {
     penalty_fact = pop_stats[0].min;
@@ -423,6 +552,7 @@ void Population::evaluate(Problem* prob) {
     penalty_fact = -pop_stats[0].min;
   }
   bool penalties_applied = false;
+#pragma omp parallel for
   for (size_t i = 0; i < this->offspring_num; ++i) {
     if (old_gen[i]->penalized()) {
       old_gen[i]->set_fitness(pop_stats[0].min - penalty_fact*old_gen[i]->get_penalty());
@@ -434,6 +564,33 @@ void Population::evaluate(Problem* prob) {
   } else {
     calculated_flags = FLAG_NONE_SET;
   }
+  check_improvement(prob);
+}
+
+void Population::check_improvement(Problem* prob) {
+  //calculate penalties based on the range of fitnesses
+  double penalty_fact;
+  if (pop_stats[0].min > 0) {
+    penalty_fact = pop_stats[0].min;
+  } else if (pop_stats[0].max == 0) {
+    penalty_fact = pop_stats[0].max;
+  } else {
+    penalty_fact = -pop_stats[0].min;
+  }
+  bool penalties_applied = false;
+#pragma omp parallel for
+  for (size_t i = 0; i < this->offspring_num; ++i) {
+    if (old_gen[i]->penalized()) {
+      old_gen[i]->set_fitness(pop_stats[0].min - penalty_fact*old_gen[i]->get_penalty());
+      penalties_applied = true;
+    }
+  }
+  if (!penalties_applied) {
+    calculated_flags |= FLAG_STATS_SET | FLAG_BEST_FOUND;
+  } else {
+    calculated_flags = FLAG_NONE_SET;
+  }
+
   if (best_organism.get_fitness(0) > alltime_best_organism.get_fitness(0)) { 
     for (_uint j = 0; j < args.noise_compensate(); ++j) {
       best_organism.evaluate_fitness_noisy(prob);
@@ -518,9 +675,6 @@ void Population::hypermutate() {
       old_gen[i]->randomize(&args);
 //    }
   }
-}
-
-void Population::evaluate_async(Problem* prob) {
 }
 
 void Population::swap_orgs(int i, int j) {
@@ -840,7 +994,11 @@ void Population::run(Problem* prob) {
       if (iterate()) {
         break;
       }
-      evaluate(prob);
+      if (args.async()) {
+	evaluate_async(prob);
+      } else {
+	evaluate(prob);
+      }
 
       if (get_best_organism()->get_fitness(0) > prev_ftns) {
         prev_ftns = get_best_organism()->get_fitness(0);

@@ -25,6 +25,7 @@
 #define MULTIPLES_SKIP		8
 #define MULTIPLES_PERTURB	16
 #define MULTIPLES_AVG		24
+#define ASYNC_EVAL		32
 
 //selection types
 #define SELECT_ROULETTE		0
@@ -63,6 +64,7 @@ class ArgStore {
     String out_fname;
 
     bool activate = true;
+    bool async_evaluation = true;
     _uchar selection_type = SELECT_ROULETTE;
     int seed = 0;
     _uint noise_compensation_runs = 0;
@@ -96,6 +98,8 @@ class ArgStore {
     bool use_tournament() { return selection_type & SELECT_TOURNAMENT; }
     bool use_roulette_pool() { return selection_type == SELECT_ROULETTE_POOL; }
     bool tournament_replacement() { return selection_type & SELECT_USE_REPLACE; }
+    bool async() { return async_evaluation; }
+    void set_async(bool val) { async_evaluation = val; }
 
     size_t get_pop_size()			{ return pop_size; }
     void set_pop_size(size_t n)			{ pop_size = n; }
