@@ -796,6 +796,7 @@ class Population {
     //guarantee that the best organism appears in the next generation
 //    size_t best_organism_ind;
     Organism best_organism;
+    Organism alltime_best_organism;
     //labels for generating data output
 //    Vector<String> var_labels;
 //    Vector<String> obj_labels;
@@ -807,16 +808,22 @@ class Population {
     //cull first sorts the organisms and selects them based on the ratio of their relative fitness to the total relative fitness
     bool cull(); 
     void breed_shuffle();
+    void check_improvement(Problem* prob);
     void breed();
+    void tournament_selection();
     void find_best_organism();
     void calculate_distances();
     void hypermutate();
+    void set_best_organism(_uint i);
 
   public:
-    Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname = "");
-    Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname = "");
-    Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, String conf_fname = "");
-    Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map, String conf_fname = "");
+//    Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, ArgStore p_args);
+//    Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, ArgStore p_args);
+    Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map);
+    Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map);
+    Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args);
+    Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args);
+    void createOrganisms(Organism* tmplt);
     ~Population();
     Population(Population& o);
     Population& operator=(Population& o);
@@ -841,16 +848,12 @@ class Population {
     Vector<String> get_pop_data();
 
     FitnessStats get_pop_stats(_uint i = 0) { return pop_stats[i]; }
-//DEPRECATION CANDIDATE
-    double get_min_fitness(_uint i = 0) {
-#warning "get_min_fitness is deprecated, use get_pop_stats instead"
+    DEPRECATED("get_min_fitness is deprecated, use get_pop_stats instead") double get_min_fitness(_uint i = 0) {
       return pop_stats[i].min;
     }
-    double get_max_fitness(_uint i = 0) {
-#warning "get_max_fitness is deprecated, use get_pop_stats instead"
+    DEPRECATED("get_max_fitness is deprecated, use get_pop_stats instead") double get_max_fitness(_uint i = 0) {
       return pop_stats[i].max;
     }
-//END DEPRECATION_CANDIDATE
 
     void set_var_label(_uint ind, String val); 
     void set_obj_label(_uint ind, String val);
@@ -874,10 +877,12 @@ class Population_NSGAII : public Population {
     void make_fronts(std::vector<std::shared_ptr<Organism>>* cmb_arr);
 
   public:
-    Population_NSGAII(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname = "");
-    Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname = "");
-    Population_NSGAII(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, String conf_fname = "");
-    Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map, String conf_fname = "");
+    //Population_NSGAII(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, String conf_fname = "");
+    //Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname = "");
+    Population_NSGAII(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map);
+    Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map);
+    Population_NSGAII(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args);
+    Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args);
     ~Population_NSGAII();
 
     void evaluate(Problem* prob);

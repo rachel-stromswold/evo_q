@@ -684,8 +684,8 @@ void Population::swap_orgs(int i, int j) {
 }
 
 int Population::partition(unsigned int fit_ind,
-					  std::vector<std::shared_ptr<Organism>>* work_arr,
-					  int s, int e) {
+			  std::vector<std::shared_ptr<Organism>>* work_arr,
+			  int s, int e) {
   double p = (*work_arr)[e]->get_fitness(fit_ind);
   int i = s;
   for (int j = s; j < e; ++j) {
@@ -705,9 +705,9 @@ int Population::partition(unsigned int fit_ind,
   return i;
 }
 
-void Population::sort_orgs(unsigned int fit_ind,
-					   std::vector<std::shared_ptr<Organism>>* work_arr,
-					   int s, int e) {
+void Population::sort_orgs (unsigned int fit_ind,
+			    std::vector<std::shared_ptr<Organism>>* work_arr,
+			    int s, int e) {
   sort_org_calls += 1;
   if (sort_org_calls > work_arr->size()*5) {
     error(CODE_WARN, "Suspiciously many calls (%u) to sort org have been made", sort_org_calls);
