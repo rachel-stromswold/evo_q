@@ -848,10 +848,10 @@ class Population {
     Vector<String> get_pop_data();
 
     FitnessStats get_pop_stats(_uint i = 0) { return pop_stats[i]; }
-    DEPRECATED("get_min_fitness is deprecated, use get_pop_stats instead") double get_min_fitness(_uint i = 0) {
+    double get_min_fitness(_uint i = 0) {
       return pop_stats[i].min;
     }
-    DEPRECATED("get_max_fitness is deprecated, use get_pop_stats instead") double get_max_fitness(_uint i = 0) {
+    double get_max_fitness(_uint i = 0) {
       return pop_stats[i].max;
     }
 
