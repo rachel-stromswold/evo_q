@@ -693,6 +693,7 @@ private:
   double penalty = 0.0;
   size_t output_len;
   std::shared_ptr<PhenotypeMap> al;
+  int n_evaluations = 0;
 
 protected:
   Chromosome genes;
@@ -724,11 +725,16 @@ public:
   bool operator>(Organism& obj);
   bool operator<(Organism& obj);
 
+  void swap(Organism& obj);
+  bool valid() { return (al != NULL && N_OBJS > 0 && N_BITS > 0); }
+
   std::vector<Organism*> breed(ArgStore* args, Organism* par1);
+  void mutate(ArgStore* args);
   void reset();
   void randomize(ArgStore* args);
   void randomize(ArgStore* args, Organism* orgtmp);
 
+  void evaluate_fitness_noisy(Problem* prob);
   void evaluate_fitness(Problem* prob);
 
   double get_fitness(_uint i = 0);
@@ -737,6 +743,7 @@ public:
   double get_penalty() { return penalty; }
   bool penalized() { return penalty != 0; }
   void set_fitness(_uint i, double val);
+  _uint get_n_evaluations() { return n_evaluations; }
 
   void set_int(_uint i, int value);
   void set_uint(_uint i, int value);
@@ -794,12 +801,9 @@ class Population {
     size_t survivors_num;
     std::vector<std::shared_ptr<Organism>> survivors;
     //guarantee that the best organism appears in the next generation
-//    size_t best_organism_ind;
     Organism best_organism;
     Organism alltime_best_organism;
     //labels for generating data output
-//    Vector<String> var_labels;
-//    Vector<String> obj_labels;
     char** var_labels;
     char** obj_labels;
 

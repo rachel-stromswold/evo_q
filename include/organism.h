@@ -84,7 +84,6 @@ public:
   bool operator<(Organism& obj);
 
   void swap(Organism& obj);
-
   bool valid() { return (al != NULL && N_OBJS > 0 && N_BITS > 0); }
 
   std::vector<Organism*> breed(ArgStore* args, Organism* par1);
