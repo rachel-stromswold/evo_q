@@ -765,7 +765,7 @@ struct FitnessStats {
 
 class ConvergenceCriteria {
   public:
-    virtual bool evaluate_convergence(FitnessStats* stats) = 0;
+    virtual bool evaluate_convergence(_uint N_OBJS, FitnessStats* stats) = 0;
 };
 
 class Population {
