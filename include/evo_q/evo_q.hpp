@@ -44,6 +44,12 @@
 #define WAIT_CON      1
 #define VERBOSE       2
 
+//selection types
+#define SELECT_ROULETTE		0
+#define SELECT_TOURNAMENT	1
+#define SELECT_USE_REPLACE	3
+#define SELECT_ROULETTE_POOL	4
+
 //POPULATION_H
 #define BUF_SIZE      50
 #define DEF_SORT_PARAM    -3
