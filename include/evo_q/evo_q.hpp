@@ -41,8 +41,14 @@
 #define DEF_NUM_CROSSOVERS      1
 
 //flags
-#define WAIT_CON      1
-#define VERBOSE       2
+#define WAIT_CON		1
+#define VERBOSE			2
+#define NOISE_COMPENSATE	4
+#define MULTIPLES_NONE		7
+#define MULTIPLES_SKIP		8
+#define MULTIPLES_PERTURB	16
+#define MULTIPLES_AVG		24
+#define ASYNC_EVAL		32
 
 //selection types
 #define SELECT_ROULETTE		0
