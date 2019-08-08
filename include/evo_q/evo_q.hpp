@@ -558,10 +558,13 @@ class ArgStore {
     double mutate_prob;
     double hypermutation_threshold;
     double replacement_fraction;
-    std::string out_fname;
+    String out_fname;
 
     bool activate = true;
+    bool async_evaluation = true;
+    _uchar selection_type = SELECT_ROULETTE;
     int seed = 0;
+    _uint noise_compensation_runs = 0;
 
   public: 
     ArgStore();
@@ -580,6 +583,20 @@ class ArgStore {
     bool random_crossover();
     void print_data();
 //END REMOVAL CANDIDATE
+
+    bool skip_multiples() { return flags & MULTIPLES_SKIP; }
+    bool average_multiples() { return flags & MULTIPLES_AVG; }
+    bool perturb_multiples() { return flags & MULTIPLES_PERTURB; }
+    _uint noise_compensate() { return noise_compensation_runs; }
+    void set_noise_compensation(_uint val);
+
+    void set_selection_type(_uchar val);
+    bool use_roulette() { return selection_type == SELECT_ROULETTE; }
+    bool use_tournament() { return selection_type & SELECT_TOURNAMENT; }
+    bool use_roulette_pool() { return selection_type == SELECT_ROULETTE_POOL; }
+    bool tournament_replacement() { return selection_type & SELECT_USE_REPLACE; }
+    bool async() { return async_evaluation; }
+    void set_async(bool val) { async_evaluation = val; }
 
     size_t get_pop_size()			{ return pop_size; }
     void set_pop_size(size_t n)			{ pop_size = n; }
@@ -605,7 +622,7 @@ class ArgStore {
     void set_wait_for_con(bool b = true)	{ flags |= WAIT_CON * ((_uint)b); }
     bool verbose()				{ return flags & VERBOSE; }
     void set_verbose(bool b = true)		{ flags |= VERBOSE * ((_uint)b); }
-    std::string get_out_fname() 		{ return out_fname; }
+    String get_out_fname() 			{ return out_fname; }
 };
     
 //CHROMOSOME_H
