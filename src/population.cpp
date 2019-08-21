@@ -1006,11 +1006,15 @@ void Population::run(Problem* prob) {
       if (iterate()) {
         break;
       }
+#ifdef USE_LIBOMP
       if (args.async()) {
 	evaluate_async(prob);
       } else {
 	evaluate(prob);
       }
+#else
+      evaluate(prob);
+#endif
 
       if (get_best_organism()->get_fitness(0) > prev_ftns) {
         prev_ftns = get_best_organism()->get_fitness(0);

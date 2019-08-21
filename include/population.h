@@ -115,7 +115,9 @@ class Population {
     void resize_population(_uint new_size);
     void set_n_survivors(_uint new_size);
     void evaluate(Problem* prob);
+#ifdef USE_LIBOMP
     void evaluate_async(Problem* prob);
+#endif
     bool iterate(ConvergenceCriteria* conv = NULL);
 
     std::shared_ptr<Organism> get_best_organism(size_t i = 0);
