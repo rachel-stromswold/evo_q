@@ -5,7 +5,11 @@
 #include <vector>
 #include <fstream>
 #include <memory>
+
+//check for the presence of libomp
+#ifdef USE_LIBOMP
 #include <omp.h>
+#endif
 
 #define NUM_GENES	10
 #define NUM_CARRY	1
