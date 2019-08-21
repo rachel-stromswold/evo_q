@@ -416,6 +416,7 @@ void Population::evaluate(Problem* prob) {
   check_improvement(prob);
 }
 
+#ifdef USE_LIBOMP
 void Population::evaluate_async(Problem* prob) {
   if (N_OBJS == 1) { 
     for (_uint i = 0; i < offspring_num; ++i) {
@@ -566,6 +567,7 @@ void Population::evaluate_async(Problem* prob) {
   }
   check_improvement(prob);
 }
+#endif
 
 void Population::check_improvement(Problem* prob) {
   //calculate penalties based on the range of fitnesses
@@ -578,6 +580,7 @@ void Population::check_improvement(Problem* prob) {
     penalty_fact = -pop_stats[0].min;
   }
   bool penalties_applied = false;
+#ifdef USE_LIBOMP
 #pragma omp parallel for
   for (size_t i = 0; i < this->offspring_num; ++i) {
     if (old_gen[i]->penalized()) {
@@ -585,6 +588,14 @@ void Population::check_improvement(Problem* prob) {
       penalties_applied = true;
     }
   }
+#else
+  for (size_t i = 0; i < this->offspring_num; ++i) {
+    if (old_gen[i]->penalized()) {
+      old_gen[i]->set_fitness(pop_stats[0].min - penalty_fact*old_gen[i]->get_penalty());
+      penalties_applied = true;
+    }
+  }
+#endif
   if (!penalties_applied) {
     calculated_flags |= FLAG_STATS_SET | FLAG_BEST_FOUND;
   } else {
@@ -728,6 +739,7 @@ bool Population::cull_in_place() {
   double difference = pop_stats[0].max - pop_stats[0].min;
   //avoid divide by 0
   if (difference == 0) {
+    error(CODE_WARN, "All organisms have the same fitness, exiting");
     return true;
   }
   std::uniform_real_distribution<double> dist(0, difference);

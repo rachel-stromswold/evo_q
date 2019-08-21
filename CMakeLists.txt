@@ -86,7 +86,10 @@ endif()
 
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
-    target_link_libraries(evo_q PUBLIC OpenMP::OpenMP_CXX)
+  target_link_libraries(evo_q PUBLIC OpenMP::OpenMP_CXX)
+  add_definitions(-DUSE_LIBOMP=1)
+else()
+  remove_definitions(-DUSE_LIBOMP)
 endif()
 
 enable_testing()
