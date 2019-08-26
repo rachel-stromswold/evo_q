@@ -84,6 +84,7 @@ class Population {
 //    Vector<String> obj_labels;
     char** var_labels;
     char** obj_labels;
+    int print_penalties = 0;
 
     //cull in place is slightly faster but less accurate than the standard cull method
     bool cull_in_place();
@@ -112,6 +113,7 @@ class Population {
     Population(Population&& o);
 
     void set_convergence_type(ConvergenceCriteria* conv);
+    void set_penalty_printing(bool val = true) { print_penalties = (val)? 1 : 0; }
     void resize_population(_uint new_size);
     void set_n_survivors(_uint new_size);
     void evaluate(Problem* prob);

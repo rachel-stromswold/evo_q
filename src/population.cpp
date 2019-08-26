@@ -309,16 +309,16 @@ void Population::evaluate(Problem* prob) {
     } else {
       //iterate until we find an organism that isn't penalized and set it to be the best
       do {
-	if (start_i == offspring_num) {
-	  error(CODE_MISC, "All organisms in population had applied penalty.");
-	}
-	old_gen[start_i]->apply_penalty(0);
-	if ( args.noise_compensate() ) {
-	  old_gen[start_i]->evaluate_fitness_noisy(prob);
-	} else {
-	  old_gen[start_i]->evaluate_fitness(prob);
-	}
-	++start_i;
+        if (start_i == offspring_num) {
+          error(CODE_MISC, "All organisms in population had applied penalty.");
+        }
+        old_gen[start_i]->apply_penalty(0);
+        if ( args.noise_compensate() ) {
+          old_gen[start_i]->evaluate_fitness_noisy(prob);
+        } else {
+          old_gen[start_i]->evaluate_fitness(prob);
+        }
+        ++start_i;
       } while( old_gen[start_i]->penalized() );
       set_best_organism(start_i - 1);
       alltime_best_organism = best_organism.copy();
@@ -331,40 +331,40 @@ void Population::evaluate(Problem* prob) {
     //calculate averages for organisms that appear twice in the population
     if ( args.average_multiples() ) {
       for (_uint i = start_i; i < this->offspring_num; ++i) {
-	Vector<_uint> identical_set;
-	double avg_fit = 0.0;
-	bool apply_averages = true;
-	for (size_t j = 0; j < this->offspring_num; ++j) {
-	  if ( i == j || *(old_gen[j]) == *(old_gen[i]) ) {
-	    //ensure that we only calculate the identical set once
-	    if (i < j) {
-	      apply_averages = false;
-	    } else {
-	      identical_set.push_back(j);
-	      old_gen[j]->evaluate_fitness(prob);
-	      avg_fit += old_gen[j]->get_fitness(0);
-	    }
-	  }
-	}
-	//don't recalculate if we don't have to
-	if (apply_averages) {
-	  for (auto it = identical_set.begin(); it != identical_set.end(); ++it) {
-	    old_gen[*it]->set_fitness(0, avg_fit / identical_set.size());
-	  }
-	  if (old_gen[i]->get_fitness(0) > best_organism.get_fitness(0) && !old_gen[i]->penalized()) {
-	    //check the organism again to make sure this isn't a fluke
-	    for (_uint i = 0; i < args.noise_compensate(); ++i) {
-	      old_gen[i]->evaluate_fitness_noisy(prob);
-	      best_organism.evaluate_fitness_noisy(prob);
-	    }
-	    if ( old_gen[i]->get_fitness(0) > best_organism.get_fitness(0) ) {
-	      set_best_organism(i);
-	    }
-	    if (old_gen[i]->get_fitness(0) < pop_stats[0].min) {
-	      pop_stats[0].min = old_gen[i]->get_fitness(0);
-	    }
-	  }
-	}
+        Vector<_uint> identical_set;
+        double avg_fit = 0.0;
+        bool apply_averages = true;
+        for (size_t j = 0; j < this->offspring_num; ++j) {
+          if ( i == j || *(old_gen[j]) == *(old_gen[i]) ) {
+            //ensure that we only calculate the identical set once
+            if (i < j) {
+              apply_averages = false;
+            } else {
+              identical_set.push_back(j);
+              old_gen[j]->evaluate_fitness(prob);
+              avg_fit += old_gen[j]->get_fitness(0);
+            }
+          }
+        }
+        //don't recalculate if we don't have to
+        if (apply_averages) {
+          for (auto it = identical_set.begin(); it != identical_set.end(); ++it) {
+            old_gen[*it]->set_fitness(0, avg_fit / identical_set.size());
+          }
+          if (old_gen[i]->get_fitness(0) > best_organism.get_fitness(0) && !old_gen[i]->penalized()) {
+            //check the organism again to make sure this isn't a fluke
+            for (_uint i = 0; i < args.noise_compensate(); ++i) {
+              old_gen[i]->evaluate_fitness_noisy(prob);
+              best_organism.evaluate_fitness_noisy(prob);
+            }
+            if ( old_gen[i]->get_fitness(0) > best_organism.get_fitness(0) ) {
+              set_best_organism(i);
+            }
+            if (old_gen[i]->get_fitness(0) < pop_stats[0].min) {
+              pop_stats[0].min = old_gen[i]->get_fitness(0);
+            }
+          }
+        }
       }
     } else {
       for (_uint i = start_i; i < offspring_num; ++i) {
@@ -385,7 +385,7 @@ void Population::evaluate(Problem* prob) {
 	      old_gen[i]->mutate(&args);
 	      old_gen[i]->evaluate_fitness(prob);
 	      for (_uint k = 0; k < args.noise_compensate(); ++k) {
-		old_gen[i]->evaluate_fitness_noisy(prob);
+          old_gen[i]->evaluate_fitness_noisy(prob);
 	      }
 	    }
 	  }
@@ -1085,15 +1085,19 @@ void Population::set_obj_label(_uint ind, String val) {
 Vector<String> Population::get_header() {
   String def;
   Vector<String> ret;
-  ret.reserve(old_gen.size()*(N_PARAMS + N_OBJS));
+  ret.reserve(old_gen.size()*(N_PARAMS + print_penalties + N_OBJS));
 
   for (_uint i = 0; i < old_gen.size(); ++i) {
     for (_uint j = 0; j < N_PARAMS; ++j) {
-      ret.push_back(String(var_labels[j]));
+      ret.push_back( String(var_labels[j]) );
+    }
+
+    if (print_penalties != 0) {
+      ret.push_back( String("Penalized") );
     }
 
     for (_uint j = 0; j < N_OBJS; ++j) {
-      ret.push_back(String(obj_labels[j]));
+      ret.push_back( String(obj_labels[j]) );
     }
   }
   return ret;
@@ -1101,19 +1105,25 @@ Vector<String> Population::get_header() {
 
 Vector<String> Population::get_pop_data() {
   sort_orgs(0, &old_gen);
-  _uint span = N_OBJS + map->get_num_params();
+  _uint span = N_OBJS + print_penalties + map->get_num_params();
   String def;
   Vector<String> ret(offspring_num*span, def);
   char buf[OUT_BUF_SIZE];
 
   for (_uint i = 0; i < old_gen.size(); ++i) {
+    //print out the parameters
     for (_uint j = 0; j < map->get_num_params(); ++j) {
       ret[i*span + j] = old_gen[i]->get_chromosome_string(j);
     }
-
+    //print out the penalty applied to the organism
+    if (print_penalties) {
+      snprintf(buf, OUT_BUF_SIZE - 1, "%f", old_gen[i]->get_penalty());
+      ret[i*span + map->get_num_params()] = buf;
+    }
+    //print out the fitness value(s)
     for (_uint j = 0; j < N_OBJS; ++j) {
       snprintf(buf, OUT_BUF_SIZE - 1, "%f", old_gen[i]->get_fitness(j));
-      ret[i*span + map->get_num_params() + j] = buf;
+      ret[i*span + map->get_num_params() + print_penalties + j] = buf;
     }
   }
 
@@ -1508,18 +1518,18 @@ Vector<String> Population_NSGAII::get_pop_data() {
     char buf[OUT_BUF_SIZE];
     for (_uint n = 0; n < pareto_fronts.size(); ++n) {
       for (_uint i = 0; i < pareto_fronts[n].size(); ++i) {
-	snprintf(buf, OUT_BUF_SIZE - 1, "%d", n);
-	tmp_str = buf;
-	ret.push_back(tmp_str);
+        snprintf(buf, OUT_BUF_SIZE - 1, "%d", n);
+        tmp_str = buf;
+        ret.push_back(tmp_str);
 
-	for (_uint j = 0; j < map->get_num_params(); ++j) {
-	  ret.push_back( pareto_fronts[n][i]->get_chromosome_string(j) );
-	}
+        for (_uint j = 0; j < map->get_num_params(); ++j) {
+          ret.push_back( pareto_fronts[n][i]->get_chromosome_string(j) );
+        }
 
-	for (_uint j = 0; j < get_n_objs(); ++j) {
-	  snprintf(buf, OUT_BUF_SIZE - 1, "%f", pareto_fronts[n][i]->get_fitness(j));
-	  ret.push_back(String(buf));
-	}
+        for (_uint j = 0; j < get_n_objs(); ++j) {
+          snprintf(buf, OUT_BUF_SIZE - 1, "%f", pareto_fronts[n][i]->get_fitness(j));
+          ret.push_back(String(buf));
+        }
       }
     }
   }

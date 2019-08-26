@@ -863,6 +863,7 @@ class Population {
     Population(Population&& o);
 
     void set_convergence_type(ConvergenceCriteria* conv);
+    void set_penalty_printing(bool val = true); { print_penalties = (val)? 1 : 0; }
     void resize_population(_uint new_size);
     void set_n_survivors(_uint new_size);
     void evaluate(Problem* prob);
