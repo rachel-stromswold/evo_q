@@ -819,6 +819,7 @@ class Population {
     FitnessStats* pop_stats = NULL;
     //EXTERNALLY MANAGED POINTERS
     std::shared_ptr<PhenotypeMap> map;
+    print_penalties = 0;
     
     ArgStore args;
     //all offspring from the previous generation
