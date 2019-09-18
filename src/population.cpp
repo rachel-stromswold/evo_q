@@ -303,7 +303,7 @@ void Population::evaluate(Problem* prob) {
     size_t start_i = 0;
     if ( best_organism.valid() ) {
       if ( args.noise_compensate() ) {
-	best_organism.evaluate_fitness_noisy(prob);
+        best_organism.evaluate_fitness_noisy(prob);
       }
       pop_stats[0].max = best_organism.get_fitness(0);
     } else {

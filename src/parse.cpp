@@ -32,6 +32,11 @@ ArgStore::ArgStore(const ArgStore& o) : out_fname(o.out_fname) {
   hypermutation_threshold = o.hypermutation_threshold;
   flags = o.flags;
   replacement_fraction = DEF_REPLACE_FRAC;
+  activate = o.activate;
+  async_evaluation = o.async_evaluation;
+  selection_type = o.selection_type;
+  noise_compensation_runs = o.noise_compensation_runs;
+
   if (o.long_bin) {
     long_bin = new std::binomial_distribution<unsigned char>(*o.long_bin);
   } else {
@@ -56,7 +61,7 @@ ArgStore::ArgStore(const ArgStore& o) : out_fname(o.out_fname) {
   }
 }
 
-ArgStore::ArgStore(ArgStore&& o) {
+ArgStore::ArgStore(ArgStore&& o) : out_fname(o.out_fname) {
   pop_size = o.pop_size;
   breed_pop_size = o.breed_pop_size;
   num_gens = o.num_gens;
@@ -67,8 +72,12 @@ ArgStore::ArgStore(ArgStore&& o) {
   mutate_prob = o.mutate_prob;
   hypermutation_threshold = o.hypermutation_threshold;
   replacement_fraction = o.replacement_fraction;
+  activate = o.activate;
+  async_evaluation = o.async_evaluation;
+  selection_type = o.selection_type;
   flags = o.flags;
-  //managed pointers dumb copying
+  noise_compensation_runs = o.noise_compensation_runs;
+  //managed pointers shallow copying
   long_bin = o.long_bin;
   short_bin = o.short_bin;
   bern_mut = o.bern_mut;
