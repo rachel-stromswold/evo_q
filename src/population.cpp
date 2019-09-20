@@ -569,29 +569,39 @@ void Population::evaluate_async(Problem* prob) {
 }
 #endif
 
+/**
+ * \brief Apply soft penalties to organisms, this gaurantees that a penalized organism will always have a lower fitness than an unpenalized organism
+ *
+ * \note Penalized organisms all have a nonzero penalty weight. Let this penalty weight be given by $P$. Let $m$ and $M$ be the minimum and maximum fitness among all unpenalized organisms respectively. Given an organism $O$ with an unpenalized fitness $F(O)$, after penalties are applied,
+ * \f[
+ * F_new(O)=m - F(O) - max(|M|, |m|)*P
+ * \f]
+ * By default $F(O)$ is set to zero unless the user specified function evaluate_fitness"("O")" calls O.set_fitness"()". 
+ * Users may or may not want to assign fitnesses to penalized organisms depending on whether such a fitness is well defined.
+ */
 void Population::apply_penalties(Problem* prob) {
   //calculate penalties based on the range of fitnesses
-  double penalty_fact;
-  if (pop_stats[0].min > 0) {
-    penalty_fact = pop_stats[0].min;
-  } else if (pop_stats[0].max == 0) {
-    penalty_fact = pop_stats[0].max;
-  } else {
-    penalty_fact = -pop_stats[0].min;
+  double penalty_fact = abs(pop_stats[0].min);
+  if (abs(pop_stats[0].max) > penalty_fact) {
+    penalty_fact = abs(pop_stats[0].max);
   }
   bool penalties_applied = false;
 #ifdef USE_LIBOMP
 #pragma omp parallel for
   for (size_t i = 0; i < this->offspring_num; ++i) {
     if (old_gen[i]->penalized()) {
-      old_gen[i]->set_fitness(pop_stats[0].min - penalty_fact*old_gen[i]->get_penalty());
+      double new_fit = pop_stats[0].min - old_gen[i]->get_fitness(0);
+      new_fit -= penalty_fact*old_gen[i]->get_penalty();
+      old_gen[i]->set_fitness(new_fit);
       penalties_applied = true;
     }
   }
 #else
   for (size_t i = 0; i < this->offspring_num; ++i) {
     if (old_gen[i]->penalized()) {
-      old_gen[i]->set_fitness(pop_stats[0].min - penalty_fact*old_gen[i]->get_penalty());
+      double new_fit = pop_stats[0].min - old_gen[i]->get_fitness(0);
+      new_fit -= penalty_fact*old_gen[i]->get_penalty();
+      old_gen[i]->set_fitness(new_fit);
       penalties_applied = true;
     }
   }
