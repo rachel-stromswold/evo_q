@@ -402,7 +402,9 @@ void Population::evaluate(Problem* prob) {
             old_gen[i]->evaluate_fitness_noisy(prob);
             best_organism.evaluate_fitness_noisy(prob);
           }
-          set_best_organism(i);
+          if (old_gen[i]->get_fitness(0) > best_organism.get_fitness(0)) {
+            set_best_organism(i);
+          }
         }
 
         if (old_gen[i]->get_fitness(0) < pop_stats[0].min) {
@@ -1092,11 +1094,34 @@ void Population::set_obj_label(_uint ind, String val) {
   }
 }
 
+Vector<String> Population::get_best_header() {
+  String def;
+  Vector<String> ret;
+  ret.reserve( N_PARAMS + print_penalties + N_OBJS );
+  char buf[OUT_BUF_SIZE];
+
+  //print information about the best organism
+  for (_uint j = 0; j < N_PARAMS; ++j) {
+    snprintf(buf, OUT_BUF_SIZE - 1, "best %s", var_labels[j]);
+    ret.push_back( String(buf) );
+  }
+  if (print_penalties != 0) {
+    ret.push_back( String("best penalty") );
+  }
+  for (_uint j = 0; j < N_OBJS; ++j) {
+    snprintf(buf, OUT_BUF_SIZE - 1, "best %s", obj_labels[j]);
+    ret.push_back( String(buf) );
+  }
+  
+  return ret;
+}
+
 Vector<String> Population::get_header() {
   String def;
   Vector<String> ret;
-  ret.reserve(old_gen.size()*(N_PARAMS + print_penalties + N_OBJS));
+  ret.reserve( old_gen.size()*(N_PARAMS + print_penalties + N_OBJS) );
 
+  //print information about every other organism in the population
   for (_uint i = 0; i < old_gen.size(); ++i) {
     for (_uint j = 0; j < N_PARAMS; ++j) {
       ret.push_back( String(var_labels[j]) );
@@ -1110,6 +1135,31 @@ Vector<String> Population::get_header() {
       ret.push_back( String(obj_labels[j]) );
     }
   }
+  
+  return ret;
+}
+
+Vector<String> Population::get_best_data() {
+  sort_orgs(0, &old_gen);
+  char buf[OUT_BUF_SIZE];
+  String def;
+  Vector<String> ret(N_OBJS + print_penalties + map->get_num_params(), def);
+
+  size_t param_o = 0;
+  size_t fitness_o = map->get_num_params() + print_penalties;
+  //print information about the best organism
+  for (_uint j = 0; j < map->get_num_params(); ++j) {
+    ret[j] = best_organism.get_chromosome_string(j);
+  }
+  if (print_penalties) {
+    snprintf(buf, OUT_BUF_SIZE - 1, "%f", best_organism.get_penalty());
+    ret[map->get_num_params()] = buf;
+  }
+  for (_uint j = 0; j < N_OBJS; ++j) {
+    snprintf(buf, OUT_BUF_SIZE - 1, "%f", best_organism.get_fitness(j));
+    ret[fitness_o + j] = buf;
+  }
+
   return ret;
 }
 
@@ -1117,23 +1167,27 @@ Vector<String> Population::get_pop_data() {
   sort_orgs(0, &old_gen);
   _uint span = N_OBJS + print_penalties + map->get_num_params();
   String def;
-  Vector<String> ret(offspring_num*span, def);
+  Vector<String> ret(span*offspring_num, def);
   char buf[OUT_BUF_SIZE];
 
+  //print information about the rest of the population
   for (_uint i = 0; i < old_gen.size(); ++i) {
+    size_t param_o = i*span;
+    size_t fitness_o = param_o + map->get_num_params() + print_penalties;
+
     //print out the parameters
     for (_uint j = 0; j < map->get_num_params(); ++j) {
-      ret[i*span + j] = old_gen[i]->get_chromosome_string(j);
+      ret[param_o + j] = old_gen[i]->get_chromosome_string(j);
     }
     //print out the penalty applied to the organism
     if (print_penalties) {
       snprintf(buf, OUT_BUF_SIZE - 1, "%f", old_gen[i]->get_penalty());
-      ret[i*span + map->get_num_params()] = buf;
+      ret[param_o + map->get_num_params()] = buf;
     }
     //print out the fitness value(s)
     for (_uint j = 0; j < N_OBJS; ++j) {
       snprintf(buf, OUT_BUF_SIZE - 1, "%f", old_gen[i]->get_fitness(j));
-      ret[i*span + map->get_num_params() + print_penalties + j] = buf;
+      ret[fitness_o + j] = buf;
     }
   }
 

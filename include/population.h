@@ -130,7 +130,9 @@ class Population {
     void swap_orgs(int i, int j);
     int partition(_uint ind, std::vector<std::shared_ptr<Organism>>* work_arr, int s, int e);
     void sort_orgs(unsigned int ind, std::vector<std::shared_ptr<Organism>>* arr, int s = DEF_SORT_PARAM, int e = DEF_SORT_PARAM);
+    Vector<String> get_best_header();
     Vector<String> get_header();
+    Vector<String> get_best_data();
     Vector<String> get_pop_data();
 
     FitnessStats get_pop_stats(_uint i = 0) { return pop_stats[i]; }
