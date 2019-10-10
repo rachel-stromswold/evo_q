@@ -84,6 +84,7 @@ class Population {
 //    Vector<String> obj_labels;
     char** var_labels;
     char** obj_labels;
+    std::vector<bool> is_obj_cost;
     int print_penalties = 0;
 
     //cull in place is slightly faster but less accurate than the standard cull method
@@ -143,6 +144,8 @@ class Population {
       return pop_stats[i].max;
     }
 
+    void set_fitness(_uint ind);
+    void set_cost(_uint ind);
     void set_var_label(_uint ind, String val); 
     void set_obj_label(_uint ind, String val);
 

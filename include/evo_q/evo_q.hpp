@@ -836,6 +836,7 @@ class Population {
     //labels for generating data output
     char** var_labels;
     char** obj_labels;
+    std::vector<bool> is_obj_cost;
 
     //cull in place is slightly faster but less accurate than the standard cull method
     bool cull_in_place();
@@ -881,7 +882,10 @@ class Population {
     void swap_orgs(int i, int j);
     int partition(_uint ind, std::vector<std::shared_ptr<Organism>>* work_arr, int s, int e);
     void sort_orgs(unsigned int ind, std::vector<std::shared_ptr<Organism>>* arr, int s = DEF_SORT_PARAM, int e = DEF_SORT_PARAM);
+
+    Vector<String> get_best_header();
     Vector<String> get_header();
+    Vector<String> get_best_data();
     Vector<String> get_pop_data();
 
     FitnessStats get_pop_stats(_uint i = 0) { return pop_stats[i]; }
@@ -892,6 +896,8 @@ class Population {
       return pop_stats[i].max;
     }
 
+    void set_fitness(_uint ind);
+    void set_cost(_uint ind);
     void set_var_label(_uint ind, String val); 
     void set_obj_label(_uint ind, String val);
 

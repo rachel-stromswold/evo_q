@@ -302,8 +302,23 @@ double Organism::get_fitness(unsigned int i) {
     return fitness[i];
 }
 
+double Organism::get_cost(unsigned int i) {
+  if (i == N_OBJS)
+    return -distance;
+  else if (i == N_OBJS + 1)
+    return (double)rank;
+  else if (i == N_OBJS + 2)
+    return (double)n_dominations;
+  else
+    return -fitness[i];
+}
+
 void Organism::set_fitness(double val) {
   fitness[0] = val;
+}
+
+void Organism::set_cost(double val) {
+  fitness[0] = -val;
 }
 
 void Organism::set_fitness(_uint i, double val) {
@@ -315,6 +330,17 @@ void Organism::set_fitness(_uint i, double val) {
     }
   }
   fitness[i] = val;
+}
+
+void Organism::set_cost(_uint i, double val) {
+  if (i >= fitness.size()) {
+    if (i < N_OBJS) {
+      fitness.resize(N_OBJS);
+    } else {
+      error(CODE_ARG_RANGE, "Attempt to modify invalid fitness index %d, size is %d.", i, fitness.size());
+    }
+  }
+  fitness[i] = -val;
 }
 
 void Organism::set_int(_uint i, int value) {

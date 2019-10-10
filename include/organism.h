@@ -96,11 +96,14 @@ public:
   void evaluate_fitness(Problem* prob);
 
   double get_fitness(_uint i = 0);
+  double get_cost(_uint i = 0);
   void set_fitness(double val);
+  void set_cost(double val);
   void apply_penalty(double val) { penalty = val; }
   double get_penalty() { return penalty; }
   bool penalized() { return penalty != 0; }
   void set_fitness(_uint i, double val);
+  void set_cost(_uint i, double val);
   _uint get_n_evaluations() { return n_evaluations; }
 
   void set_int(_uint i, int value);

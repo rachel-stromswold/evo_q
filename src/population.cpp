@@ -88,7 +88,8 @@ Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeM
 
 Population::Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map) :
   N_BITS(pn_bits),
-  N_OBJS(pn_objs)
+  N_OBJS(pn_objs),
+  is_obj_cost(N_OBJS, false)
 {
   map = p_map;
   createOrganisms(NULL);
@@ -96,7 +97,8 @@ Population::Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMa
 
 Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map) :
   N_BITS(pn_bits),
-  N_OBJS(pn_objs)
+  N_OBJS(pn_objs),
+  is_obj_cost(N_OBJS, false)
 {
   map = p_map;
   createOrganisms(tmplt);
@@ -105,7 +107,8 @@ Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::share
 Population::Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args) :
   N_BITS(pn_bits),
   N_OBJS(pn_objs),
-  args(p_args)
+  args(p_args),
+  is_obj_cost(N_OBJS, false)
 {
   map = p_map;
   createOrganisms(NULL);
@@ -114,7 +117,8 @@ Population::Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMa
 Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args) :
   N_BITS(pn_bits),
   N_OBJS(pn_objs),
-  args(p_args)
+  args(p_args),
+  is_obj_cost(N_OBJS, false)
 {
   map = p_map;
   createOrganisms(tmplt);
@@ -1062,6 +1066,26 @@ void Population::run(Problem* prob) {
   }
 }
 
+/**
+ * \brief Sets the objective referenced by index ind to use a cost (corresponding to a minimization problem).
+ *
+ * \param ind	The index of the parameter to set
+ * \seealso set_fitness
+ */
+void Population::set_cost(_uint ind) {
+  is_obj_cost[ind] = true;
+}
+
+/**
+ * \brief Sets the objective referenced by index ind to use a fitness (corresponding to a maximization problem).
+ *
+ * \param ind	The index of the parameter to set
+ * \seealso set_cost
+ */
+void Population::set_fitness(_uint ind) {
+  is_obj_cost[ind] = false;
+}
+
 void Population::set_var_label(_uint ind, String val) {
   if (ind >= N_PARAMS) {
     error(CODE_WARN, "Invalid parameter index %u provided for set_var_label. The parameter index must be less than %u.", ind, N_PARAMS);
@@ -1156,7 +1180,12 @@ Vector<String> Population::get_best_data() {
     ret[map->get_num_params()] = buf;
   }
   for (_uint j = 0; j < N_OBJS; ++j) {
-    snprintf(buf, OUT_BUF_SIZE - 1, "%f", best_organism.get_fitness(j));
+    if (is_obj_cost[j]) {
+      snprintf(buf, OUT_BUF_SIZE - 1, "%f", best_organism.get_cost(j));
+    } else {
+      snprintf(buf, OUT_BUF_SIZE - 1, "%f", best_organism.get_fitness(j));
+    }
+    
     ret[fitness_o + j] = buf;
   }
 
@@ -1186,7 +1215,12 @@ Vector<String> Population::get_pop_data() {
     }
     //print out the fitness value(s)
     for (_uint j = 0; j < N_OBJS; ++j) {
-      snprintf(buf, OUT_BUF_SIZE - 1, "%f", old_gen[i]->get_fitness(j));
+      if (is_obj_cost[j]) {
+        snprintf(buf, OUT_BUF_SIZE - 1, "%f", old_gen[i]->get_cost(j));
+      } else {
+        snprintf(buf, OUT_BUF_SIZE - 1, "%f", old_gen[i]->get_fitness(j));
+      }
+      
       ret[fitness_o + j] = buf;
     }
   }
