@@ -15,7 +15,7 @@
 #define NUM_CARRY	1
 
 #define MAX_NUM_GENS	100
-#define OUT_BUF_SIZE    10
+#define OUT_BUF_SIZE    50
 
 #define DEF_SORT_PARAM	-3
 
@@ -76,12 +76,9 @@ class Population {
     size_t survivors_num;
     std::vector<std::shared_ptr<Organism>> survivors;
     //guarantee that the best organism appears in the next generation
-//    size_t best_organism_ind;
     Organism best_organism;
     Organism alltime_best_organism;
     //labels for generating data output
-//    Vector<String> var_labels;
-//    Vector<String> obj_labels;
     char** var_labels;
     char** obj_labels;
     std::vector<bool> is_obj_cost;

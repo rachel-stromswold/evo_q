@@ -450,6 +450,7 @@ namespace Genetics {
         _uint n_;
         _uint k_;
         std::uniform_int_distribution<_uint> dist;
+        bool replace;
         
     public:
         SampleDraw(_uint p_n, _uint p_k) : dist(0, nChoosek(p_n-1, p_k-1)*factorial(p_k-1)) {
@@ -821,7 +822,6 @@ class Population {
     FitnessStats* pop_stats = NULL;
     //EXTERNALLY MANAGED POINTERS
     std::shared_ptr<PhenotypeMap> map;
-    int print_penalties = 0;
     
     ArgStore args;
     //all offspring from the previous generation
@@ -839,13 +839,14 @@ class Population {
     char** var_labels;
     char** obj_labels;
     std::vector<bool> is_obj_cost;
+    int print_penalties = 0;
 
     //cull in place is slightly faster but less accurate than the standard cull method
     bool cull_in_place();
     //cull first sorts the organisms and selects them based on the ratio of their relative fitness to the total relative fitness
     bool cull(); 
     void breed_shuffle();
-    void check_improvement(Problem* prob);
+    void apply_penalties(Problem* prob);
     void breed();
     void tournament_selection();
     void find_best_organism();
