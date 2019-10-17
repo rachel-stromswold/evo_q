@@ -443,6 +443,21 @@ namespace Genetics {
     using Vector = std::vector<T>;
     typedef std::string String;
 #endif
+
+    template<typename T>
+    bool contains(Vector<T>& vec, T target) {
+      for (auto it = vec.begin(); it != vec.end(); ++it) {
+        if (*it == target) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+#ifndef USE_EXCEPTIONS
+    bool has_error();
+    String get_error();
+#endif
     
     //draw k elements from the integer range from 0 to n useful for sampling from arrays
     class SampleDraw {
@@ -723,11 +738,11 @@ private:
   double penalty = 0.0;
   size_t output_len;
   std::shared_ptr<PhenotypeMap> al;
-  int n_evaluations = 0;
 
 protected:
   Chromosome genes;
   size_t n_nodes;
+  int n_evaluations = 0;
 
 public:
   //this is not used internally, but can be set when evaluating the fitness
@@ -768,6 +783,7 @@ public:
   void evaluate_fitness(Problem* prob);
 
   double get_fitness(_uint i = 0);
+  double get_cost(_uint i = 0);
   void set_fitness(double val);
   void set_cost(double val);
   void apply_penalty(double val) { penalty = val; }
@@ -776,6 +792,8 @@ public:
   void set_fitness(_uint i, double val);
   void set_cost(_uint i, double val);
   _uint get_n_evaluations() { return n_evaluations; }
+  //average fitness with another organism if they both have the same genotype
+  void average_fitness(Organism* other);
 
   void set_int(_uint i, int value);
   void set_uint(_uint i, int value);
@@ -852,7 +870,7 @@ class Population {
     void find_best_organism();
     void calculate_distances();
     void hypermutate();
-    void set_best_organism(_uint i);
+    void set_best_organism(_uint i, bool force=false);
 
   public:
 //    Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, ArgStore p_args);
@@ -885,17 +903,16 @@ class Population {
     void swap_orgs(int i, int j);
     int partition(_uint ind, std::vector<std::shared_ptr<Organism>>* work_arr, int s, int e);
     void sort_orgs(unsigned int ind, std::vector<std::shared_ptr<Organism>>* arr, int s = DEF_SORT_PARAM, int e = DEF_SORT_PARAM);
-
     Vector<String> get_best_header();
     Vector<String> get_header();
     Vector<String> get_best_data();
     Vector<String> get_pop_data();
 
     FitnessStats get_pop_stats(_uint i = 0) { return pop_stats[i]; }
-    double get_min_fitness(_uint i = 0) {
+    DEPRECATED("get_min_fitness is deprecated, use get_pop_stats instead") double get_min_fitness(_uint i = 0) {
       return pop_stats[i].min;
     }
-    double get_max_fitness(_uint i = 0) {
+    DEPRECATED("get_max_fitness is deprecated, use get_pop_stats instead") double get_max_fitness(_uint i = 0) {
       return pop_stats[i].max;
     }
 

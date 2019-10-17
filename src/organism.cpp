@@ -343,6 +343,17 @@ void Organism::set_cost(_uint i, double val) {
   fitness[i] = -val;
 }
 
+void Organism::average_fitness(Organism* other) {
+  _uint my_n = n_evaluations;
+  _uint their_n = other->n_evaluations;
+  for (int j = 0; j < fitness.size(); ++j) {
+    fitness[j] = (my_n*fitness[j] + their_n*other->get_fitness(j)) / (my_n + their_n);
+    other->set_fitness(j, fitness[j]);
+  }
+  n_evaluations = my_n + their_n;
+  other->n_evaluations = n_evaluations;
+}
+
 void Organism::set_int(_uint i, int value) {
   genes.set_to_int(al.get(), i, value);
 }

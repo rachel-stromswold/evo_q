@@ -6,6 +6,7 @@
 #define N_TRIALS 100
 #include <chrono>
 #include <thread>
+#include <random>
 
 #define NUM_BITS	16
 #define NUM_OBJS  	2
@@ -72,15 +73,22 @@ public:
 class TestProblemPenalties : public Genetics::Problem {
 private:
   bool apply_penalty;
+  bool use_costs = false;
   double penalty_amt;
 public:
-  TestProblemPenalties(double p_penalty_amt) : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1) {
+  TestProblemPenalties(double p_penalty_amt, bool p_use_costs) : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1) {
     map->initialize(1, Genetics::t_real);
     apply_penalty = true;
     penalty_amt = p_penalty_amt;
+    use_costs = p_use_costs;
   }
   void evaluate_fitness(Genetics::Organism* org) {
-    org->set_fitness(0, 1);
+    if (use_costs) {
+      org->set_cost(0, 1);
+    } else {
+      org->set_fitness(0, 1);
+    }
+    
     if (apply_penalty) {
       org->apply_penalty(penalty_amt);
       apply_penalty = false;
@@ -121,6 +129,36 @@ public:
     std::this_thread::sleep_for( std::chrono::milliseconds(SLEEP_TIME) );
     double x = org->read_real(0);
     org->set_fitness(0, -(x*x));
+  }
+};
+
+#define NOISY_DOMAIN  1
+class TestProblemNoisy : public Genetics::Problem {
+private:
+  std::mt19937 gen;
+  std::normal_distribution<> norm;
+
+public:
+  TestProblemNoisy() : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1), norm(0.0, NOISY_DOMAIN) {
+    Genetics::Vector<Genetics::VarContainer> tmp_vars;
+    for (int i = 0; i < NUM_CHROMS; ++i) {
+      tmp_vars.emplace_back(0, -NOISY_DOMAIN, NOISY_DOMAIN, Genetics::t_real);
+    }
+    map->initialize(tmp_vars);
+  }
+
+  double evaluate_fitness_noiseless(Genetics::Organism* org) {
+    double ret = 0.0;
+    for (unsigned i = 0; i < NUM_CHROMS; ++i) {
+      ret += org->read_real(i) * org->read_real(i);
+    }
+    return ret;
+  }
+
+  void evaluate_fitness(Genetics::Organism* org) {
+    double val = evaluate_fitness_noiseless(org);
+    val += norm(gen);
+    org->set_cost(0, val);
   }
 };
 
@@ -429,6 +467,50 @@ TEST_CASE ("ArgStore successfully parses a file") {
   REQUIRE( pop.get_args().get_out_fname() == "output.csv" );
 }
 
+TEST_CASE ("Noisy population evaluations don't break") {
+  TestProblemNoisy prob;
+  Genetics::ArgStore args;
+  args.initialize_from_file("ga.conf");
+  Genetics::Population pop( NUM_BITS, 1, prob.map, args);
+
+  std::cout << "now running noisy test" << std::endl;
+  //evaluate for 10 generations
+  for (int gen = 0; gen < 10; ++gen) {
+    pop.evaluate(&prob);
+    std::shared_ptr<Genetics::Organism> best_org = pop.get_best_organism();
+    double best_fitness = best_org->get_fitness(0);
+    bool best_found = false;
+    bool best_in_pop = false;
+    for (int i = 0; i < pop.get_offspring_num(); ++i) {
+      std::shared_ptr<Genetics::Organism> org_i = pop.get_organism(i);
+      //check for information about the fitness relative to the best
+      REQUIRE( org_i->get_fitness(0) <= best_fitness );
+      if ( org_i->get_fitness(0) == best_fitness ) {
+        best_found = true;
+      }
+      //check whether this organism has the same genotype as the best organism
+      bool is_best_geno = true;
+      REQUIRE( org_i->get_n_params()  == best_org->get_n_params() );
+      for (int j = 0; j < org_i->get_n_params(); ++j) {
+        if ( org_i->read_real(j) != best_org->read_real(j) ) {
+          is_best_geno = false;
+        }
+      }
+      if (is_best_geno) {
+        best_in_pop = true;
+      }
+    }
+    REQUIRE( best_in_pop );
+
+    if (gen == 0) {
+      REQUIRE( best_found );
+    }
+    if (best_found) {
+      std::cout << "\timprovement in generation " << gen << ". New fitness = " << best_fitness << std::endl;
+    }
+  }
+}
+
 TEST_CASE ("Populations are correctly created and data is successfully read", "[populations]") {
 //  Genetics::ArgStore inst;
   Genetics::ArgStore args;
@@ -482,19 +564,26 @@ TEST_CASE ("Populations are correctly created and data is successfully read", "[
 
 TEST_CASE ("Penalties are applied properly", "[populations]") {
   double penalty_str = 4.0;
-  TestProblemPenalties prob(penalty_str);
+  TestProblemPenalties prob_fit(penalty_str, false);
+  TestProblemPenalties prob_cost(penalty_str, true);
   Genetics::ArgStore args;
   args.initialize_from_file("ga.conf");
-  Genetics::Population pop( NUM_BITS, 1, prob.map, args);
-  pop.evaluate(&prob);
+  Genetics::Population pop_fit( NUM_BITS, 1, prob_fit.map, args);
+  Genetics::Population pop_cost( NUM_BITS, 1, prob_cost.map, args);
+  pop_fit.evaluate(&prob_fit);
+  pop_cost.evaluate(&prob_cost);
 
-  double fit_0 = pop.get_organism(0)->get_fitness(0);
-  for (unsigned i = 1; i < pop.get_offspring_num(); ++i) {
-    double fit_i = pop.get_organism(i)->get_fitness(0);
+  double fit_0 = pop_fit.get_organism(0)->get_fitness(0);
+  double cost_0 = pop_cost.get_organism(0)->get_cost(0);
+  for (unsigned i = 1; i < pop_fit.get_offspring_num() && i < pop_cost.get_offspring_num(); ++i) {
+    double fit_i = pop_fit.get_organism(i)->get_fitness(0);
+    double cost_i = pop_cost.get_organism(i)->get_cost(0);
     INFO( "i = " << i )
     REQUIRE( fit_i == 1.0 );
     REQUIRE( fit_0 < fit_i );
-  }
+    REQUIRE( cost_i == 1.0 );
+    REQUIRE( cost_0 > fit_i );
+  } 
 }
 
 TEST_CASE ("Simple evolution of a single objective converges to roughly appropriate result", "[populations]") {

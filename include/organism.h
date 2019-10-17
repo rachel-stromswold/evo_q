@@ -51,11 +51,11 @@ private:
   double penalty = 0.0;
   size_t output_len;
   std::shared_ptr<PhenotypeMap> al;
-  int n_evaluations = 0;
 
 protected:
   Chromosome genes;
   size_t n_nodes;
+  int n_evaluations = 0;
 
 public:
   //this is not used internally, but can be set when evaluating the fitness
@@ -105,6 +105,8 @@ public:
   void set_fitness(_uint i, double val);
   void set_cost(_uint i, double val);
   _uint get_n_evaluations() { return n_evaluations; }
+  //average fitness with another organism if they both have the same genotype
+  void average_fitness(Organism* other);
 
   void set_int(_uint i, int value);
   void set_uint(_uint i, int value);

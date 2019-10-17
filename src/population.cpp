@@ -290,10 +290,10 @@ void Population::set_n_survivors(_uint new_size) {
   args.set_survivors(new_size);
 }
 
-void Population::set_best_organism(_uint i) {
+void Population::set_best_organism(_uint i, bool force) {
   pop_stats[0].max = old_gen[i]->get_fitness(0);
   Organism tmp_org = old_gen[i]->copy();
-  if (tmp_org > best_organism) {
+  if (force || tmp_org > best_organism) {
     best_organism = tmp_org;
     for (_uint j = 0; j < N_OBJS; ++j) {
       best_organism.set_fitness( j, old_gen[i]->get_fitness(j) );
@@ -314,7 +314,7 @@ void Population::evaluate(Problem* prob) {
       //iterate until we find an organism that isn't penalized and set it to be the best
       do {
         if (start_i == offspring_num) {
-          error(CODE_MISC, "All organisms in population had applied penalty.");
+          error(CODE_MISC, "All organisms in population had an applied penalty.");
         }
         old_gen[start_i]->apply_penalty(0);
         if ( args.noise_compensate() ) {
@@ -323,8 +323,8 @@ void Population::evaluate(Problem* prob) {
           old_gen[start_i]->evaluate_fitness(prob);
         }
         ++start_i;
-      } while( old_gen[start_i]->penalized() );
-      set_best_organism(start_i - 1);
+      } while( old_gen[start_i - 1]->penalized() );
+      set_best_organism(start_i - 1, args.noise_compensate());
       alltime_best_organism = best_organism.copy();
     }
     pop_stats[0].min = best_organism.get_fitness(0);
@@ -334,7 +334,27 @@ void Population::evaluate(Problem* prob) {
     }
     //calculate averages for organisms that appear twice in the population
     if ( args.average_multiples() ) {
-      for (_uint i = start_i; i < this->offspring_num; ++i) {
+      for (int i = start_i; i < this->offspring_num; ++i) {
+        old_gen[i]->evaluate_fitness(prob);
+      }
+      Vector<_uint> ignore_list;
+      for (_uint i = 0; i < this->offspring_num; ++i) {
+        if ( !contains<_uint>(ignore_list, i) ) {
+          for (_uint j = i+1; j < this->offspring_num; ++j) {
+            if ( *(old_gen[i]) == *(old_gen[j]) ){
+              old_gen[i]->average_fitness( old_gen[j].get() );
+              //make sure we don't average with this site twice
+              ignore_list.push_back(j);
+            }
+          }
+          //if i is unpenalized and less than start_i, then this is the best organism so we should update the best fitness 
+          if ( (i < start_i && !(old_gen[i]->penalized()))
+               || old_gen[i]->get_fitness(0) > best_organism.get_fitness(0) ) {
+            set_best_organism(i, args.noise_compensate());
+          }
+        }
+      }
+      /*for (_uint i = start_i; i < this->offspring_num; ++i) {
         Vector<_uint> identical_set;
         double avg_fit = 0.0;
         bool apply_averages = true;
@@ -369,7 +389,7 @@ void Population::evaluate(Problem* prob) {
             }
           }
         }
-      }
+      }*/
     } else {
       for (_uint i = start_i; i < offspring_num; ++i) {
         if ( args.verbose() ) {
@@ -381,11 +401,11 @@ void Population::evaluate(Problem* prob) {
           //look for duplicates of the current organism
           for (size_t j = 0; j < i; ++j) {
             //handle them
-            if (args.skip_multiples() && *(old_gen[j]) == *(old_gen[i]) ) {
+            if ( args.skip_multiples() && *(old_gen[j]) == *(old_gen[i]) ) {
               old_gen[i]->set_fitness( 0, old_gen[j]->get_fitness() );
               found_identical = true;
               break;
-            } else if (args.perturb_multiples()) {
+            } else if ( args.perturb_multiples() && *(old_gen[j]) == *(old_gen[i]) ) {
               old_gen[i]->mutate(&args);
               old_gen[i]->evaluate_fitness(prob);
               for (_uint k = 0; k < args.noise_compensate(); ++k) {
@@ -413,6 +433,12 @@ void Population::evaluate(Problem* prob) {
 
         if (old_gen[i]->get_fitness(0) < pop_stats[0].min) {
           pop_stats[0].min = old_gen[i]->get_fitness(0);
+        }
+      }
+      //average the fitness of the best organism with each of its duplicates
+      for (_uint j = 0; j < this->offspring_num; ++j) {
+        if ( *(old_gen[j]) == best_organism ) {
+          best_organism.average_fitness( old_gen[j].get() );
         }
       }
     }

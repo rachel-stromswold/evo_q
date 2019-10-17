@@ -95,7 +95,7 @@ class Population {
     void find_best_organism();
     void calculate_distances();
     void hypermutate();
-    void set_best_organism(_uint i);
+    void set_best_organism(_uint i, bool force=false);
 
   public:
 //    Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, ArgStore p_args);

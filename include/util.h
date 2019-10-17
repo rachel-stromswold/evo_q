@@ -411,6 +411,16 @@ typedef std::string String;
 void error (int fatal, String msg, ...);
 String read_number(String::iterator* it);
 
+template<typename T>
+bool contains(Vector<T>& vec, T target) {
+  for (auto it = vec.begin(); it != vec.end(); ++it) {
+    if (*it == target) {
+      return true;
+    }
+  }
+  return false;
+}
+
 #ifndef USE_EXCEPTIONS
 bool has_error();
 String get_error();
