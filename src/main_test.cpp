@@ -17,7 +17,10 @@
 #define TEST_CONV_GEN	10
 #define SLEEP_TIME	1000
 
-#define APPROX(a,b) ((a-b < 0.01 && a-b >= 0) || (b-a < 0.01 && b-a >= 0))
+#define DEFAULT_LCG_SEED 0xA1A3A5A7A9ABAFA5
+
+#define EPSILON 0.01
+#define APPROX(a,b) ((a-b < EPSILON && a-b >= 0) || (b-a < EPSILON && b-a >= 0))
 
 int str_starts(const char* test_str, const char* match_str) {
   for (size_t i = 0; match_str[i] != 0; ++i) {
@@ -37,12 +40,12 @@ private:
   //a-1 is divisible by 4 (and obviously 2 (the only prime factor of 2^64)
   static const unsigned long a = 3*( ((unsigned long)1 << 24) + 5 );
   static const unsigned long c = 170859375;//=15^7 which is relatively prime to m = 2^64
-  static const unsigned long x0 = 0xA1A3A5A7A9ABAFA5;
+  static const unsigned long x0 = DEFAULT_LCG_SEED;
   static const unsigned long high_mask = ULONG_MAX << 32;
 
   unsigned long state; void update_state() { state = (state*a + c)/* the modulo 64 is implicit */;}
 public:
-  LCG() : state(x0) {}
+  LCG(unsigned long seed=x0) : state(seed) {}
   unsigned long random_ulong() {
     unsigned long ret = state >> 32;
     update_state();
@@ -100,11 +103,13 @@ class ChromosomeTestFixture {
 protected:
   Genetics::ArgStore args;
   Genetics::Chromosome chrom_96_bits_A, chrom_96_bits_B;//this should be large enough to require the use of two words
+  Genetics::Chromosome chrom_64_bits_A, chrom_64_bits_B;
   Genetics::Chromosome chrom_32_bits_A, chrom_32_bits_B;
   Genetics::PhenotypeMap map_96;
+  Genetics::PhenotypeMap map_64;
   Genetics::PhenotypeMap map_32;
 public:
-  ChromosomeTestFixture() : chrom_96_bits_A(96), chrom_96_bits_B(96), chrom_32_bits_A(32), chrom_32_bits_B(32), map_96(96), map_32(32) {}
+  ChromosomeTestFixture() : chrom_96_bits_A(96), chrom_96_bits_B(96), chrom_64_bits_A(64), chrom_64_bits_B(64), chrom_32_bits_A(32), chrom_32_bits_B(32), map_96(96), map_64(64), map_32(32) {}
 };
 
 class TestProblemPenalties : public Genetics::Problem {
@@ -205,7 +210,7 @@ public:
   Genetics::Vector<double> fit_vals;
 
 public:
-  TestProblemAvgs() : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1) {}
+  TestProblemAvgs(unsigned long seed = DEFAULT_LCG_SEED) : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1), gen(seed) {}
 
   void evaluate_fitness(Genetics::Organism* org) {
     double val = gen.random_real();
@@ -213,6 +218,7 @@ public:
     org->set_fitness(val);
   }
 
+  double get_val(size_t i) { return fit_vals[i]; }
   void get_mean_var(double* mean, double* var) {
     *mean = 0.0;
     if ( fit_vals.size() > 0 ) {
@@ -236,12 +242,16 @@ public:
 TEST_CASE_METHOD( ChromosomeTestFixture, "Ensure that chromosomes are correctly encoded and decoded for integers", "[chromosomes]" ) {
   REQUIRE(chrom_96_bits_A.get_n_bits() == 96);
   REQUIRE(chrom_96_bits_B.get_n_bits() == 96);
+  REQUIRE(chrom_64_bits_A.get_n_bits() == 64);
+  REQUIRE(chrom_64_bits_B.get_n_bits() == 64);
   REQUIRE(chrom_32_bits_A.get_n_bits() == 32);
   REQUIRE(chrom_32_bits_B.get_n_bits() == 32);
   map_96.initialize(2, Genetics::t_uint);
+  map_64.initialize(2, Genetics::t_uint);
   map_32.initialize(2, Genetics::t_uint);
   
   unsigned long mask_96 = ( (unsigned long)1 << (96/2) ) - 1;
+  unsigned long mask_64 = ( (unsigned long)1 << (64/2) ) - 1;
   unsigned long mask_32 = ( (unsigned long)1 << (32/2) ) - 1;
 
   LCG generator;
@@ -257,6 +267,18 @@ TEST_CASE_METHOD( ChromosomeTestFixture, "Ensure that chromosomes are correctly 
     chrom_32_bits_A.set_to_ulong(&map_32, 1, val);
     INFO("Setting 32 bit genome: i = " << i)
     REQUIRE(chrom_32_bits_A.gene_to_ulong(&map_32, 1) == val);
+  }
+  for (int i = 0; i < N_TRIALS; ++i) {
+    val = generator.random_ulong() & mask_64;
+    chrom_64_bits_A.set_to_ulong(&map_64, 0, val);
+    INFO("Setting 64 bit genome: i = " << i)
+    REQUIRE(chrom_64_bits_A.gene_to_ulong(&map_64, 0) == val);
+  }
+  for (int i = 0; i < N_TRIALS; ++i) {
+    val = generator.random_ulong() & mask_64;
+    chrom_64_bits_A.set_to_ulong(&map_64, 1, val);
+    INFO("Setting 64 bit genome: i = " << i)
+    REQUIRE(chrom_64_bits_A.gene_to_ulong(&map_64, 1) == val);
   }
   for (int i = 0; i < N_TRIALS; ++i) {
     val = generator.random_ulong() & mask_96;
@@ -275,12 +297,18 @@ TEST_CASE_METHOD( ChromosomeTestFixture, "Ensure that chromosomes are correctly 
 TEST_CASE_METHOD( ChromosomeTestFixture, "Ensure that chromosomes are correctly encoded and decoded for reals", "[chromosomes]" ) {
   REQUIRE(chrom_96_bits_A.get_n_bits() == 96);
   REQUIRE(chrom_96_bits_B.get_n_bits() == 96);
+  REQUIRE(chrom_64_bits_A.get_n_bits() == 64);
+  REQUIRE(chrom_64_bits_B.get_n_bits() == 64);
   REQUIRE(chrom_32_bits_A.get_n_bits() == 32);
   REQUIRE(chrom_32_bits_B.get_n_bits() == 32);
   //initialize the 96 bit map
   map_96.initialize(2, Genetics::t_real);
   map_96.set_range(0, 0, 100);
   map_96.set_range(1, 0, 1);
+  //initialize the 64 bit map
+  map_64.initialize(2, Genetics::t_real);
+  map_64.set_range(0, 0, 100);
+  map_64.set_range(1, 0, 1);
   //initialize the 32 bit map
   map_32.initialize(2, Genetics::t_real);
   map_32.set_range(0, 0, 100);
@@ -302,6 +330,18 @@ TEST_CASE_METHOD( ChromosomeTestFixture, "Ensure that chromosomes are correctly 
   }
   for (int i = 0; i < N_TRIALS; ++i) {
     val = generator.random_real()*100.0;
+    chrom_64_bits_A.set_to_num(&map_64, 0, val);
+    INFO("Setting 64 bit genome: i = " << i << " val = " << val << " rep = " << chrom_64_bits_A.gene_to_num(&map_64, 0))
+    REQUIRE( APPROX(chrom_64_bits_A.gene_to_num(&map_64, 0), val) );
+  }
+  for (int i = 0; i < N_TRIALS; ++i) {
+    val = generator.random_real();
+    chrom_64_bits_A.set_to_num(&map_64, 1, val);
+    INFO("Setting 64 bit genome: i = " << i << " val = " << val << " rep = " << chrom_64_bits_A.gene_to_num(&map_64, 1))
+    REQUIRE(APPROX(chrom_64_bits_A.gene_to_num(&map_64, 1), val));
+  }
+  for (int i = 0; i < N_TRIALS; ++i) {
+    val = generator.random_real()*100.0;
     chrom_96_bits_A.set_to_num(&map_96, 0, val);
     INFO("Setting 32 bit genome: i = " << i << " val = " << val << " rep = " << chrom_32_bits_A.gene_to_num(&map_32, 0))
     REQUIRE(APPROX(chrom_96_bits_A.gene_to_num(&map_96, 0), val));
@@ -315,20 +355,22 @@ TEST_CASE_METHOD( ChromosomeTestFixture, "Ensure that chromosomes are correctly 
 }
 
 TEST_CASE_METHOD( ChromosomeTestFixture, "Ensure that chromosome exchange works properly", "[chromosomes]" ) {
-  REQUIRE(chrom_96_bits_A.get_n_bits() == 96);
-  REQUIRE(chrom_96_bits_B.get_n_bits() == 96);
+  REQUIRE(chrom_64_bits_A.get_n_bits() == 64);
+  REQUIRE(chrom_64_bits_B.get_n_bits() == 64);
   REQUIRE(chrom_32_bits_A.get_n_bits() == 32);
   REQUIRE(chrom_32_bits_B.get_n_bits() == 32);
-  map_96.initialize(1, Genetics::t_uint);
+  map_64.initialize(1, Genetics::t_uint);
+  map_96.initialize(2, Genetics::t_uint);
   map_32.initialize(1, Genetics::t_uint); 
+  int single_size_96 = 96 / 2;// = 48
 
   for (int i = 0; i < 64; ++i) {
-    chrom_96_bits_A.set_to_ulong(&map_96, 0, ULONG_MAX);
-    REQUIRE( chrom_96_bits_A.gene_to_ulong(&map_96, 0) == ULONG_MAX );
-    chrom_96_bits_B.set_to_ulong(&map_96, 0, 0);
+    chrom_64_bits_A.set_to_ulong(&map_64, 0, ULONG_MAX);
+    REQUIRE( chrom_64_bits_A.gene_to_ulong(&map_64, 0) == ULONG_MAX );
+    chrom_64_bits_B.set_to_ulong(&map_64, 0, 0);
     //perform the exchange
-    chrom_96_bits_A.exchange(&chrom_96_bits_B, i);
-    unsigned long tmp_long = chrom_96_bits_A.gene_to_ulong(&map_96, 0);
+    chrom_64_bits_A.exchange(&chrom_64_bits_B, i);
+    unsigned long tmp_long = chrom_64_bits_A.gene_to_ulong(&map_64, 0);
     INFO("i = " << i)
     REQUIRE(tmp_long == (ULONG_MAX << i));
   }
@@ -341,6 +383,18 @@ TEST_CASE_METHOD( ChromosomeTestFixture, "Ensure that chromosome exchange works 
     chrom_32_bits_A.exchange(&chrom_32_bits_B, i);
 
     unsigned long tmp_long = chrom_32_bits_A.gene_to_ulong(&map_32, 0);
+    INFO("i = " << i)
+    REQUIRE( tmp_long == ((ULONG_MAX << i) & mask) );
+  }
+  mask = ((unsigned long)1 << single_size_96) - 1;
+  for (int i = 0; i < single_size_96; ++i) {
+    chrom_96_bits_A.set_to_ulong(&map_96, 1, ULONG_MAX);
+    REQUIRE( chrom_96_bits_A.gene_to_ulong(&map_96, 1) == (ULONG_MAX & mask) );
+    chrom_96_bits_B.set_to_ulong(&map_96, 1, 0);
+    //perform the exchange
+    chrom_96_bits_A.exchange(&chrom_96_bits_B, i + single_size_96);
+
+    unsigned long tmp_long = chrom_96_bits_A.gene_to_ulong(&map_96, 1);
     INFO("i = " << i)
     REQUIRE( tmp_long == ((ULONG_MAX << i) & mask) );
   }
@@ -372,7 +426,7 @@ TEST_CASE( "Ensure that phenotype mappings are set up properly", "[PhenotypeMapp
   }
 
   SECTION ( "Phenotype maps correctly handle more complex initialization" ) {
-    Genetics::PhenotypeMap map_mixed(32);
+    Genetics::PhenotypeMap map_mixed(31);
     Genetics::Vector<Genetics::VarContainer> vc;
     vc.push_back(Genetics::VarContainer(0, 0.0, 1.0, Genetics::t_real));
     vc.push_back(Genetics::VarContainer(0, 0.0, 0.0, Genetics::t_int));
@@ -391,7 +445,7 @@ TEST_CASE( "Ensure that phenotype mappings are set up properly", "[PhenotypeMapp
     param_list.push_back("real_(0, 1.0)");
     param_list.push_back("int");
     param_list.push_back("bitstream_16");
-    Genetics::PhenotypeMap map(32);
+    Genetics::PhenotypeMap map(31);
 
     Genetics::Vector<Genetics::VarContainer> vc_list;
     for (size_t i = 0; i < param_list.size(); ++i) {
@@ -538,27 +592,52 @@ TEST_CASE ("ArgStore successfully parses a file") {
 
 TEST_CASE ("Accumulated averages and standard deviations work") {
   TestProblemAvgs avg;
-  Genetics::Organism org(1, 1, std::make_shared<Genetics::PhenotypeMap>(1));
+  TestProblemAvgs avg2(0xA1B3C5D7E9FBABA5);
+  Genetics::Organism org1(1, 1, std::make_shared<Genetics::PhenotypeMap>(1));
+  Genetics::Organism org2(1, 1, std::make_shared<Genetics::PhenotypeMap>(1));
   double mean, var;
   double org_mean, org_var;
-  for (int i = 0; i < 100; ++i) {
-    org.evaluate_fitness_noisy(&avg, 0);
+  for (int i = 0; i < N_TRIALS; ++i) {
+    org1.evaluate_fitness_noisy(&avg, 0);
+    org2.evaluate_fitness_noisy(&avg2, 0);
     avg.get_mean_var(&mean, &var);
-    org_mean = org.get_fitness();
-    org_var = org.get_fitness_variance();
+    org_mean = org1.get_fitness();
+    org_var = org1.get_fitness_variance();
 
-    REQUIRE( org.get_n_evaluations() == i+1 );
+    REQUIRE( org1.get_n_evaluations() == i+1 );
     INFO( "i=" << i << " accumulated fitness: " << org_mean << ", actual: " << mean << ", accumulated variance: " << org_var << ", actual: " << var)
     REQUIRE( APPROX(org_mean, mean) );
     INFO( "i=" << i << " accumulated fitness: " << org_mean << ", actual: " << mean << ", accumulated variance: " << org_var << ", actual: " << var)
     REQUIRE( APPROX(org_var, var) );
   }
+
+  //use the more memory intensive but sure-fire way of calculating mean and variance
+  mean = 0;
+  var = 0;
+  for (int i = 0; i < N_TRIALS; ++i) {
+    mean += avg.get_val(i);
+    mean += avg2.get_val(i);
+  }
+  mean /= 2*N_TRIALS;
+  for (int i = 0; i < N_TRIALS; ++i) {
+    var += (avg.get_val(i) - mean)*(avg.get_val(i) - mean);
+    var += (avg2.get_val(i) - mean)*(avg2.get_val(i) - mean);
+  }
+  var /= (2*N_TRIALS - 1);
+  org1.average_fitness(&org2);
+  org_mean = org1.get_fitness();
+  org_var = org1.get_fitness_variance();
+  std::cout << "Using accumulated fitnesses with " << 2*N_TRIALS << " trials produced a value of " << org_mean << " and a variance " << org_var << ". The accepted values were " << mean << " and " << var << " respectively. Abs_mu=" << (org_mean - mean) << ", %_mu=" << 100*(org_mean - mean)/mean << ", Abs_var=" << (org_var - var) << ", %_var=" << 100*(org_var - var)/var << std::endl;
+  INFO( "accumulated fitness: " << org_mean << ", actual: " << mean << ", accumulated variance: " << org_var << ", actual: " << var)
+  REQUIRE( APPROX(org_mean, mean) );
+  INFO( "accumulated fitness: " << org_mean << ", actual: " << mean << ", accumulated variance: " << org_var << ", actual: " << var)
+  REQUIRE( APPROX(org_var, var) );
 }
 
 TEST_CASE ("Noisy population evaluations don't break") {
   TestProblemNoisy prob;
   Genetics::ArgStore args;
-  args.initialize_from_file("ga.conf");
+  args.initialize_from_file("ga_noisy.conf");
   Genetics::Population pop( NUM_BITS, 1, prob.map, args);
   pop.set_cost(0);
   PopulationPrinter out(&pop, "noisy_output.csv");
@@ -787,6 +866,7 @@ TEST_CASE ("Combine convergence checking and evolution", "[populations]") {
 	      << " fitness = " << pop_dat[2*i + 1] << std::endl;
 #endif
   }
+  //unicode for \pm
   std::cout << "x1 = " << mean_x << "\u00B1" << var_x
 	    << ", fitness = " << mean_fit << "\u00B1" << var_fit << std::endl;
 }

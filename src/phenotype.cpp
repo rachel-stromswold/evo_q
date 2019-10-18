@@ -166,7 +166,7 @@ void PhenotypeMap::allocate_locations(_uint n_ints, _uint n_reals, std::vector<_
   }
   //since it is possible for the ints and reals to not fill up the allocated space we need to add filler to pad out the genome
   if (isize*n_ints + rsize*n_reals < n_avail) {
-    error(CODE_WARN, "The genome does not make full use of available data, consider reducing the number of allocated bits.");
+    error(CODE_WARN, "The genome does not make full use of available data, consider reducing the number of allocated bits. (%d bits used while %d are available)", isize*n_ints + rsize*n_reals, n_avail);
   }
   unsigned long real_mask = ( ((unsigned long)0x01 << rsize) - 1 );
   if (rsize == sto_size) {

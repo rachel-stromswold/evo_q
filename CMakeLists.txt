@@ -54,20 +54,7 @@ endif()
 
 add_subdirectory(extern/pybind11)
 
-#include(FetchContent)
-#FetchContent_Declare(
-#    pybind11
-#    GIT_REPOSITORY https://github.com/pybind/pybind11
-#    GIT_TAG        v2.2.3 )
-
-include_directories(
-    include )
-
-#FetchContent_GetProperties(pybind11)
-#if(NOT pybind11_POPULATED)
-#    FetchContent_Populate(pybind11)
-#    add_subdirectory(${pybind11_SOURCE_DIR} ${pybind11_BINARY_DIR})
-#endif()
+include_directories( include )
 
 if(BUILD_PYTHON)
   pybind11_add_module(evo_q src/util.cpp src/phenotype.cpp src/parse.cpp src/gene.cpp src/organism.cpp src/population.cpp src/convergence.cpp src/python.cpp)

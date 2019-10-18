@@ -795,6 +795,7 @@ public:
   void evaluate_fitness(Problem* prob);
 
   double get_fitness(_uint i = 0);
+  double get_fitness_variance(_uint i = 0);
   double get_cost(_uint i = 0);
   void set_fitness(double val);
   void set_cost(double val);
