@@ -47,7 +47,6 @@ private:
   _uint N_OBJS;
 
   char output_stream[BUF_SIZE];
-  Vector<double> fitness;
   double penalty = 0.0;
   size_t output_len;
   std::shared_ptr<PhenotypeMap> al;
@@ -55,6 +54,8 @@ private:
 protected:
   Chromosome genes;
   size_t n_nodes;
+  Vector<double> fitness;
+  Vector<double> fit_vars;
   int n_evaluations = 0;
 
 public:
@@ -92,7 +93,7 @@ public:
   void randomize(ArgStore* args);
   void randomize(ArgStore* args, Organism* orgtmp);
 
-  void evaluate_fitness_noisy(Problem* prob);
+  void evaluate_fitness_noisy(Problem* prob, double forget_weight=0);
   void evaluate_fitness(Problem* prob);
 
   double get_fitness(_uint i = 0);

@@ -164,21 +164,23 @@ void ArgStore::initialize_from_file(const char* fname) {
     } else if (strcmp(token, "handle_multiples") == 0) {
       flags = flags & MULTIPLES_NONE;
       if (strcmp(val, "average") == 0) {
-	flags = flags | MULTIPLES_AVG;
+        flags = flags | MULTIPLES_AVG;
       } else if (strcmp(val, "skip") == 0) {
-	flags = flags | MULTIPLES_SKIP;
+        flags = flags | MULTIPLES_SKIP;
       } else if (strcmp(val, "perturb") == 0) {
-	flags = flags | MULTIPLES_PERTURB;
+        flags = flags | MULTIPLES_PERTURB;
       }
+    } else if (strcmp(token, "forget_weight")) {
+      forget_weight = atof(val);
     } else if (strcmp(token, "selection_type") == 0) {
       if (strcmp(val, "roulette") == 0) {
-	selection_type = SELECT_ROULETTE;
+        selection_type = SELECT_ROULETTE;
       } else if (strcmp(val, "tournament") == 0) {
-	selection_type = SELECT_TOURNAMENT | SELECT_USE_REPLACE;
+        selection_type = SELECT_TOURNAMENT | SELECT_USE_REPLACE;
       } else if (strcmp(val, "tournament-no-replace") == 0) {
-	selection_type = SELECT_TOURNAMENT;
+        selection_type = SELECT_TOURNAMENT;
       } else if (strcmp(val, "roulette-pool") == 0) {
-	selection_type = SELECT_ROULETTE_POOL;
+        selection_type = SELECT_ROULETTE_POOL;
       }
     } else if (strcmp(token, "output_file") == 0) {
       val = clean_c_str(val);

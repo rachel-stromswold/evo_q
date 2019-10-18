@@ -2,7 +2,7 @@
 
 namespace Genetics {
 
-Organism::Organism() : genes(0), fitness(1) {
+Organism::Organism() : genes(0), fitness(1), fit_vars(1) {
   N_BITS = 0;
   N_OBJS = 0;
   for (auto it = fitness.begin(); it != fitness.end(); ++it) {
@@ -15,6 +15,7 @@ Organism::Organism(int pn_bits, int pn_objs, PhenotypeMap* p_al) :
   N_BITS(pn_bits),
   N_OBJS(pn_objs),
   fitness(N_OBJS, (double)0.0),
+  fit_vars(N_OBJS),
   genes(N_BITS),
   al(p_al)
 {
@@ -27,6 +28,7 @@ Organism::Organism(int pn_bits, int pn_objs, Chromosome p_genes, PhenotypeMap* p
   N_BITS(pn_bits),
   N_OBJS(pn_objs),
   fitness(N_OBJS, (double)0.0),
+  fit_vars(N_OBJS),
   genes(p_genes),
   al(p_al)
 {
@@ -39,6 +41,7 @@ Organism::Organism(int pn_bits, int pn_objs, std::shared_ptr<PhenotypeMap> p_al)
   N_BITS(pn_bits),
   N_OBJS(pn_objs),
   fitness(N_OBJS, (double)0.0),
+  fit_vars(N_OBJS),
   genes(N_BITS),
   al(p_al)
 {
@@ -51,6 +54,7 @@ Organism::Organism(int pn_bits, int pn_objs, Chromosome p_genes, std::shared_ptr
   N_BITS(pn_bits),
   N_OBJS(pn_objs),
   fitness(N_OBJS, (double)0.0),
+  fit_vars(N_OBJS),
   genes(p_genes),
   al(p_al)
 {
@@ -272,18 +276,31 @@ void Organism::randomize(ArgStore* args, Organism* orgtmp) {
   }
 }
 
-void Organism::evaluate_fitness_noisy(Problem* prob) {
+void Organism::evaluate_fitness_noisy(Problem* prob, double forget_weight) {
   double* prev_fitness = (double*)malloc(sizeof(double)*N_OBJS);
   for (_uint i = 0; i < N_OBJS; ++i) {
     prev_fitness[i] = fitness[i];
   }
   prob->evaluate_fitness(this);
   for (_uint i = 0; i < N_OBJS; ++i) {
-    //the commented line does not forget old evaluations, the new one does
-    //fitness[i] = (n_evaluations*prev_fitness[i] + fitness[i]) / (n_evaluations + 1);
-    fitness[i] = (prev_fitness[i] + fitness[i]) / 2;
+    if (n_evaluations == 0) {
+      fit_vars[i] = 0.0;
+      n_evaluations = 1;
+    } else if (forget_weight >= 1) {
+      //TODO: figure out how to drop previous evaluations (I'm 99.9% sure that you need to keep track of the history)
+      double mu = (prev_fitness[i] + forget_weight*fitness[i]) / (forget_weight + 1);
+      //TODO: double check whether this is actually correct
+      fit_vars[i] = ( pow(prev_fitness[i] - mu, 2) + pow(forget_weight*fitness[i] - mu, 2) ) / forget_weight;
+      fitness[i] = mu;
+      n_evaluations = 2;
+    } else {
+      double old_mu = fitness[i];
+      double new_mu = (n_evaluations*prev_fitness[i] + fitness[i]) / (n_evaluations + 1);
+      fit_vars[i] = old_mu*(old_mu - 2*new_mu) + pow(new_mu, 2) + (n_evaluations - 1)*fit_vars[i]/n_evaluations + pow(fitness[i] - new_mu, 2)/n_evaluations;
+      //fit_vars[i] = (fit_vars[i]*(n_evaluations - 1) + old_mu*(old_mu - 2*mu) + mu*mu)/n_evaluations;
+      ++n_evaluations;
+    }
   }
-  ++n_evaluations;
 }
 
 void Organism::evaluate_fitness(Problem* prob) {
@@ -347,7 +364,15 @@ void Organism::average_fitness(Organism* other) {
   _uint my_n = n_evaluations;
   _uint their_n = other->n_evaluations;
   for (int j = 0; j < fitness.size(); ++j) {
+    double my_mu_1 = fitness[j];
+    double their_mu_1 = other->get_fitness(j);
+    //these two functions combine the sample means and sample variances from two different measurements
     fitness[j] = (my_n*fitness[j] + their_n*other->get_fitness(j)) / (my_n + their_n);
+    fit_vars[j] = my_n*( my_mu_1*(my_mu_1 - 2*fitness[j]) + pow(fitness[j], 2) )/(my_n + their_n - 1) + 
+               their_n*( their_mu_1*(their_mu_1 - 2*fitness[j]) + pow(fitness[j], 2) )/(my_n + their_n - 1) +
+            ( (my_n - 1)*fit_vars[j] + (their_n - 1)*other->fit_vars[j] )/(my_n + their_n - 1);
+
+    other->fit_vars[j] = fit_vars[j];
     other->set_fitness(j, fitness[j]);
   }
   n_evaluations = my_n + their_n;

@@ -70,6 +70,8 @@ class ArgStore {
     _uint noise_compensation_runs = 0;
 
   public: 
+    double forget_weight = 0;
+
     ArgStore();
     ArgStore(const ArgStore& o);
     ArgStore(ArgStore&& o);

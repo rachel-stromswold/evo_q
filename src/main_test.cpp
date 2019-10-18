@@ -7,6 +7,7 @@
 #include <chrono>
 #include <thread>
 #include <random>
+#include <fstream>
 
 #define NUM_BITS	16
 #define NUM_OBJS  	2
@@ -57,6 +58,42 @@ public:
     }
   }
   double random_real() { return (double)random_ulong()/ULONG_MAX; }
+};
+
+class PopulationPrinter {
+private:
+  std::ofstream ofs;
+  Genetics::Population* pop;
+  int gen = -1;
+public:
+  PopulationPrinter(Genetics::Population* p_pop, std::string fname) : ofs(fname, std::ofstream::out) { pop = p_pop; }
+  void print_line() {
+    if (gen < 0) {
+      Genetics::Vector<Genetics::String> best_data = pop->get_best_header();
+      Genetics::Vector<Genetics::String> data = pop->get_header();
+      ofs << "gen,n_evals";
+      for (auto it = best_data.begin(); it != best_data.end(); ++it) {
+        ofs << "," << *it;
+      }
+      for (auto it = data.begin(); it != data.end(); ++it) {
+        ofs << "," << *it;
+      }
+      ofs << "\n";
+      gen = 0;
+    } else {
+      Genetics::Vector<Genetics::String> best_data = pop->get_best_data();
+      Genetics::Vector<Genetics::String> data = pop->get_pop_data();
+      ofs << gen << "," << pop->get_best_organism()->get_n_evaluations();
+      for (auto it = best_data.begin(); it != best_data.end(); ++it) {
+        ofs << "," << *it;
+      }
+      for (auto it = data.begin(); it != data.end(); ++it) {
+        ofs << "," << *it;
+      }
+      ofs << "\n";
+      ++gen;
+    }
+  }
 };
 
 class ChromosomeTestFixture {
@@ -139,7 +176,7 @@ private:
   std::normal_distribution<> norm;
 
 public:
-  TestProblemNoisy() : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1), norm(0.0, NOISY_DOMAIN) {
+  TestProblemNoisy() : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1), norm(0.0, NOISY_DOMAIN/4) {
     Genetics::Vector<Genetics::VarContainer> tmp_vars;
     for (int i = 0; i < NUM_CHROMS; ++i) {
       tmp_vars.emplace_back(0, -NOISY_DOMAIN, NOISY_DOMAIN, Genetics::t_real);
@@ -472,6 +509,9 @@ TEST_CASE ("Noisy population evaluations don't break") {
   Genetics::ArgStore args;
   args.initialize_from_file("ga.conf");
   Genetics::Population pop( NUM_BITS, 1, prob.map, args);
+  pop.set_cost(0);
+  PopulationPrinter out(&pop, "noisy_output.csv");
+  out.print_line();
 
   std::cout << "now running noisy test" << std::endl;
   //evaluate for 10 generations
@@ -484,7 +524,7 @@ TEST_CASE ("Noisy population evaluations don't break") {
     for (int i = 0; i < pop.get_offspring_num(); ++i) {
       std::shared_ptr<Genetics::Organism> org_i = pop.get_organism(i);
       //check for information about the fitness relative to the best
-      REQUIRE( org_i->get_fitness(0) <= best_fitness );
+      REQUIRE( (org_i->get_fitness(0) < best_fitness || APPROX(org_i->get_fitness(0), best_fitness)) );
       if ( org_i->get_fitness(0) == best_fitness ) {
         best_found = true;
       }
@@ -499,6 +539,7 @@ TEST_CASE ("Noisy population evaluations don't break") {
       if (is_best_geno) {
         best_in_pop = true;
       }
+      //print out the spreadsheet
     }
     REQUIRE( best_in_pop );
 
@@ -508,6 +549,7 @@ TEST_CASE ("Noisy population evaluations don't break") {
     if (best_found) {
       std::cout << "\timprovement in generation " << gen << ". New fitness = " << best_fitness << std::endl;
     }
+    out.print_line();
   }
 }
 
