@@ -954,10 +954,15 @@ void Population::tournament_selection() {
     first_parent = old_gen[t1[0]].get();
     second_parent = old_gen[t2[0]].get();
     for (size_t j = 1; j < t1.size(); ++j) {
-      if (old_gen[t1[j]]->get_fitness() > first_parent->get_fitness()) {
+      //check whether the fitness is an improvement and use variance as a tiebreaker
+      if ( old_gen[t1[j]]->get_fitness() > first_parent->get_fitness()
+        || (old_gen[t1[j]]->get_fitness() == first_parent->get_fitness()
+           && old_gen[t1[j]]->get_fitness_variance() < first_parent->get_fitness_variance()) ) {
         first_parent = old_gen[t1[0]].get();
       }
-      if (old_gen[t2[j]]->get_fitness() > second_parent->get_fitness()) {
+      if ( old_gen[t2[j]]->get_fitness() > second_parent->get_fitness()
+        || (old_gen[t2[j]]->get_fitness() == second_parent->get_fitness()
+           && old_gen[t2[j]]->get_fitness_variance() < second_parent->get_fitness_variance())) {
         second_parent = old_gen[t2[0]].get();
       }
     }
