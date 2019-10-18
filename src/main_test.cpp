@@ -199,6 +199,38 @@ public:
   }
 };
 
+class TestProblemAvgs : public Genetics::Problem {
+public:
+  LCG gen;
+  Genetics::Vector<double> fit_vals;
+
+public:
+  TestProblemAvgs() : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1) {}
+
+  void evaluate_fitness(Genetics::Organism* org) {
+    double val = gen.random_real();
+    fit_vals.push_back(val);
+    org->set_fitness(val);
+  }
+
+  void get_mean_var(double* mean, double* var) {
+    *mean = 0.0;
+    if ( fit_vals.size() > 0 ) {
+      for (auto it = fit_vals.begin(); it != fit_vals.end(); ++it) {
+        *mean += (*it);
+      }
+      *mean /= fit_vals.size();
+      *var = 0.0;
+      if ( fit_vals.size() > 1 ) {
+        for (auto it = fit_vals.begin(); it != fit_vals.end(); ++it) {
+          *var += (*it - *mean)*(*it - *mean);
+        }
+        *var /= (fit_vals.size() - 1);
+      }
+    }
+  }
+};
+
 // =============================== CHROMOSOME TEST CASES ===============================
 
 TEST_CASE_METHOD( ChromosomeTestFixture, "Ensure that chromosomes are correctly encoded and decoded for integers", "[chromosomes]" ) {
@@ -502,6 +534,25 @@ TEST_CASE ("ArgStore successfully parses a file") {
   REQUIRE( pop.get_args().get_mutate_prob() == 0.016 );
   REQUIRE( pop.get_args().get_hypermutation_threshold() == 1.0 );
   REQUIRE( pop.get_args().get_out_fname() == "output.csv" );
+}
+
+TEST_CASE ("Accumulated averages and standard deviations work") {
+  TestProblemAvgs avg;
+  Genetics::Organism org(1, 1, std::make_shared<Genetics::PhenotypeMap>(1));
+  double mean, var;
+  double org_mean, org_var;
+  for (int i = 0; i < 100; ++i) {
+    org.evaluate_fitness_noisy(&avg, 0);
+    avg.get_mean_var(&mean, &var);
+    org_mean = org.get_fitness();
+    org_var = org.get_fitness_variance();
+
+    REQUIRE( org.get_n_evaluations() == i+1 );
+    INFO( "i=" << i << " accumulated fitness: " << org_mean << ", actual: " << mean << ", accumulated variance: " << org_var << ", actual: " << var)
+    REQUIRE( APPROX(org_mean, mean) );
+    INFO( "i=" << i << " accumulated fitness: " << org_mean << ", actual: " << mean << ", accumulated variance: " << org_var << ", actual: " << var)
+    REQUIRE( APPROX(org_var, var) );
+  }
 }
 
 TEST_CASE ("Noisy population evaluations don't break") {

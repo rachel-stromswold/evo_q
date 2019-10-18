@@ -294,9 +294,10 @@ void Organism::evaluate_fitness_noisy(Problem* prob, double forget_weight) {
       fitness[i] = mu;
       n_evaluations = 2;
     } else {
-      double old_mu = fitness[i];
+      double old_mu = prev_fitness[i];
       double new_mu = (n_evaluations*prev_fitness[i] + fitness[i]) / (n_evaluations + 1);
       fit_vars[i] = old_mu*(old_mu - 2*new_mu) + pow(new_mu, 2) + (n_evaluations - 1)*fit_vars[i]/n_evaluations + pow(fitness[i] - new_mu, 2)/n_evaluations;
+      fitness[i] = new_mu;
       //fit_vars[i] = (fit_vars[i]*(n_evaluations - 1) + old_mu*(old_mu - 2*mu) + mu*mu)/n_evaluations;
       ++n_evaluations;
     }
@@ -317,6 +318,12 @@ double Organism::get_fitness(unsigned int i) {
     return -(double)n_dominations;
   else
     return fitness[i];
+}
+
+double Organism::get_fitness_variance(unsigned int i) {
+  if (i < N_OBJS)
+    return fit_vars[i];
+  return 0.0;
 }
 
 double Organism::get_cost(unsigned int i) {
