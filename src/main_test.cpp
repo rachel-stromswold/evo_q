@@ -6,7 +6,6 @@
 #define N_TRIALS 100
 #include <chrono>
 #include <thread>
-#include <random>
 #include <fstream>
 
 #define NUM_BITS	16
@@ -34,6 +33,7 @@ int str_starts(const char* test_str, const char* match_str) {
   return 0;
 }
 
+#define INV_ERR_N 5
 //for random number generation
 class LCG {
 private:
@@ -42,10 +42,24 @@ private:
   static const unsigned long c = 170859375;//=15^7 which is relatively prime to m = 2^64
   static const unsigned long x0 = DEFAULT_LCG_SEED;
   static const unsigned long high_mask = ULONG_MAX << 32;
+  double c_k[INV_ERR_N];
 
   unsigned long state; void update_state() { state = (state*a + c)/* the modulo 64 is implicit */;}
 public:
-  LCG(unsigned long seed=x0) : state(seed) {}
+  LCG(unsigned long seed=x0) : state(seed) {
+    //calculate the c_k terms in the taylor series for the inverse error function (from wikipedia)
+    c_k[0] = 1;
+    for (int k = 1; k < INV_ERR_N; ++k) {
+      c_k[k] = 0;
+      for (int m = 0; m < k; ++m) {
+        c_k[k] += (c_k[m]*c_k[k-1-m])/( (m+1)*(2*m+1) );
+      }
+    }
+    for (int k = 0; k < INV_ERR_N; ++k) {
+      //sqrt(pi)
+      c_k[k] *= pow(0.88622693, 2*k + 1)/(2*k + 1);
+    }
+  }
   unsigned long random_ulong() {
     unsigned long ret = state >> 32;
     update_state();
@@ -61,6 +75,14 @@ public:
     }
   }
   double random_real() { return (double)random_ulong()/ULONG_MAX; }
+  double gaussian_0_1() {
+    double uniform = 2*random_real() - 1;
+    double ret = 0;
+    for (int k = 0; k < INV_ERR_N; ++k) {
+      ret += c_k[k]*pow(uniform, 2*k + 1);
+    }
+    return ret;
+  }
 };
 
 class PopulationPrinter {
@@ -175,13 +197,15 @@ public:
 };
 
 #define NOISY_DOMAIN  1
+#define NOISY_VAR     0.25
 class TestProblemNoisy : public Genetics::Problem {
 private:
-  std::mt19937 gen;
-  std::normal_distribution<> norm;
+  LCG gen;
+  //std::mt19937 gen;
+  //std::normal_distribution<> norm;
 
 public:
-  TestProblemNoisy() : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1), norm(0.0, NOISY_DOMAIN/4) {
+  TestProblemNoisy() : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1) {
     Genetics::Vector<Genetics::VarContainer> tmp_vars;
     for (int i = 0; i < NUM_CHROMS; ++i) {
       tmp_vars.emplace_back(0, -NOISY_DOMAIN, NOISY_DOMAIN, Genetics::t_real);
@@ -199,7 +223,7 @@ public:
 
   void evaluate_fitness(Genetics::Organism* org) {
     double val = evaluate_fitness_noiseless(org);
-    val += norm(gen);
+    val += NOISY_VAR*gen.gaussian_0_1();
     org->set_cost(0, val);
   }
 };
@@ -654,6 +678,7 @@ TEST_CASE ("Noisy population evaluations don't break") {
     for (int i = 0; i < pop.get_offspring_num(); ++i) {
       std::shared_ptr<Genetics::Organism> org_i = pop.get_organism(i);
       //check for information about the fitness relative to the best
+      INFO( "i= " << i << ", best fitness = " << best_fitness << ", current observed = " << org_i->get_fitness(0) )
       REQUIRE( (org_i->get_fitness(0) < best_fitness || APPROX(org_i->get_fitness(0), best_fitness)) );
       if ( org_i->get_fitness(0) == best_fitness ) {
         best_found = true;

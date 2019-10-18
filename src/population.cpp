@@ -1206,12 +1206,21 @@ Vector<String> Population::get_best_data() {
     ret[map->get_num_params()] = buf;
   }
   for (_uint j = 0; j < N_OBJS; ++j) {
-    double std_dev = sqrt( best_organism.get_fitness_variance() );
-    if (is_obj_cost[j]) {
-      snprintf(buf, OUT_BUF_SIZE - 1, "%f\u00B1%f", best_organism.get_cost(j), std_dev);
+    if ( args.noise_compensate() ) {
+      double std_dev = sqrt( best_organism.get_fitness_variance() );
+      if (is_obj_cost[j]) {
+        snprintf(buf, OUT_BUF_SIZE - 1, "%f\u00B1%f", best_organism.get_cost(j), std_dev);
+      } else {
+        snprintf(buf, OUT_BUF_SIZE - 1, "%f\u00B1%f", best_organism.get_fitness(j), std_dev);
+      }
     } else {
-      snprintf(buf, OUT_BUF_SIZE - 1, "%f\u00B1%f", best_organism.get_fitness(j), std_dev);
+      if (is_obj_cost[j]) {
+        snprintf(buf, OUT_BUF_SIZE - 1, "%f", best_organism.get_cost(j));
+      } else {
+        snprintf(buf, OUT_BUF_SIZE - 1, "%f", best_organism.get_fitness(j));
+      }
     }
+    
     
     ret[fitness_o + j] = buf;
   }
@@ -1242,10 +1251,19 @@ Vector<String> Population::get_pop_data() {
     }
     //print out the fitness value(s)
     for (_uint j = 0; j < N_OBJS; ++j) {
-      if (is_obj_cost[j]) {
-        snprintf(buf, OUT_BUF_SIZE - 1, "%f", old_gen[i]->get_cost(j));
+      if ( args.noise_compensate() ) {
+        double std_dev = sqrt( old_gen[i]->get_fitness_variance() );
+        if (is_obj_cost[j]) {
+          snprintf(buf, OUT_BUF_SIZE - 1, "%f\u00B1%f", old_gen[i]->get_cost(j), std_dev);
+        } else {
+          snprintf(buf, OUT_BUF_SIZE - 1, "%f\u00B1%f", old_gen[i]->get_fitness(j), std_dev);
+        }
       } else {
-        snprintf(buf, OUT_BUF_SIZE - 1, "%f", old_gen[i]->get_fitness(j));
+        if (is_obj_cost[j]) {
+          snprintf(buf, OUT_BUF_SIZE - 1, "%f", old_gen[i]->get_cost(j));
+        } else {
+          snprintf(buf, OUT_BUF_SIZE - 1, "%f", old_gen[i]->get_fitness(j));
+        }
       }
       
       ret[fitness_o + j] = buf;
