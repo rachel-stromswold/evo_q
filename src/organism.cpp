@@ -282,26 +282,30 @@ void Organism::evaluate_fitness_noisy(Problem* prob, double forget_weight) {
     prev_fitness[i] = fitness[i];
   }
   prob->evaluate_fitness(this);
-  for (_uint i = 0; i < N_OBJS; ++i) {
-    if (n_evaluations == 0) {
-      fit_vars[i] = 0.0;
-      n_evaluations = 1;
-    } else if (forget_weight >= 1) {
-      //TODO: figure out how to drop previous evaluations (I'm 99.9% sure that you need to keep track of the history)
-      double mu = (prev_fitness[i] + forget_weight*fitness[i]) / (forget_weight + 1);
-      //TODO: double check whether this is actually correct
-      fit_vars[i] = ( pow(prev_fitness[i] - mu, 2) + pow(forget_weight*fitness[i] - mu, 2) ) / forget_weight;
-      fitness[i] = mu;
-      n_evaluations = 2;
-    } else {
-      double old_mu = prev_fitness[i];
-      double new_mu = (n_evaluations*prev_fitness[i] + fitness[i]) / (n_evaluations + 1);
-      fit_vars[i] = old_mu*(old_mu - 2*new_mu) + pow(new_mu, 2) + (n_evaluations - 1)*fit_vars[i]/n_evaluations + pow(fitness[i] - new_mu, 2)/n_evaluations;
-      fitness[i] = new_mu;
-      //fit_vars[i] = (fit_vars[i]*(n_evaluations - 1) + old_mu*(old_mu - 2*mu) + mu*mu)/n_evaluations;
-      ++n_evaluations;
+
+  if ( !penalized() ) {
+    for (_uint i = 0; i < N_OBJS; ++i) {
+      if (n_evaluations == 0) {
+        fit_vars[i] = 0.0;
+        n_evaluations = 1;
+      } else if (forget_weight >= 1) {
+        //TODO: figure out how to drop previous evaluations (I'm 99.9% sure that you need to keep track of the history)
+        double mu = (prev_fitness[i] + forget_weight*fitness[i]) / (forget_weight + 1);
+        //TODO: double check whether this is actually correct
+        fit_vars[i] = ( pow(prev_fitness[i] - mu, 2) + pow(forget_weight*fitness[i] - mu, 2) ) / forget_weight;
+        fitness[i] = mu;
+        n_evaluations = 2;
+      } else {
+        double old_mu = prev_fitness[i];
+        double new_mu = (n_evaluations*prev_fitness[i] + fitness[i]) / (n_evaluations + 1);
+        fit_vars[i] = old_mu*(old_mu - 2*new_mu) + pow(new_mu, 2) + (n_evaluations - 1)*fit_vars[i]/n_evaluations + pow(fitness[i] - new_mu, 2)/n_evaluations;
+        fitness[i] = new_mu;
+        //fit_vars[i] = (fit_vars[i]*(n_evaluations - 1) + old_mu*(old_mu - 2*mu) + mu*mu)/n_evaluations;
+        ++n_evaluations;
+      }
     }
   }
+  free(prev_fitness);
 }
 
 void Organism::evaluate_fitness(Problem* prob) {
@@ -368,22 +372,24 @@ void Organism::set_cost(_uint i, double val) {
 }
 
 void Organism::average_fitness(Organism* other) {
-  _uint my_n = n_evaluations;
-  _uint their_n = other->n_evaluations;
-  for (int j = 0; j < fitness.size(); ++j) {
-    double my_mu_1 = fitness[j];
-    double their_mu_1 = other->get_fitness(j);
-    //these two functions combine the sample means and sample variances from two different measurements
-    fitness[j] = (my_n*fitness[j] + their_n*other->get_fitness(j)) / (my_n + their_n);
-    fit_vars[j] = my_n*( my_mu_1*(my_mu_1 - 2*fitness[j]) + pow(fitness[j], 2) )/(my_n + their_n - 1) + 
-               their_n*( their_mu_1*(their_mu_1 - 2*fitness[j]) + pow(fitness[j], 2) )/(my_n + their_n - 1) +
-            ( (my_n - 1)*fit_vars[j] + (their_n - 1)*other->fit_vars[j] )/(my_n + their_n - 1);
+  if ( !penalized() && !(other->penalized()) ) {
+    _uint my_n = n_evaluations;
+    _uint their_n = other->n_evaluations;
+    for (int j = 0; j < fitness.size(); ++j) {
+      double my_mu_1 = fitness[j];
+      double their_mu_1 = other->get_fitness(j);
+      //these two functions combine the sample means and sample variances from two different measurements
+      fitness[j] = (my_n*fitness[j] + their_n*other->get_fitness(j)) / (my_n + their_n);
+      fit_vars[j] = my_n*( my_mu_1*(my_mu_1 - 2*fitness[j]) + pow(fitness[j], 2) )/(my_n + their_n - 1) + 
+                 their_n*( their_mu_1*(their_mu_1 - 2*fitness[j]) + pow(fitness[j], 2) )/(my_n + their_n - 1) +
+              ( (my_n - 1)*fit_vars[j] + (their_n - 1)*other->fit_vars[j] )/(my_n + their_n - 1);
 
-    other->fit_vars[j] = fit_vars[j];
-    other->set_fitness(j, fitness[j]);
+      other->fit_vars[j] = fit_vars[j];
+      other->set_fitness(j, fitness[j]);
+    }
+    n_evaluations = my_n + their_n;
+    other->n_evaluations = n_evaluations;
   }
-  n_evaluations = my_n + their_n;
-  other->n_evaluations = n_evaluations;
 }
 
 void Organism::set_int(_uint i, int value) {

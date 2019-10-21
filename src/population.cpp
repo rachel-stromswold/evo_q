@@ -354,42 +354,6 @@ void Population::evaluate(Problem* prob) {
           }
         }
       }
-      /*for (_uint i = start_i; i < this->offspring_num; ++i) {
-        Vector<_uint> identical_set;
-        double avg_fit = 0.0;
-        bool apply_averages = true;
-        for (size_t j = 0; j < this->offspring_num; ++j) {
-          if ( i == j || *(old_gen[j]) == *(old_gen[i]) ) {
-            //ensure that we only calculate the identical set once
-            if (i < j) {
-              apply_averages = false;
-            } else {
-              identical_set.push_back(j);
-              old_gen[j]->evaluate_fitness(prob);
-              avg_fit += old_gen[j]->get_fitness(0);
-            }
-          }
-        }
-        //don't recalculate if we don't have to
-        if (apply_averages) {
-          for (auto it = identical_set.begin(); it != identical_set.end(); ++it) {
-            old_gen[*it]->set_fitness(0, avg_fit / identical_set.size());
-          }
-          if (old_gen[i]->get_fitness(0) > best_organism.get_fitness(0) && !old_gen[i]->penalized()) {
-            //check the organism again to make sure this isn't a fluke
-            for (_uint i = 0; i < args.noise_compensate(); ++i) {
-              old_gen[i]->evaluate_fitness_noisy(prob, args.forget_weight);
-              best_organism.evaluate_fitness_noisy(prob, args.forget_weight);
-            }
-            if ( old_gen[i]->get_fitness(0) > best_organism.get_fitness(0) ) {
-              set_best_organism(i);
-            }
-            if (old_gen[i]->get_fitness(0) < pop_stats[0].min) {
-              pop_stats[0].min = old_gen[i]->get_fitness(0);
-            }
-          }
-        }
-      }*/
     } else {
       for (_uint i = start_i; i < offspring_num; ++i) {
         if ( args.verbose() ) {
