@@ -392,6 +392,16 @@ void Organism::average_fitness(Organism* other) {
   }
 }
 
+void Organism::copy_fitness_data(Organism* other) {
+  if ( other->get_n_objs() == N_OBJS ) {
+    for (int j = 0; j < fitness.size(); ++j) {
+      fitness[j] = other->fitness[j];
+      fit_vars[j] = other->fit_vars[j];
+    }
+    n_evaluations = other->n_evaluations;
+  }
+}
+
 void Organism::set_int(_uint i, int value) {
   genes.set_to_int(al.get(), i, value);
 }

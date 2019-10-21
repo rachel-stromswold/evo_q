@@ -401,11 +401,19 @@ void Population::evaluate(Problem* prob) {
         }
       }
       //average the fitness of the best organism with each of its duplicates
+      _uint* best_org_set = new _uint[this->offspring_num];
+      _uint n_best_orgs = 0;
       for (_uint j = 0; j < this->offspring_num; ++j) {
         if ( *(old_gen[j]) == best_organism && j != best_organism_ind ) {
           best_organism.average_fitness( old_gen[j].get() );
+          best_org_set[n_best_orgs] = j;
+          ++n_best_orgs;
         }
       }
+      for (_uint j = 0; j < n_best_orgs; ++j) {
+        old_gen[j]->copy_fitness_data( &best_organism );
+      }
+      delete[] best_org_set;
     }
   } else {
     //TODO: figure out what the default behavior should be

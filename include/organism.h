@@ -109,6 +109,7 @@ public:
   _uint get_n_evaluations() { return n_evaluations; }
   //average fitness with another organism if they both have the same genotype
   void average_fitness(Organism* other);
+  void copy_fitness_data(Organism* other);
 
   void set_int(_uint i, int value);
   void set_uint(_uint i, int value);
