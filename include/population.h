@@ -76,6 +76,7 @@ class Population {
     size_t survivors_num;
     std::vector<std::shared_ptr<Organism>> survivors;
     //guarantee that the best organism appears in the next generation
+    _uint best_organism_ind = 0;
     Organism best_organism;
     Organism alltime_best_organism;
     //labels for generating data output

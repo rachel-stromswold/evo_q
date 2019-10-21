@@ -298,6 +298,7 @@ void Population::set_best_organism(_uint i, bool force) {
     for (_uint j = 0; j < N_OBJS; ++j) {
       best_organism.set_fitness( j, old_gen[i]->get_fitness(j) );
     }
+    best_organism_ind = i;
   }
   calculated_flags |= VALID_BEST;
 }
@@ -401,7 +402,7 @@ void Population::evaluate(Problem* prob) {
       }
       //average the fitness of the best organism with each of its duplicates
       for (_uint j = 0; j < this->offspring_num; ++j) {
-        if ( *(old_gen[j]) == best_organism ) {
+        if ( *(old_gen[j]) == best_organism && j != best_organism_ind ) {
           best_organism.average_fitness( old_gen[j].get() );
         }
       }

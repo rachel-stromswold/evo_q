@@ -201,29 +201,36 @@ public:
 class TestProblemNoisy : public Genetics::Problem {
 private:
   LCG gen;
-  //std::mt19937 gen;
-  //std::normal_distribution<> norm;
+  double domain, penalty_domain, variance;
 
 public:
-  TestProblemNoisy() : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1) {
+  TestProblemNoisy(double p_domain = NOISY_DOMAIN, double p_penalty_domain = NOISY_DOMAIN/8, double p_variance = NOISY_VAR) :
+  Genetics::Problem(NUM_BITS, NUM_CHROMS, 1), domain(p_domain), penalty_domain(p_penalty_domain), variance(p_variance) {
     Genetics::Vector<Genetics::VarContainer> tmp_vars;
     for (int i = 0; i < NUM_CHROMS; ++i) {
-      tmp_vars.emplace_back(0, -NOISY_DOMAIN, NOISY_DOMAIN, Genetics::t_real);
+      tmp_vars.emplace_back(0, -domain, domain, Genetics::t_real);
     }
     map->initialize(tmp_vars);
+    penalty_domain = abs(penalty_domain);
   }
 
   double evaluate_fitness_noiseless(Genetics::Organism* org) {
     double ret = 0.0;
+    double penalty = 0;
     for (unsigned i = 0; i < NUM_CHROMS; ++i) {
-      ret += org->read_real(i) * org->read_real(i);
+      double x_i = org->read_real(i);
+      ret += x_i*x_i;
+      if (x_i < penalty_domain && x_i > -penalty_domain) {
+        penalty += 1;
+      }
     }
+    org->apply_penalty(penalty);
     return ret;
   }
 
   void evaluate_fitness(Genetics::Organism* org) {
     double val = evaluate_fitness_noiseless(org);
-    val += NOISY_VAR*gen.gaussian_0_1();
+    val += variance*gen.gaussian_0_1();
     org->set_cost(0, val);
   }
 };
@@ -658,53 +665,72 @@ TEST_CASE ("Accumulated averages and standard deviations work") {
   REQUIRE( APPROX(org_var, var) );
 }
 
+#define N_VAR_TRIALS  5
 TEST_CASE ("Noisy population evaluations don't break") {
-  TestProblemNoisy prob;
-  Genetics::ArgStore args;
-  args.initialize_from_file("ga_noisy.conf");
-  Genetics::Population pop( NUM_BITS, 1, prob.map, args);
-  pop.set_cost(0);
-  PopulationPrinter out(&pop, "noisy_output.csv");
-  out.print_line();
+  PopulationPrinter* out;
+  char out_name[50];
+  for (int n = 0; n < N_VAR_TRIALS; ++n) {
+    double penalty_domain = NOISY_DOMAIN*(1 - pow(0.9, n));
+    std::cout << "Now running noisy test with domain: " << NOISY_DOMAIN << " and penalty domain: " << penalty_domain << std::endl;
+    TestProblemNoisy prob(NOISY_DOMAIN, penalty_domain, NOISY_VAR);
+    Genetics::ArgStore args;
+    args.initialize_from_file("ga_noisy.conf");
+    Genetics::Population pop( NUM_BITS, 1, prob.map, args);
+    pop.set_cost(0);
+    snprintf(out_name, 50, "noisy_output_%d.csv", n);
+    out = new PopulationPrinter(&pop, out_name);
+    out->print_line();
 
-  std::cout << "now running noisy test" << std::endl;
-  //evaluate for 10 generations
-  for (int gen = 0; gen < 10; ++gen) {
-    pop.evaluate(&prob);
-    std::shared_ptr<Genetics::Organism> best_org = pop.get_best_organism();
-    double best_fitness = best_org->get_fitness(0);
-    bool best_found = false;
-    bool best_in_pop = false;
-    for (int i = 0; i < pop.get_offspring_num(); ++i) {
-      std::shared_ptr<Genetics::Organism> org_i = pop.get_organism(i);
-      //check for information about the fitness relative to the best
-      INFO( "i= " << i << ", best fitness = " << best_fitness << ", current observed = " << org_i->get_fitness(0) )
-      REQUIRE( (org_i->get_fitness(0) < best_fitness || APPROX(org_i->get_fitness(0), best_fitness)) );
-      if ( org_i->get_fitness(0) == best_fitness ) {
-        best_found = true;
-      }
-      //check whether this organism has the same genotype as the best organism
-      bool is_best_geno = true;
-      REQUIRE( org_i->get_n_params()  == best_org->get_n_params() );
-      for (int j = 0; j < org_i->get_n_params(); ++j) {
-        if ( org_i->read_real(j) != best_org->read_real(j) ) {
-          is_best_geno = false;
+    //evaluate for 10 generations
+    for (int gen = 0; gen < 10; ++gen) {
+      pop.evaluate(&prob);
+      std::shared_ptr<Genetics::Organism> best_org = pop.get_best_organism();
+      double best_fitness = best_org->get_fitness(0);
+      bool best_found = false;
+      bool best_in_pop = false;
+      for (int i = 0; i < pop.get_offspring_num(); ++i) {
+        std::shared_ptr<Genetics::Organism> org_i = pop.get_organism(i);
+        //check for information about the fitness relative to the best
+        INFO( "i= " << i << ", best fitness = " << best_fitness << ", current observed = " << org_i->get_fitness(0) )
+        REQUIRE( (org_i->get_fitness(0) < best_fitness || APPROX(org_i->get_fitness(0), best_fitness)) );
+        if ( org_i->get_fitness(0) == best_fitness ) {
+          best_found = true;
+        }
+        //check whether this organism has the same genotype as the best organism
+        /*bool is_best_geno = true;
+        REQUIRE( org_i->get_n_params()  == best_org->get_n_params() );
+
+        for (int j = 0; j < org_i->get_n_params(); ++j) {
+          if ( org_i->read_real(j) != best_org->read_real(j) ) {
+            is_best_geno = false;
+          }
+        }*/
+        if ( *best_org == *org_i ) {
+          std::cout << "\ti = " << i << ", value = " << org_i->read_real(0) << std::endl;
+          best_in_pop = true;
+        }
+        //if the organism is penalized ensure that it is less fit than every other organism
+        if (org_i->penalized()) {
+          for (int j = 0; j < pop.get_offspring_num(); ++j) {
+            if ( !(pop.get_organism(j)->penalized()) ) {
+              REQUIRE( org_i->get_fitness() < pop.get_organism(j)->get_fitness() );
+            }
+          }
         }
       }
-      if (is_best_geno) {
-        best_in_pop = true;
-      }
-      //print out the spreadsheet
-    }
-    REQUIRE( best_in_pop );
+      INFO( "gen=" << gen << ", best_org.value[i]=" << best_org->read_real(0) << ", fitness=" << best_org->get_fitness() )
+      REQUIRE( best_in_pop );
 
-    if (gen == 0) {
-      REQUIRE( best_found );
+      REQUIRE( !(pop.get_best_organism()->penalized()) );
+      if (gen == 0) {
+        REQUIRE( best_found );
+      }
+      if (best_found) {
+        std::cout << "\timprovement in generation " << gen << ". New fitness = " << best_fitness << std::endl;
+      }
+      out->print_line();
     }
-    if (best_found) {
-      std::cout << "\timprovement in generation " << gen << ". New fitness = " << best_fitness << std::endl;
-    }
-    out.print_line();
+    delete out;
   }
 }
 

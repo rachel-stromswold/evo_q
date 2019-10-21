@@ -130,15 +130,15 @@ bool Organism::operator==(Organism& obj) {
     Type t = al->get_type(i);
     if (t == t_real) {
       if (read_real(i) != obj.read_real(i)) {
-	return false;
+        return false;
       }
     } else if (t == t_int) {
       if (read_int(i) != obj.read_int(i)) {
-	return false;
+        return false;
       }
     } else {
       if (read_uint(i) != obj.read_uint(i)) {
-	return false;
+        return false;
       }
     }
   }
