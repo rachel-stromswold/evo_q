@@ -82,6 +82,7 @@ endif()
 enable_testing()
 configure_file(tests/test.py test.py COPYONLY)
 configure_file(tests/ga.conf ga.conf COPYONLY)
+configure_file(tests/ga_noisy.conf ga_noisy.conf COPYONLY)
 
 if(NOT BUILD_PYTHON)
   add_test(NAME evo_q_test COMMAND ${APP_EXE})
