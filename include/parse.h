@@ -4,21 +4,21 @@
 #include <fstream>
 #include "util.h"
 
-#define DEF_POP_SIZE		    20
+#define DEF_POP_SIZE		20
 #define DEF_BREED_POP_SIZE	6
-#define DEF_NUM_GENS		    50
-#define DEF_COUPLING_BITS	  16
-#define DEF_MAX_COUPLING	  100
-#define DEF_COUP_VAR		    0.25
-#define DEF_COUP_MEAN		    0.0
+#define DEF_NUM_GENS		50
+#define DEF_COUPLING_BITS	16
+#define DEF_MAX_COUPLING	100
+#define DEF_COUP_VAR		0.25
+#define DEF_COUP_MEAN		0.0
 #define DEF_CROSSOVER_PROB	0.8
-#define DEF_MUTATE_PROB		  0.1
-#define DEF_HYPER_THRESH    0.8
+#define DEF_MUTATE_PROB		0.1
+#define DEF_HYPER_THRESH	0.8
 #define DEF_REPLACE_FRAC	0.5
-#define DEF_NUM_CROSSOVERS  1
+#define DEF_NUM_CROSSOVERS	1
 
 //flags
-#define WAIT_CON		1
+#define WAIT_CON	    	1
 #define VERBOSE			2
 #define NOISE_COMPENSATE	4
 #define MULTIPLES_NONE		7

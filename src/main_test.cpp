@@ -92,26 +92,33 @@ private:
   int gen = -1;
 public:
   PopulationPrinter(Genetics::Population* p_pop, std::string fname) : ofs(fname, std::ofstream::out) { pop = p_pop; }
-  void print_line() {
+
+  void print_line(bool include_best = true) {
     if (gen < 0) {
-      Genetics::Vector<Genetics::String> best_data = pop->get_best_header();
-      Genetics::Vector<Genetics::String> data = pop->get_header();
-      ofs << "gen,n_evals";
-      for (auto it = best_data.begin(); it != best_data.end(); ++it) {
-        ofs << "," << *it;
+      ofs << "gen";
+      if (include_best) {
+	ofs << ",n_evals";
+	Genetics::Vector<Genetics::String> best_data = pop->get_best_header();
+	for (auto it = best_data.begin(); it != best_data.end(); ++it) {
+	  ofs << "," << *it;
+	}
       }
+      Genetics::Vector<Genetics::String> data = pop->get_header();
       for (auto it = data.begin(); it != data.end(); ++it) {
         ofs << "," << *it;
       }
       ofs << "\n";
       gen = 0;
     } else {
-      Genetics::Vector<Genetics::String> best_data = pop->get_best_data();
-      Genetics::Vector<Genetics::String> data = pop->get_pop_data();
-      ofs << gen << "," << pop->get_best_organism()->get_n_evaluations();
-      for (auto it = best_data.begin(); it != best_data.end(); ++it) {
-        ofs << "," << *it;
+      ofs << gen;
+      if (include_best) {
+	Genetics::Vector<Genetics::String> best_data = pop->get_best_data();
+	ofs << "," << pop->get_best_organism()->get_n_evaluations();
+	for (auto it = best_data.begin(); it != best_data.end(); ++it) {
+	  ofs << "," << *it;
+	}
       }
+      Genetics::Vector<Genetics::String> data = pop->get_pop_data();
       for (auto it = data.begin(); it != data.end(); ++it) {
         ofs << "," << *it;
       }
@@ -686,12 +693,15 @@ TEST_CASE ("Noisy population evaluations don't break") {
       pop.evaluate(&prob);
       std::shared_ptr<Genetics::Organism> best_org = pop.get_best_organism();
       double best_fitness = best_org->get_fitness(0);
+      Genetics::FitnessStats pop_stats = pop.get_pop_stats();
+      REQUIRE( pop_stats.max == best_fitness );
+
       bool best_found = false;
       bool best_in_pop = false;
       for (int i = 0; i < pop.get_offspring_num(); ++i) {
         std::shared_ptr<Genetics::Organism> org_i = pop.get_organism(i);
         //check for information about the fitness relative to the best
-        INFO( "i= " << i << ", best fitness = " << best_fitness << ", current observed = " << org_i->get_fitness(0) )
+        INFO( "i=" << i << ", best fitness=" << best_fitness << ", current observed=" << org_i->get_fitness(0) )
         REQUIRE( (org_i->get_fitness(0) < best_fitness || APPROX(org_i->get_fitness(0), best_fitness)) );
         if ( org_i->get_fitness(0) == best_fitness ) {
           best_found = true;
@@ -814,9 +824,12 @@ TEST_CASE ("Simple evolution of a single objective converges to roughly appropri
   Genetics::ArgStore args;
   args.initialize_from_file("ga.conf");
   Genetics::Population pop( NUM_BITS, 1, prob.map, args);
+  PopulationPrinter out(&pop, "simple_evo.csv");
+  out.print_line();
   for (size_t i = 0; i < 100; ++i) {
     pop.evaluate(&prob);
     pop.iterate();
+    out.print_line();
   }
   pop.evaluate(&prob);
   REQUIRE( APPROX(pop.get_best_organism()->get_fitness(0), 0) );
@@ -827,10 +840,13 @@ TEST_CASE ("Simple evolution of a multi objective converges to roughly appropria
   Genetics::ArgStore args;
   args.initialize_from_file("ga.conf");
   Genetics::Population_NSGAII pop( NUM_BITS, NUM_OBJS, prob.map, args);
+  PopulationPrinter out(&pop, "multi_objective.csv");
+  out.print_line(false);
   bool converged = false;
   while (!converged) {
     pop.evaluate(&prob);
     converged = pop.iterate();
+    out.print_line(false);
   }
   int modulo = NUM_OBJS + prob.map->get_num_params() + 1;
   pop.evaluate(&prob);

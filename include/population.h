@@ -57,6 +57,8 @@ class Population {
     _uint N_OBJS;
     _uint generation = 0;
     _uchar calculated_flags = 0;
+    void evaluate_best(Problem* prob, double forget_weight=0.0);
+
   protected:
     size_t sort_org_calls = 0;
     size_t carryover_num;//How many of the best individuals carry over to the next generation 
@@ -77,8 +79,8 @@ class Population {
     std::vector<std::shared_ptr<Organism>> survivors;
     //guarantee that the best organism appears in the next generation
     _uint best_organism_ind = 0;
-    Organism best_organism;
-    Organism alltime_best_organism;
+    std::shared_ptr<Organism> best_organism;
+    std::shared_ptr<Organism> alltime_best_organism;
     //labels for generating data output
     char** var_labels;
     char** obj_labels;
@@ -101,11 +103,11 @@ class Population {
   public:
 //    Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, ArgStore p_args);
 //    Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, ArgStore p_args);
-    Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map);
+    Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, bool latin=true);
     Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map);
-    Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args);
+    Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args, bool latin=true);
     Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args);
-    void createOrganisms(Organism* tmplt);
+    void createOrganisms(Organism* tmplt, bool latin);
     ~Population();
     Population(Population& o);
     Population& operator=(Population& o);
@@ -190,7 +192,9 @@ class Population_NSGAII : public Population {
     }
     std::vector<std::shared_ptr<Organism>> get_pareto_front(_uint i);
 
+    Vector<String> get_best_header();
     Vector<String> get_header();
+    Vector<String> get_best_data();
     Vector<String> get_pop_data();
 
     std::shared_ptr<Organism> get_organism(size_t i) { return (i < offspring_num) ? this->old_gen[i] : this->offspring[i - offspring_num]; }

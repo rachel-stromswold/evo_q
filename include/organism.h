@@ -118,7 +118,7 @@ public:
   int read_int(_uint i);
   _uint read_uint(_uint i);
   bool dominates(Organism* other);
-  String get_chromosome_string(_uint i) { return genes.get_string(al.get(), i); }
+  String get_chromosome_string(_uint i);
   char* get_output_stream() { return output_stream; }
   size_t get_output_len() {return output_len; }
   int get_rank() { return rank; }

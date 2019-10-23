@@ -435,4 +435,14 @@ bool Organism::dominates(Organism* other) {
   return ret;
 }
 
+String Organism::get_chromosome_string(_uint i) {
+  if (N_BITS == 0 || !al) {
+    error(1, "Attempt to access string for uninitialized organism.");
+  }
+  if ( i >= al->get_num_params() ) {
+    error(1, "Attempt to access invalid parameter with index %d.", i);
+  }
+  return genes.get_string(al.get(), i);
+}
+
 }
