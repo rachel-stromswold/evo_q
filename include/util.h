@@ -448,26 +448,62 @@ public:
     Vector<_uint> ret(k_, 0);
     for (_uint i = 0; i < k_; ++i) {
       if (replace) {
-	ret[i] = dist( g) % n_;
+        ret[i] = dist( g) % n_;
       } else {
-	_uint x = dist( g ) % (n_ - i);
-	bool append = true;
-	for (_uint j = 0; j < i; ++j) {
-	  if (x >= ret[j]) {
-	    ++x;
-	  } else {
-	    //move everything up to maintain a proper sorting
-	    for (_uint l = i; l > j; --l) {
-	      ret[l] = ret[l - 1];
-	    }
-	    ret[j] = x;
-	    append = false;
-	    break;
-	  }
-	}
-	if (append) {
-	  ret[i] = x;
-	}
+        //TODO: this method biases results since UINT_MAX is not necessarily divisible by n-i
+        _uint x = dist( g ) % (n_ - i);
+        bool append = true;
+        for (_uint j = 0; j < i; ++j) {
+          if (x >= ret[j]) {
+            ++x;
+          } else {
+            //move everything up to maintain a proper sorting
+            for (_uint l = i; l > j; --l) {
+              ret[l] = ret[l - 1];
+            }
+            ret[j] = x;
+            append = false;
+            break;
+          }
+        }
+        if (append) {
+          ret[i] = x;
+        }
+      }
+    }
+    return ret;
+  }
+};
+
+//rearrange n elements into a random order
+class Shuffle {
+private:
+  _uint n_;
+  std::uniform_int_distribution<_uint> dist;
+  bool replace;
+
+public:
+  Shuffle(_uint p_n);
+
+  void reset() { dist.reset(); }
+  _uint n() { return n_; }
+
+  template <class Generator>
+  Vector<_uint> operator()(Generator& g) {
+    Vector<_uint> ret(n_, 0);
+    for (_uint i = 0; i < n_; ++i) {
+      _uint x = dist( g ) % (n_ - i);
+      bool contained = true;
+      while (contained) {
+        contained = false;
+        for (_uint j = 0; j < i; ++j) {
+          if (ret[j] == x) { contained = true;break; }
+        }
+        if (!contained) {
+          ret[i] = x;
+        } else {
+          ++x;
+        }
       }
     }
     return ret;

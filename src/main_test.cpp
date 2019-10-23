@@ -9,6 +9,7 @@
 #include <fstream>
 
 #define NUM_BITS	16
+#define NUM_BITS_LARGE  64
 #define NUM_OBJS  	2
 #define NUM_CHROMS	1
 
@@ -700,21 +701,21 @@ TEST_CASE ("Populations are correctly created and data is successfully read", "[
     unsigned n_orgs = (POP_TEST_MAX - POP_TEST_MIN) / 2;
     args.set_pop_size(n_orgs);
     for (unsigned dims = 1; dims < 5; ++dims) {
-      Genetics::PhenotypeMap map_multi(NUM_BITS);
-      map_multi.initialize(dims, Genetics::t_real);
+      std::shared_ptr<Genetics::PhenotypeMap> map_multi = std::make_shared<Genetics::PhenotypeMap>(NUM_BITS_LARGE);
+      map_multi->initialize(dims, Genetics::t_real);
       for (unsigned i = 0; i < dims; ++i) {
-	map_multi.set_range(i, POP_TEST_MIN, POP_TEST_MAX);
+        map_multi->set_range(i, POP_TEST_MIN, POP_TEST_MAX);
       }
-      Genetics::Population pop(NUM_BITS, NUM_OBJS, map, args, true);
+      Genetics::Population pop(NUM_BITS, NUM_OBJS, map_multi, args, true);
       for (unsigned k = 0; k < dims; ++k) {
-	for (unsigned i = 0; i < pop.get_offspring_num(); ++i) {
-	  unsigned row_i = (unsigned)floor( pop.get_offspring_num()*(pop.get_organism(i)->read_real(k) - POP_TEST_MIN) / (POP_TEST_MAX - POP_TEST_MIN) );
-	  for (unsigned j = i+1; j < pop.get_offspring_num(); ++j) {
-	    unsigned row_j = (unsigned)floor( pop.get_offspring_num()*(pop.get_organism(j)->read_real(k) - POP_TEST_MIN) / (POP_TEST_MAX - POP_TEST_MIN) );
-	    INFO ( "i=" << i << " ( " << pop.get_organism(i)->read_real(k) << " ), j=" << j << " ( " << pop.get_organism(j)->read_real(k) << " ) , collision in x_" << k )
-	    REQUIRE( row_i != row_j );
-	  }
-	}
+        for (unsigned i = 0; i < pop.get_offspring_num(); ++i) {
+          unsigned row_i = (unsigned)floor( pop.get_offspring_num()*(pop.get_organism(i)->read_real(k) - POP_TEST_MIN) / (POP_TEST_MAX - POP_TEST_MIN) );
+          for (unsigned j = i+1; j < pop.get_offspring_num(); ++j) {
+            unsigned row_j = (unsigned)floor( pop.get_offspring_num()*(pop.get_organism(j)->read_real(k) - POP_TEST_MIN) / (POP_TEST_MAX - POP_TEST_MIN) );
+            INFO ( "i=" << i << " ( " << pop.get_organism(i)->read_real(k) << " ), j=" << j << " ( " << pop.get_organism(j)->read_real(k) << " ) , collision in x_" << k << " " << POP_TEST_MIN << "<x<" << POP_TEST_MAX << ", n_orgs=" << pop.get_offspring_num() )
+            REQUIRE( row_i != row_j );
+          }
+        }
       }
     }
   }

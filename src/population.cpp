@@ -142,27 +142,29 @@ void Population::createOrganisms(Organism* tmplt, bool latin) {
     }
   } else {
     if (latin) {
-      SampleDraw samp(offspring_num, offspring_num);
+      Shuffle samp(offspring_num);
       std::uniform_real_distribution<double> in_cube_dist(0, 1);
       Vector<_uint> row;
+      
       this->old_gen.reserve(this->offspring_num);
       for (size_t i = 0; i < this->offspring_num; ++i) {
-	this->old_gen.push_back( std::make_shared<Organism>(N_BITS, N_OBJS, map) );
+        this->old_gen.push_back( std::make_shared<Organism>(N_BITS, N_OBJS, map) );
       }
       for (size_t i = 0; i < map->get_num_params(); ++i) {
-	row = samp( args.get_generator() ); 
-	for (size_t j = 0; j < offspring_num; ++j) {
-	  double x = in_cube_dist( args.get_generator() );
-	  x = x*( map->get_range_max(i) ) + (1-x)*( map->get_range_min(i) );
-	  this->old_gen[j]->set_real(i, x);
-	}
+        row = samp( args.get_generator() ); 
+        double row_width = ( map->get_range_max(i) - map->get_range_min(i) )/offspring_num;
+        for (size_t j = 0; j < offspring_num; ++j) {
+          double x = in_cube_dist( args.get_generator() );
+          x = (x + row[j])*row_width + map->get_range_min(i);
+          this->old_gen[j]->set_real(i, x);
+        }
       }
     } else {
       this->old_gen.reserve(this->offspring_num);
       //initally fill up the offspring randomly
       for (size_t i = 0; i < this->offspring_num; ++i) {
-	this->old_gen.push_back( std::make_shared<Organism>(N_BITS, N_OBJS, map) );
-	this->old_gen[i]->randomize(&args);
+        this->old_gen.push_back( std::make_shared<Organism>(N_BITS, N_OBJS, map) );
+        this->old_gen[i]->randomize(&args);
       }
     }
   }
@@ -420,7 +422,7 @@ void Population::evaluate(Problem* prob) {
           //check the organism again to make sure this isn't a fluke
           for (_uint j = 0; j < args.noise_compensate(); ++j) {
             old_gen[i]->evaluate_fitness_noisy(prob, args.forget_weight);
-            evaluate_best(prob, args.forget_weight);
+            //evaluate_best(prob, args.forget_weight);
           }
           if (old_gen[i]->get_fitness(0) > best_organism->get_fitness(0)) {
             set_best_organism(i);

@@ -202,13 +202,59 @@ String read_number(String::iterator* it) {
   return ret;
 }
 
-SampleDraw::SampleDraw(_uint p_n, _uint p_k, bool replace) : dist(0, nChoosek(p_n-1, p_k-1)*factorial(p_k-1)) {
+// ============== SampleDraw and Shuffle ===============
+
+#define N_PRIMES 25
+size_t first_primes[N_PRIMES] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97};
+/*size_t get_prime(_uint k) {
+  if (k < N_PRIMES) { return first_primes[k]; }
+  size_t* prev_primes = (size_t*)malloc( sizeof(size_t)*(k - 1) );
+  for (_uint i = 0; i < N_PRIMES; ++i) {
+    prev_primes = first_primes[i];
+  }
+  for (_uint i = N_PRIMES; i < k - 1; ++i) {
+    prev_primes = get_prime(i);
+  }
+
+  size_t trial_prime = get_prime(k - 1);
+  bool not_prime = true;
+  while (not_prime) {
+    trial_prime += 2;
+    not_prime = false;
+    for (_uint i = 0; i < k - 1; ++i) {
+      if (trial_prime % prev_primes[i] == 0) {
+        not_prime = true;
+        break;
+      }
+    }
+  }
+  free(prev_primes);
+  return trial_prime;
+}
+
+size_t mega_prime(int n) {
+  size_t ret = first_primes[0];
+  _uint k = 1;
+  while (ret < n) {
+    ret *= get_prime(k);
+    ++k;
+  }
+  return ret;
+}*/
+
+//SampleDraw::SampleDraw(_uint p_n, _uint p_k, bool replace) : dist(0, nChoosek(p_n-1, p_k-1)*factorial(p_k-1))
+//TODO: find a way of sampling that does not bias certain results (the factorial trick is intractably large)
+SampleDraw::SampleDraw(_uint p_n, _uint p_k, bool replace) : dist(0, UINT_MAX) {
   this->replace = replace;
   n_ = p_n;
   k_ = p_k;
   if (k_ > n_) {
     error(1, "Cannot initialize sample draw with more samples than the population size.");
   }
+}
+
+Shuffle::Shuffle(_uint p_n) : dist(0, UINT_MAX) {
+  n_ = p_n;
 }
 
 }
