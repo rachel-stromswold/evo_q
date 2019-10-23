@@ -321,3 +321,16 @@ if run_tests[TEST_NOISE_IND]:
     plt.ylabel(r'$y^2$')
     plt.show()
     print("successfully evaluated noisy fitness function")
+
+if run_tests[COMPARE_LATIN]:
+    conv = evo_q.PlateauCutoff(0.0001, 5)
+    prob_rast = evo_q.Problem(32, 2, 1)
+    prob_rast.set_phenotype_parameters(["real_(-2.56, 2.56)", "real_(-2.56, 2.56)"])
+    prob_rast.set_fitness_function(rastrigin)
+    pop_rast_non_latin = prob_rast.initialize_population("ga.conf", False)
+    pop_rast_with_latin = prob_rast.initialize_population("ga.conf", True)
+    results_non_latin = pop_rast.run(conv, store_intermediate=True)
+    results_with_latin = pop_rast.run(conv, store_intermediate=True)
+    #print("generation " + str(results["Generation"]) + ", " + str(results["Solution"]) + ", max_fitness = " + str(results["Fitness"]))
+    plt.scatter(range(results_non_latin["Generations"]), results_non_latin["Fitness"], label='without latin-hypercube initialization')
+    plt.scatter(range(results_with_latin["Generations"]), results_with_latin["Fitness"], label='with latin-hypercube initialization')

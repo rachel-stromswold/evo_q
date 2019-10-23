@@ -550,83 +550,7 @@ TEST_CASE( "Ensure that phenotype mappings are set up properly", "[PhenotypeMapp
   }
 }
 
-// =============================== POPULATION TEST CASES ===============================
-
-TEST_CASE ( "Organisms are correctly created and decoded", "[organisms]" ) {
-  std::shared_ptr<Genetics::PhenotypeMap> map_16 = std::make_shared<Genetics::PhenotypeMap>(16);
-  std::shared_ptr<Genetics::PhenotypeMap> map_32 = std::make_shared<Genetics::PhenotypeMap>(32);
-  Genetics::Organism template_16_bits_1_params(16, 1, map_16);
-  Genetics::Organism template_32_bits_2_params(32, 2, map_32);
-  LCG generator;
-
-  SECTION ( "The organism correctly sets and reads unsigned integers" ) {
-    map_16->initialize(1, Genetics::t_uint);
-    map_32->initialize(2, Genetics::t_uint);
-    for (int i = 0; i < N_TRIALS; ++i) {
-      int val = i - N_TRIALS/2;
-      template_16_bits_1_params.set_int(0, val);
-      REQUIRE(template_16_bits_1_params.read_int(0) == val);
-    }
-    for (int i = 0; i < N_TRIALS; ++i) {
-      int val1 = i - N_TRIALS;
-      template_32_bits_2_params.set_int(0, val1);
-      int val2 = i;
-      template_32_bits_2_params.set_int(1, val2);
-      REQUIRE(template_32_bits_2_params.read_int(0) == val1);
-      REQUIRE(template_32_bits_2_params.read_int(1) == val2);
-    }
-  }
-  SECTION ( "The organism correctly sets and read reals" ) {
-    map_16->initialize(1, Genetics::t_real);
-    map_32->initialize(2, Genetics::t_real);
-    for (int i = 0; i < N_TRIALS; ++i) {
-      double val = generator.random_real();
-      template_16_bits_1_params.set_real(0, val);
-      REQUIRE( APPROX(template_16_bits_1_params.read_real(0), val) );
-    }
-    for (int i = 0; i < N_TRIALS; ++i) {
-      double val1 = generator.random_real();
-      template_32_bits_2_params.set_real(0, val1);
-      double val2 = generator.random_real();
-      template_32_bits_2_params.set_real(1, val2);
-      INFO("res = " << template_32_bits_2_params.read_real(0) << " val = " << val1)
-      REQUIRE( APPROX(template_32_bits_2_params.read_real(0), val1) );
-      INFO("res = " << template_32_bits_2_params.read_real(1) << " val = " << val2)
-      REQUIRE( APPROX(template_32_bits_2_params.read_real(1), val2) );
-    }
-  }
-}
-
-TEST_CASE ("ArgStore successfully parses a file") {
-  TestProblemSingle prob;
-  Genetics::Conv_Plateau plat_cut(0.05, TEST_CONV_GEN / 2);
-  Genetics::ArgStore args;
-  args.initialize_from_file("ga.conf");
-  Genetics::Population pop( NUM_BITS, 1, prob.map, args);
-
-  //ga.conf must be as follows for this to work:
-  /*
-   * population_size: 50
-   * tournament_size: 2
-   * num_generations: 50
-   * num_crossovers: 2
-   * parameter_variance: 0.3
-   * parameter_mean: 0.0
-   * mutation_probability: 0.016
-   * crossover_probability: 0.9
-   * hypermutation_threshold: 1.0
-   * output_file: output.csv
-   */
-  REQUIRE( pop.get_args().get_pop_size() == 50 );
-  REQUIRE( pop.get_args().get_survivors() == 2 );
-  REQUIRE( pop.get_args().get_num_gens() == 50 );
-  REQUIRE( pop.get_args().get_num_crossovers() == 2 );
-  REQUIRE( pop.get_args().get_init_coup_var() == 0.3 );
-  REQUIRE( pop.get_args().get_crossover_prob() == 0.9 );
-  REQUIRE( pop.get_args().get_mutate_prob() == 0.016 );
-  REQUIRE( pop.get_args().get_hypermutation_threshold() == 1.0 );
-  REQUIRE( pop.get_args().get_out_fname() == "output.csv" );
-}
+// =============================== ORGANISM TEST CASES ===============================
 
 TEST_CASE ("Accumulated averages and standard deviations work") {
   TestProblemAvgs avg;
@@ -670,6 +594,187 @@ TEST_CASE ("Accumulated averages and standard deviations work") {
   REQUIRE( APPROX(org_mean, mean) );
   INFO( "accumulated fitness: " << org_mean << ", actual: " << mean << ", accumulated variance: " << org_var << ", actual: " << var)
   REQUIRE( APPROX(org_var, var) );
+}
+
+TEST_CASE ( "Organisms are correctly created and decoded", "[organisms]" ) {
+  std::shared_ptr<Genetics::PhenotypeMap> map_16 = std::make_shared<Genetics::PhenotypeMap>(16);
+  std::shared_ptr<Genetics::PhenotypeMap> map_32 = std::make_shared<Genetics::PhenotypeMap>(32);
+  Genetics::Organism template_16_bits_1_params(16, 1, map_16);
+  Genetics::Organism template_32_bits_2_params(32, 2, map_32);
+  LCG generator;
+
+  SECTION ( "The organism correctly sets and reads unsigned integers" ) {
+    map_16->initialize(1, Genetics::t_uint);
+    map_32->initialize(2, Genetics::t_uint);
+    for (int i = 0; i < N_TRIALS; ++i) {
+      int val = i - N_TRIALS/2;
+      template_16_bits_1_params.set_int(0, val);
+      REQUIRE(template_16_bits_1_params.read_int(0) == val);
+    }
+    for (int i = 0; i < N_TRIALS; ++i) {
+      int val1 = i - N_TRIALS;
+      template_32_bits_2_params.set_int(0, val1);
+      int val2 = i;
+      template_32_bits_2_params.set_int(1, val2);
+      REQUIRE(template_32_bits_2_params.read_int(0) == val1);
+      REQUIRE(template_32_bits_2_params.read_int(1) == val2);
+    }
+  }
+
+  SECTION ( "The organism correctly sets and read reals" ) {
+    map_16->initialize(1, Genetics::t_real);
+    map_32->initialize(2, Genetics::t_real);
+    for (int i = 0; i < N_TRIALS; ++i) {
+      double val = generator.random_real();
+      template_16_bits_1_params.set_real(0, val);
+      REQUIRE( APPROX(template_16_bits_1_params.read_real(0), val) );
+    }
+    for (int i = 0; i < N_TRIALS; ++i) {
+      double val1 = generator.random_real();
+      template_32_bits_2_params.set_real(0, val1);
+      double val2 = generator.random_real();
+      template_32_bits_2_params.set_real(1, val2);
+      INFO("res = " << template_32_bits_2_params.read_real(0) << " val = " << val1)
+      REQUIRE( APPROX(template_32_bits_2_params.read_real(0), val1) );
+      INFO("res = " << template_32_bits_2_params.read_real(1) << " val = " << val2)
+      REQUIRE( APPROX(template_32_bits_2_params.read_real(1), val2) );
+    }
+  }
+}
+
+// =============================== POPULATION TEST CASES ===============================
+
+#define POP_TEST_MIN	-10
+#define POP_TEST_MAX	10
+TEST_CASE ("Populations are correctly created and data is successfully read", "[populations]") {
+//  Genetics::ArgStore inst;
+  Genetics::ArgStore args;
+  args.initialize_from_file("ga.conf");
+//  inst.initialize_from_file(conf_file.c_str());
+  std::shared_ptr<Genetics::PhenotypeMap> map = std::make_shared<Genetics::PhenotypeMap>(NUM_BITS);
+  map->initialize(NUM_CHROMS, Genetics::t_real);
+  map->set_range(0, POP_TEST_MIN, POP_TEST_MAX);
+  Genetics::Organism tmplt(NUM_BITS, NUM_OBJS, map);
+  tmplt.set_real(0, 4.6);
+  Genetics::Population pop_none(NUM_BITS, NUM_OBJS, &tmplt, map, args);
+  Genetics::Population pop_tmplt(NUM_BITS, NUM_OBJS, map, args);
+
+  SECTION ( "The header is read correctly" ) {
+    Genetics::Vector<Genetics::String> pop_dat = pop_none.get_header();
+    for (unsigned i = 0; i < pop_dat.size() / 3; ++i) {
+      REQUIRE( pop_dat[i*3] == "x_0");
+      REQUIRE( pop_dat[i*3 + 1] == "f_0(x)" );
+      REQUIRE( pop_dat[i*3 + 2] == "f_1(x)" );
+    }
+#ifdef PRINT_GARBAGE
+    for (Genetics::Vector<Genetics::String>::iterator it = pop_dat.begin(); it != pop_dat.end(); ++it) {
+      printf("%s ", it->c_str());
+    }
+    printf("\n");
+    Genetics::Vector<Genetics::String> pop_dat2 = pop_tmplt.get_header();
+    for (Genetics::Vector<Genetics::String>::iterator it = pop_dat2.begin(); it != pop_dat2.end(); ++it) {
+      printf("%s ", it->c_str());
+    }
+    printf("\n");
+#endif
+  }
+  SECTION ( "The population data is read correctly" ) {
+    Genetics::Vector<Genetics::String> pop_dat = pop_none.get_pop_data();
+    Genetics::Vector<Genetics::String> pop_dat2 = pop_tmplt.get_pop_data();
+    REQUIRE( pop_dat.size() % 3 == 0 );
+    REQUIRE( pop_dat.size() == pop_dat2.size() );
+
+#ifdef PRINT_GARBAGE
+    for (Genetics::Vector<Genetics::String>::iterator it = pop_dat.begin(); it != pop_dat.end(); ++it) {
+      printf("%s ", it->c_str());
+    }
+    printf("\n");
+    for (Genetics::Vector<Genetics::String>::iterator it = pop_dat2.begin(); it != pop_dat2.end(); ++it) {
+      printf("%s ", it->c_str());
+    }
+    printf("\n");
+#endif
+  }
+
+  SECTION ( "Latin-Hypercube initialization works" ) {
+    unsigned n_orgs = (POP_TEST_MAX - POP_TEST_MIN) / 2;
+    args.set_pop_size(n_orgs);
+    for (unsigned dims = 1; dims < 5; ++dims) {
+      Genetics::PhenotypeMap map_multi(NUM_BITS);
+      map_multi.initialize(dims, Genetics::t_real);
+      for (unsigned i = 0; i < dims; ++i) {
+	map_multi.set_range(i, POP_TEST_MIN, POP_TEST_MAX);
+      }
+      Genetics::Population pop(NUM_BITS, NUM_OBJS, map, args, true);
+      for (unsigned k = 0; k < dims; ++k) {
+	for (unsigned i = 0; i < pop.get_offspring_num(); ++i) {
+	  unsigned row_i = (unsigned)floor( pop.get_offspring_num()*(pop.get_organism(i)->read_real(k) - POP_TEST_MIN) / (POP_TEST_MAX - POP_TEST_MIN) );
+	  for (unsigned j = i+1; j < pop.get_offspring_num(); ++j) {
+	    unsigned row_j = (unsigned)floor( pop.get_offspring_num()*(pop.get_organism(j)->read_real(k) - POP_TEST_MIN) / (POP_TEST_MAX - POP_TEST_MIN) );
+	    INFO ( "i=" << i << " ( " << pop.get_organism(i)->read_real(k) << " ), j=" << j << " ( " << pop.get_organism(j)->read_real(k) << " ) , collision in x_" << k )
+	    REQUIRE( row_i != row_j );
+	  }
+	}
+      }
+    }
+  }
+}
+
+TEST_CASE ("Penalties are applied properly", "[populations]") {
+  double penalty_str = 4.0;
+  TestProblemPenalties prob_fit(penalty_str, false);
+  TestProblemPenalties prob_cost(penalty_str, true);
+  Genetics::ArgStore args;
+  args.initialize_from_file("ga.conf");
+  Genetics::Population pop_fit( NUM_BITS, 1, prob_fit.map, args);
+  Genetics::Population pop_cost( NUM_BITS, 1, prob_cost.map, args);
+  pop_fit.evaluate(&prob_fit);
+  pop_cost.evaluate(&prob_cost);
+
+  double fit_0 = pop_fit.get_organism(0)->get_fitness(0);
+  double cost_0 = pop_cost.get_organism(0)->get_cost(0);
+  for (unsigned i = 1; i < pop_fit.get_offspring_num() && i < pop_cost.get_offspring_num(); ++i) {
+    double fit_i = pop_fit.get_organism(i)->get_fitness(0);
+    double cost_i = pop_cost.get_organism(i)->get_cost(0);
+    INFO( "i = " << i )
+    REQUIRE( fit_i == 1.0 );
+    REQUIRE( fit_0 < fit_i );
+    REQUIRE( cost_i == 1.0 );
+    REQUIRE( cost_0 > fit_i );
+  } 
+}
+
+// =============================== ARG_STORE TEST CASES ===============================
+
+TEST_CASE ("ArgStore successfully parses a file") {
+  TestProblemSingle prob;
+  Genetics::Conv_Plateau plat_cut(0.05, TEST_CONV_GEN / 2);
+  Genetics::ArgStore args;
+  args.initialize_from_file("ga.conf");
+  Genetics::Population pop( NUM_BITS, 1, prob.map, args);
+
+  //ga.conf must be as follows for this to work:
+  /*
+   * population_size: 50
+   * tournament_size: 2
+   * num_generations: 50
+   * num_crossovers: 2
+   * parameter_variance: 0.3
+   * parameter_mean: 0.0
+   * mutation_probability: 0.016
+   * crossover_probability: 0.9
+   * hypermutation_threshold: 1.0
+   * output_file: output.csv
+   */
+  REQUIRE( pop.get_args().get_pop_size() == 50 );
+  REQUIRE( pop.get_args().get_survivors() == 2 );
+  REQUIRE( pop.get_args().get_num_gens() == 50 );
+  REQUIRE( pop.get_args().get_num_crossovers() == 2 );
+  REQUIRE( pop.get_args().get_init_coup_var() == 0.3 );
+  REQUIRE( pop.get_args().get_crossover_prob() == 0.9 );
+  REQUIRE( pop.get_args().get_mutate_prob() == 0.016 );
+  REQUIRE( pop.get_args().get_hypermutation_threshold() == 1.0 );
+  REQUIRE( pop.get_args().get_out_fname() == "output.csv" );
 }
 
 #define N_VAR_TRIALS  5
@@ -744,80 +849,7 @@ TEST_CASE ("Noisy population evaluations don't break") {
   }
 }
 
-TEST_CASE ("Populations are correctly created and data is successfully read", "[populations]") {
-//  Genetics::ArgStore inst;
-  Genetics::ArgStore args;
-  args.initialize_from_file("ga.conf");
-//  inst.initialize_from_file(conf_file.c_str());
-  std::shared_ptr<Genetics::PhenotypeMap> map = std::make_shared<Genetics::PhenotypeMap>(NUM_BITS);
-  map->initialize(NUM_CHROMS, Genetics::t_real);
-  map->set_range(0, -10, 10);
-  Genetics::Organism tmplt(NUM_BITS, NUM_OBJS, map);
-  tmplt.set_real(0, 4.6);
-  Genetics::Population pop_none(NUM_BITS, NUM_OBJS, &tmplt, map, args);
-  Genetics::Population pop_tmplt(NUM_BITS, NUM_OBJS, map, args);
-
-  SECTION ( "The header is read correctly" ) {
-    Genetics::Vector<Genetics::String> pop_dat = pop_none.get_header();
-    for (unsigned i = 0; i < pop_dat.size() / 3; ++i) {
-      REQUIRE( pop_dat[i*3] == "x_0");
-      REQUIRE( pop_dat[i*3 + 1] == "f_0(x)" );
-      REQUIRE( pop_dat[i*3 + 2] == "f_1(x)" );
-    }
-#ifdef PRINT_GARBAGE
-    for (Genetics::Vector<Genetics::String>::iterator it = pop_dat.begin(); it != pop_dat.end(); ++it) {
-      printf("%s ", it->c_str());
-    }
-    printf("\n");
-    Genetics::Vector<Genetics::String> pop_dat2 = pop_tmplt.get_header();
-    for (Genetics::Vector<Genetics::String>::iterator it = pop_dat2.begin(); it != pop_dat2.end(); ++it) {
-      printf("%s ", it->c_str());
-    }
-    printf("\n");
-#endif
-  }
-  SECTION ( "The population data is read correctly" ) {
-    Genetics::Vector<Genetics::String> pop_dat = pop_none.get_pop_data();
-    Genetics::Vector<Genetics::String> pop_dat2 = pop_tmplt.get_pop_data();
-    REQUIRE( pop_dat.size() % 3 == 0 );
-    REQUIRE( pop_dat.size() == pop_dat2.size() );
-
-#ifdef PRINT_GARBAGE
-    for (Genetics::Vector<Genetics::String>::iterator it = pop_dat.begin(); it != pop_dat.end(); ++it) {
-      printf("%s ", it->c_str());
-    }
-    printf("\n");
-    for (Genetics::Vector<Genetics::String>::iterator it = pop_dat2.begin(); it != pop_dat2.end(); ++it) {
-      printf("%s ", it->c_str());
-    }
-    printf("\n");
-#endif
-  }
-}
-
-TEST_CASE ("Penalties are applied properly", "[populations]") {
-  double penalty_str = 4.0;
-  TestProblemPenalties prob_fit(penalty_str, false);
-  TestProblemPenalties prob_cost(penalty_str, true);
-  Genetics::ArgStore args;
-  args.initialize_from_file("ga.conf");
-  Genetics::Population pop_fit( NUM_BITS, 1, prob_fit.map, args);
-  Genetics::Population pop_cost( NUM_BITS, 1, prob_cost.map, args);
-  pop_fit.evaluate(&prob_fit);
-  pop_cost.evaluate(&prob_cost);
-
-  double fit_0 = pop_fit.get_organism(0)->get_fitness(0);
-  double cost_0 = pop_cost.get_organism(0)->get_cost(0);
-  for (unsigned i = 1; i < pop_fit.get_offspring_num() && i < pop_cost.get_offspring_num(); ++i) {
-    double fit_i = pop_fit.get_organism(i)->get_fitness(0);
-    double cost_i = pop_cost.get_organism(i)->get_cost(0);
-    INFO( "i = " << i )
-    REQUIRE( fit_i == 1.0 );
-    REQUIRE( fit_0 < fit_i );
-    REQUIRE( cost_i == 1.0 );
-    REQUIRE( cost_0 > fit_i );
-  } 
-}
+// =============================== CONVERGENCE TEST CASES ===============================
 
 TEST_CASE ("Simple evolution of a single objective converges to roughly appropriate result", "[populations]") {
   TestProblemSingle prob;

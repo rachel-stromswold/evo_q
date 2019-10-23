@@ -445,6 +445,8 @@ void Population::evaluate(Problem* prob) {
       for (_uint j = 0; j < n_best_orgs; ++j) {
         old_gen[ best_org_set[j] ]->copy_fitness_data( best_organism.get() );
       }
+      //TODO: do something more intelligent?
+      pop_stats[0].max = best_organism->get_fitness();
       delete[] best_org_set;
     }
   } else {

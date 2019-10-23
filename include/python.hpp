@@ -74,7 +74,7 @@ private:
 //  unsigned char pop_type;
 
 public:
-  PopulationWrapper(_uint N_BITS, _uint N_OBJS, ge::Problem* p_prob, std::shared_ptr<ge::PhenotypeMap> map, ge::String conf_file);
+  PopulationWrapper(_uint N_BITS, _uint N_OBJS, ge::Problem* p_prob, std::shared_ptr<ge::PhenotypeMap> map, ge::String conf_file, bool latin);
   PopulationWrapper(_uint N_BITS, _uint N_OBJS, ge::Problem* p_prob, ge::Organism* tmplt, std::shared_ptr<ge::PhenotypeMap> map, ge::String conf_file);
   void evaluate();
   void iterate();
@@ -137,7 +137,7 @@ public:
 
   void set_template_parameter(unsigned param_ind, py::object o);
 
-  PopulationWrapper* initialize_population(ge::String conf_file);
+  PopulationWrapper* initialize_population(ge::String conf_file, bool latin);
 };
 
 #endif //EVO_Q_HPP

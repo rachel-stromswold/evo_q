@@ -84,9 +84,9 @@ py::list OrganismWrapper::get_phenotype() {
 
 // ============================= POPULATION_WRAPPER =============================
 
-PopulationWrapper::PopulationWrapper(_uint N_BITS, _uint N_OBJS, Genetics::Problem* p_prob, std::shared_ptr<Genetics::PhenotypeMap> map, ge::String conf_file) {
+PopulationWrapper::PopulationWrapper(_uint N_BITS, _uint N_OBJS, Genetics::Problem* p_prob, std::shared_ptr<Genetics::PhenotypeMap> map, ge::String conf_file, bool latin) {
   if (N_OBJS <= 1) {
-    pop = new ge::Population(N_BITS, N_OBJS, map, conf_file);
+    pop = new ge::Population(N_BITS, N_OBJS, map, conf_file, latin);
 //    pop_type = POP_SINGLE;
   } else {
     pop = new ge::Population_NSGAII(N_BITS, N_OBJS, map, conf_file);
@@ -353,7 +353,7 @@ void PythonProblem::set_template_parameter(unsigned param_ind, py::object o) {
   }
 }
 
-PopulationWrapper* PythonProblem::initialize_population(ge::String conf_file) {
+PopulationWrapper* PythonProblem::initialize_population(ge::String conf_file, bool latin) {
   PopulationWrapper* pop;
   ArgStore args;
   if (conf_file != "") {
@@ -362,7 +362,7 @@ PopulationWrapper* PythonProblem::initialize_population(ge::String conf_file) {
   if (template_set) {
     pop = new PopulationWrapper(N_BITS, N_OBJS, (Genetics::Problem*)this, &tmplt_org, map, args);
   } else {
-    pop = new PopulationWrapper(N_BITS, N_OBJS, (Genetics::Problem*)this, map, args);
+    pop = new PopulationWrapper(N_BITS, N_OBJS, (Genetics::Problem*)this, map, args, latin);
   }
 #ifdef PRINT_DEBUG_DATA
   std::cout << "map_size = " << map->get_num_params() << "\n";
@@ -427,7 +427,7 @@ PYBIND11_MODULE(evo_q, m) {
       .def("set_selection_type", &PopulationWrapper::set_selection);
   py::class_<PythonProblem>(m, "Problem")
       .def(py::init<int, int, int>())
-      .def("initialize_population", &PythonProblem::initialize_population, py::return_value_policy::take_ownership, py::arg("conf_file") = "")
+      .def("initialize_population", &PythonProblem::initialize_population, py::return_value_policy::take_ownership, py::arg("conf_file") = "", py::arg("latin") = true)
       .def("set_template_parameter", &PythonProblem::set_template_parameter)
       .def("set_parameter_range", &PythonProblem::set_parameter_range)
       .def("set_phenotype_parameters", &PythonProblem::set_phenotype_parameters)
