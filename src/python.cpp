@@ -399,6 +399,7 @@ PYBIND11_MODULE(evo_q, m) {
       .def("evaluate", &PopulationWrapper::evaluate)
       .def("iterate", &PopulationWrapper::iterate, py::return_value_policy::take_ownership)
       .def("run", &PopulationWrapper::run, py::arg("criteria") = NULL, py::arg("store_intermediate") = false)
+      .def("set_cost", &PopulationWrapper::set_cost, py::arg("i") = 0)
       .def("get_best", &PopulationWrapper::get_best, py::return_value_policy::reference_internal, py::arg("i") = 0)
       .def("get_max_fitness", &PopulationWrapper::get_max_fitness, py::arg("i") = 0)
       .def("get_min_fitness", &PopulationWrapper::get_min_fitness, py::arg("i") = 0)

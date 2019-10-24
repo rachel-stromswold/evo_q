@@ -9,15 +9,16 @@ from matplotlib import pyplot as plt
 import matplotlib
 from mpl_toolkits.mplot3d import Axes3D
 
-matplotlib.rcParams['text.usetex'] = True
-matplotlib.rcParams['text.latex.preamble'] = [r'\usepackage{amsmath}']
+#matplotlib.rcParams['text.usetex'] = True
+#matplotlib.rcParams['text.latex.preamble'] = [r'\usepackage{amsmath}']
 
-N_TESTS = 4
+N_TESTS = 5
 N_DIMS = 2
 TEST_MULTI_IND = 0
 TEST_LAMBDA_IND = 1
 TEST_CONVERGE_IND = 2
 TEST_NOISE_IND = 3
+TEST_COMPARE_LATIN = 4
 run_tests = [True for i in range(N_TESTS)]
 
 if len(sys.argv) > 1:
@@ -32,6 +33,8 @@ for arg in sys.argv:
         run_tests[TEST_CONVERGE_IND] = True
     if "noise" in arg:
         run_tests[TEST_NOISE_IND] = True
+    if "latin" in arg:
+        run_tests[TEST_COMPARE_LATIN] = True
 
 N_GENS = 20
 PRINT_PERIOD = 5
@@ -159,6 +162,7 @@ def rastrigin_2d_np(x, y):
 
 schaffer = lambda org: [-org.read_real(0)*org.read_real(0), - (org.read_real(0) - 2)*(org.read_real(0) - 2)]
 rastrigin = lambda org: [-rastrigin_2d(org.read_real(0), org.read_real(1))]
+rastrigin_cost = lambda org: [rastrigin_2d(org.read_real(0), org.read_real(1))]
 
 if (run_tests[TEST_MULTI_IND]):
     print("Now trying multi-objective optimization")
@@ -298,7 +302,7 @@ if run_tests[TEST_NOISE_IND]:
     pop = prob.initialize_population("ga.conf")
     pop.set_noise_compensation(5)
     #results = pop.run(conv, store_intermediate=True)
-    #results = pop.run(store_intermediate=True) 
+    #results = pop.run(store_intermediate=True)
     print()
     results_noisy = []
     results_actual = []
@@ -322,15 +326,23 @@ if run_tests[TEST_NOISE_IND]:
     plt.show()
     print("successfully evaluated noisy fitness function")
 
-if run_tests[COMPARE_LATIN]:
-    conv = evo_q.PlateauCutoff(0.0001, 5)
+if run_tests[TEST_COMPARE_LATIN]:
+    conv_non_latin = evo_q.PlateauCutoff(0.0001, 5)
+    conv_with_latin = evo_q.PlateauCutoff(0.0001, 5)
     prob_rast = evo_q.Problem(32, 2, 1)
     prob_rast.set_phenotype_parameters(["real_(-2.56, 2.56)", "real_(-2.56, 2.56)"])
     prob_rast.set_fitness_function(rastrigin)
     pop_rast_non_latin = prob_rast.initialize_population("ga.conf", False)
     pop_rast_with_latin = prob_rast.initialize_population("ga.conf", True)
-    results_non_latin = pop_rast.run(conv, store_intermediate=True)
-    results_with_latin = pop_rast.run(conv, store_intermediate=True)
+    #pop_rast_non_latin.set_cost()
+    #pop_rast_with_latin.set_cost()
+    results_non_latin = pop_rast_non_latin.run(conv_non_latin, store_intermediate=True)
+    results_with_latin = pop_rast_with_latin.run(conv_with_latin, store_intermediate=True)
     #print("generation " + str(results["Generation"]) + ", " + str(results["Solution"]) + ", max_fitness = " + str(results["Fitness"]))
     plt.scatter(range(results_non_latin["Generations"]), results_non_latin["Fitness"], label='without latin-hypercube initialization')
     plt.scatter(range(results_with_latin["Generations"]), results_with_latin["Fitness"], label='with latin-hypercube initialization')
+    plt.title('Comparison between latin-hypercube and uniform random initialization')
+    plt.xlabel('Generation')
+    plt.ylabel('Fitness')
+    plt.legend()
+    plt.show()

@@ -88,6 +88,7 @@ public:
   double get_fitness_range(_uint i = 0) { return get_max_fitness() - get_min_fitness(); }
   double get_fitness_var(_uint i = 0)  { return pop->get_pop_stats(i).var; }
 
+  void set_cost(_uint i = 0) { pop->set_cost(i); }
   size_t get_pop_size()			{ return pop->get_args().get_pop_size(); }
   void set_pop_size(size_t n)		{ pop->resize_population(n); }
   size_t get_survivors()		{ return pop->get_args().get_survivors(); }

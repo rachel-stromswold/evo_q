@@ -18,7 +18,6 @@ __version__ = '0.7'
 __author__  = 'Rachel Stromswold'
 __email__   = 'rachel.stromswold@gmail.com'
 
-
 class CMakeExtension(Extension):
     def __init__(self, name, sourcedir=''):
         Extension.__init__(self, name, sources=[])
