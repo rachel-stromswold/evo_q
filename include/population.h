@@ -48,6 +48,7 @@ struct FitnessStats {
 class ConvergenceCriteria {
   public:
     virtual bool evaluate_convergence(_uint N_OBJS, FitnessStats* stats) = 0;
+    virtual ~ConvergenceCriteria() = default;
 };
 
 class Population {

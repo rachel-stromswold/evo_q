@@ -3,6 +3,10 @@ import re
 import sys
 import platform
 import subprocess
+print("Running setup with: {}".format(sys.version))
+if (sys.version_info.major < 3 or sys.version_info.minor < 4):
+    print("Error: please build with python version >= 3.4")
+    quit()
 from pathlib import Path
 
 from setuptools import setup, Extension
@@ -10,9 +14,9 @@ from setuptools.command.build_ext import build_ext
 from distutils.version import LooseVersion
 
 __name__    = 'evo_q'
-__version__ = '0.6'
-__author__  = 'Samantha Stromswold'
-__email__   = 'samstromsw@gmail.com'
+__version__ = '0.7'
+__author__  = 'Rachel Stromswold'
+__email__   = 'rachel.stromswold@gmail.com'
 
 
 class CMakeExtension(Extension):
@@ -46,7 +50,7 @@ class CMakeBuild(build_ext):
               '-DCMAKE_MODULE_NAME=' + ext.name,
               '-DPYTHON_EXECUTABLE=' + sys.executable,
               '-DBUILD_PYTHON=True']
-        print(f"calling cmake with {' '.join(cmake_args)}")
+        print("calling cmake with {' '.join(cmake_args)}")
         cfg = 'Debug' if self.debug else 'Release'
         build_args = ['--config', cfg]
 

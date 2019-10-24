@@ -85,11 +85,13 @@ py::list OrganismWrapper::get_phenotype() {
 // ============================= POPULATION_WRAPPER =============================
 
 PopulationWrapper::PopulationWrapper(_uint N_BITS, _uint N_OBJS, Genetics::Problem* p_prob, std::shared_ptr<Genetics::PhenotypeMap> map, ge::String conf_file, bool latin) {
+  ge::ArgStore args;
+  args.initialize_from_file( conf_file.c_str() );
   if (N_OBJS <= 1) {
-    pop = new ge::Population(N_BITS, N_OBJS, map, conf_file, latin);
+    pop = new ge::Population(N_BITS, N_OBJS, map, args, latin);
 //    pop_type = POP_SINGLE;
   } else {
-    pop = new ge::Population_NSGAII(N_BITS, N_OBJS, map, conf_file);
+    pop = new ge::Population_NSGAII(N_BITS, N_OBJS, map, args);
 //    pop_type = POP_NSGAII;
   }
   prob = p_prob;
@@ -97,11 +99,13 @@ PopulationWrapper::PopulationWrapper(_uint N_BITS, _uint N_OBJS, Genetics::Probl
 
 PopulationWrapper::PopulationWrapper(_uint N_BITS, _uint N_OBJS, ge::Problem* p_prob, ge::Organism* tmplt, std::shared_ptr<ge::PhenotypeMap> map, ge::String conf_file)
 {
+  ge::ArgStore args;
+  args.initialize_from_file( conf_file.c_str() );
   if (N_OBJS <= 1) {
-    pop = new ge::Population(N_BITS, N_OBJS, map, conf_file);
+    pop = new ge::Population(N_BITS, N_OBJS, map, args);
 //    pop_type = POP_SINGLE;
   } else {
-    pop = new ge::Population_NSGAII(N_BITS, N_OBJS, map, conf_file);
+    pop = new ge::Population_NSGAII(N_BITS, N_OBJS, map, args);
 //    pop_type = POP_NSGAII;
   }
   prob = p_prob;
@@ -355,14 +359,10 @@ void PythonProblem::set_template_parameter(unsigned param_ind, py::object o) {
 
 PopulationWrapper* PythonProblem::initialize_population(ge::String conf_file, bool latin) {
   PopulationWrapper* pop;
-  ArgStore args;
-  if (conf_file != "") {
-    args.initialize_from_file(conf_file.c_str());
-  }
   if (template_set) {
-    pop = new PopulationWrapper(N_BITS, N_OBJS, (Genetics::Problem*)this, &tmplt_org, map, args);
+    pop = new PopulationWrapper(N_BITS, N_OBJS, (Genetics::Problem*)this, &tmplt_org, map, conf_file);
   } else {
-    pop = new PopulationWrapper(N_BITS, N_OBJS, (Genetics::Problem*)this, map, args, latin);
+    pop = new PopulationWrapper(N_BITS, N_OBJS, (Genetics::Problem*)this, map, conf_file, latin);
   }
 #ifdef PRINT_DEBUG_DATA
   std::cout << "map_size = " << map->get_num_params() << "\n";
