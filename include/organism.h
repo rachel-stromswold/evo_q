@@ -41,6 +41,91 @@ public:
   virtual void evaluate_fitness_async(size_t index, Chromosome genes) {}
 };
 
+/**
+ * \brief	The abstract class FitnessStats is used by implementations of the Selector abstract class to select which organism is more fit
+ */
+class FitnessStats {
+public:
+  virtual double get_fitness(_uint i = 0);
+  virtual ~FitnessStats() = default;
+  virtual void update(double val, _uint i = 0);
+
+  friend class Organism;
+};
+
+/**
+ * \brief	An implementation of FitnessStats designed for single-objective optimization in the noise-free case
+ */
+class SingleFitness : public FitnessStats {
+protected:
+  double fitness;
+public:
+  SingleFitness();
+  double get_fitness(_uint i = 0);
+  virtual void update(double val, _uint i = 0);
+};
+
+/**
+ * \brief	An implementation of FitnessStats designed for multi-objective optimization in the noise-free case
+ */
+class MultiFitness : public FitnessStats {
+protected:
+  Vector<double> fitness;
+
+  _uint N_OBJS;
+  _uint n_dominations = 0;
+  _uint rank = 0;
+  double distance = 0;
+
+public:
+  MultiFitness(_uint pn_objs);
+  double get_fitness(_uint i);
+};
+
+/**
+ * \brief	An implementation of FitnessStats designed for single-objective optimization in the noisy case
+ */
+class NoisyFitness : public FitnessStats {
+protected:
+  double fitness = 0, variance = 0;
+
+  _uint n_evaluations = 0;
+
+public:
+  double get_fitness(_uint i = 0);
+  virtual void update(double val, _uint i = 0);
+};
+
+/**
+ * \brief	An implementation of FitnessStats designed for single-objective optimization in the noisy case. This implementation uses a parameter forget_weight that biases results to more heavily weigh recent observations
+ */
+class NoisyFitnessForgetful : public FitnessStats {
+protected:
+  double fitness = 0, variance = 0;
+  double forget_weight;
+  bool evaluated = false;
+public:
+  NoisyFitnessForgetful(double p_forget_weight);
+  double get_fitness(_uint i = 0);
+  void update(double val, _uint i = 0);
+};
+
+/**
+ * \brief	An implementation of FitnessStats designed for single-objective optimization in the noisy case
+ */
+class NoisyMultiFitness : public FitnessStats {
+protected:
+  Vector<double> fitness;
+  Vector<double> variance;
+  _uint N_OBJS;
+  _uint n_evaluations;
+
+public:
+  NoisyMultiFitness(_uint pn_objs);
+  double get_fitness(_uint i);
+  void update(double val, _uint i = 0);
+};
+
 class Organism {
 private:
   _uint N_BITS;
@@ -54,19 +139,15 @@ private:
 protected:
   Chromosome genes;
   size_t n_nodes;
-  Vector<double> fitness;
-  Vector<double> fit_vars;
-  int n_evaluations = 0;
+  //Vector<double> fitness;
+  //Vector<double> fit_vars;
+  //int n_evaluations = 0;
 
 public:
   //this is not used internally, but can be set when evaluating the fitness
   String misc_data;
   double coupling_range;
-  double coupling_prec;
-
-  int n_dominations;
-  int rank;
-  double distance;
+  double coupling_prec; 
 
   Organism();
   Organism(int N_BITS, int N_OBJS, PhenotypeMap* p_al);

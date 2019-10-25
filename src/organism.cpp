@@ -2,6 +2,89 @@
 
 namespace Genetics {
 
+// ==================== COMPARATORS ====================
+
+SingleFitness::SingleFitness() { fitness = 0.0; }
+double SingleFitness::get_fitness(_uint i) { return fitness; }
+double SingleFitness::update(_uint i, double val) { fitness = val; }
+
+MultiFitness::MultiFitness(_uint pn_objs) : N_OBJS(pn_objs), fitness(N_OBJS, 0.0) {}
+double MultiFitness::update(double val, _uint i) {
+  if (i < N_OBJS) {
+    fitness[i] = val;
+  }
+}
+double MultiFitness::get_fitness(_uint i) {
+  if (i < N_OBJS) {
+    return fitness[i];
+  } else if (i == N_OBJS) {
+    //TODO: this should probably be replaced with -distance?
+    return distance;
+  } else if (i == N_OBJS + 1) {
+    return -(double)rank;
+  } else {
+    return -(double)n_dominations;
+  }
+}
+
+double NoisyFitness::get_fitness(_uint i) { return fitness; }
+void NoisyFitness::update(double val, _uint i) {
+  if (n_evaluations == 0) {
+    variance = 0.0;
+    fitness = val;
+    n_evaluations = 1;
+  } else {
+    double old_mu = fitness;
+    double new_mu = (n_evaluations*fitness + val) / (n_evaluations + 1);
+    variance = old_mu*(old_mu - 2*new_mu) + pow(new_mu, 2) + (n_evaluations - 1)*variance/n_evaluations + pow(val - new_mu, 2)/n_evaluations;
+    fitness = new_mu;
+    ++n_evaluations;
+  }
+}
+
+NoisyFitnessForgetful::NoisyFitnessForgetful(double p_forget_weight) { forget_weight = p_forget_weight; }
+double NoisyFitnessForgetful::get_fitness(_uint i) { return fitness; }
+void NoisyFitnessForgetful::update(double val, _uint i) { 
+  if (!evaluated) {
+    fitness = val;
+    variance = 0;
+    evaluated = true;
+  } else {
+    //TODO: figure out how to drop previous evaluations (I'm 99.9% sure that you need to keep track of the history)
+    double mu = (fitness + forget_weight*val) / (forget_weight + 1);
+    //TODO: double check whether this is actually correct
+    variance = ( pow(fitness - mu, 2) + pow(forget_weight*val - mu, 2) ) / forget_weight;
+    fitness = mu;
+  }
+}
+
+NoisyMultiFitness::NoisyMultiFitness(_uint pn_objs) { N_OBJS = pn_objs; }
+double NoisyMultiFitness::get_fitness(_uint i) { return fitness[i]; }
+void NoisyMultiFitness::update(double val, _uint i) {
+  for (_uint i = 0; i < N_OBJS; ++i) {
+    if (n_evaluations == 0) {
+      fit_vars[i] = 0.0;
+      n_evaluations = 1;
+    } else if (forget_weight >= 1) {
+      //TODO: figure out how to drop previous evaluations (I'm 99.9% sure that you need to keep track of the history)
+      double mu = (prev_fitness[i] + forget_weight*fitness[i]) / (forget_weight + 1);
+      //TODO: double check whether this is actually correct
+      fit_vars[i] = ( pow(prev_fitness[i] - mu, 2) + pow(forget_weight*fitness[i] - mu, 2) ) / forget_weight;
+      fitness[i] = mu;
+      n_evaluations = 2;
+    } else {
+      double old_mu = prev_fitness[i];
+      double new_mu = (n_evaluations*prev_fitness[i] + fitness[i]) / (n_evaluations + 1);
+      fit_vars[i] = old_mu*(old_mu - 2*new_mu) + pow(new_mu, 2) + (n_evaluations - 1)*fit_vars[i]/n_evaluations + pow(fitness[i] - new_mu, 2)/n_evaluations;
+      fitness[i] = new_mu;
+      //fit_vars[i] = (fit_vars[i]*(n_evaluations - 1) + old_mu*(old_mu - 2*mu) + mu*mu)/n_evaluations;
+      ++n_evaluations;
+    }
+  }
+}
+
+// ==================== ORGANISM ====================
+
 Organism::Organism() : genes(0), fitness(1), fit_vars(1) {
   N_BITS = 0;
   N_OBJS = 0;
@@ -281,31 +364,24 @@ void Organism::evaluate_fitness_noisy(Problem* prob, double forget_weight) {
   for (_uint i = 0; i < N_OBJS; ++i) {
     prev_fitness[i] = fitness[i];
   }
-  prob->evaluate_fitness(this);
+  if (N_OBJS > 1) {
+    NoisyMultiFitness tmp(N_OBJS);
+    prob->evaluate_fitness(this, &tmp);
 
-  if ( !penalized() ) {
-    for (_uint i = 0; i < N_OBJS; ++i) {
-      if (n_evaluations == 0) {
-        fit_vars[i] = 0.0;
-        n_evaluations = 1;
-      } else if (forget_weight >= 1) {
-        //TODO: figure out how to drop previous evaluations (I'm 99.9% sure that you need to keep track of the history)
-        double mu = (prev_fitness[i] + forget_weight*fitness[i]) / (forget_weight + 1);
-        //TODO: double check whether this is actually correct
-        fit_vars[i] = ( pow(prev_fitness[i] - mu, 2) + pow(forget_weight*fitness[i] - mu, 2) ) / forget_weight;
-        fitness[i] = mu;
-        n_evaluations = 2;
-      } else {
-        double old_mu = prev_fitness[i];
-        double new_mu = (n_evaluations*prev_fitness[i] + fitness[i]) / (n_evaluations + 1);
-        fit_vars[i] = old_mu*(old_mu - 2*new_mu) + pow(new_mu, 2) + (n_evaluations - 1)*fit_vars[i]/n_evaluations + pow(fitness[i] - new_mu, 2)/n_evaluations;
-        fitness[i] = new_mu;
-        //fit_vars[i] = (fit_vars[i]*(n_evaluations - 1) + old_mu*(old_mu - 2*mu) + mu*mu)/n_evaluations;
-        ++n_evaluations;
+    if ( !penalized() ) {
+      for (_uint i = 0; i < N_OBJS; ++i) {
+        fit->update(tmp.get_fitness(i), i);
       }
     }
+  } else {
+    NoisyFitness tmp;
+    prob->evaluate_fitness(this, &tmp);
+    if ( !penalized() ) {
+      fit->update(tmp.get_fitness());
+    }
   }
-  free(prev_fitness);
+
+  
 }
 
 void Organism::evaluate_fitness(Problem* prob) {
