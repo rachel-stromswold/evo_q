@@ -869,7 +869,7 @@ class Population {
     //guarantee that the best organism appears in the next generation
     _uint best_organism_ind = 0;
     std::shared_ptr<Organism> best_organism;
-    std::shared_ptr<Organism> alltime_best_organism;
+    std::vector<std::shared_ptr<Organism>> past_best_organisms;
     //labels for generating data output
     char** var_labels;
     char** obj_labels;
@@ -887,7 +887,9 @@ class Population {
     void find_best_organism();
     void calculate_distances();
     void hypermutate();
+    void archive_best_organism();
     void set_best_organism(_uint i, bool force=false);
+    size_t initialize_organism_pool(Problem* prob);
 
   public:
 //    Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, ArgStore p_args);
