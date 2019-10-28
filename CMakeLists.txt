@@ -66,7 +66,7 @@ if(NOT BUILD_PYTHON)
 
   set(APP_EXE main_test)
   add_executable( ${APP_EXE}
-		  src/main_test.cpp )
+		  src/testProblems.cpp src/main_test.cpp )
   target_link_libraries( ${APP_EXE}
 			 evo_q )
 endif()

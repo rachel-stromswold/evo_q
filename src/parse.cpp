@@ -36,6 +36,7 @@ ArgStore::ArgStore(const ArgStore& o) : out_fname(o.out_fname) {
   async_evaluation = o.async_evaluation;
   selection_type = o.selection_type;
   noise_compensation_runs = o.noise_compensation_runs;
+  forget_weight = o.forget_weight;
 
   if (o.long_bin) {
     long_bin = new std::binomial_distribution<unsigned char>(*o.long_bin);
@@ -77,6 +78,7 @@ ArgStore::ArgStore(ArgStore&& o) : out_fname(o.out_fname) {
   selection_type = o.selection_type;
   flags = o.flags;
   noise_compensation_runs = o.noise_compensation_runs;
+  forget_weight = o.forget_weight;
   //managed pointers shallow copying
   long_bin = o.long_bin;
   short_bin = o.short_bin;
@@ -170,7 +172,7 @@ void ArgStore::initialize_from_file(const char* fname) {
       } else if (strcmp(val, "perturb") == 0) {
         flags = flags | MULTIPLES_PERTURB;
       }
-    } else if (strcmp(token, "forget_weight")) {
+    } else if (strcmp(token, "forget_weight") == 0) {
       forget_weight = atof(val);
     } else if (strcmp(token, "selection_type") == 0) {
       if (strcmp(val, "roulette") == 0) {

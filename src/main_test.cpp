@@ -1,23 +1,15 @@
-//#include "../include/evo_q.hpp"
-#include "../include/convergence.h"
+//#include "../include/evo_q/evo_q.hpp"
+
 #define CATCH_CONFIG_ENABLE_BENCHMARKING
 #define CATCH_CONFIG_MAIN
-#include "../include/catch.hpp"
-#define N_TRIALS 100
-#include <chrono>
-#include <thread>
-#include <fstream>
 
-#define NUM_BITS	16
-#define NUM_BITS_LARGE  64
-#define NUM_OBJS  	2
-#define NUM_CHROMS	1
+#include "testProblems.hpp"
+#include "../include/catch.hpp"
+
+#define N_TRIALS 100
 
 #define M_RANGE		2.0
 #define TEST_CONV_GEN	10
-#define SLEEP_TIME	1000
-
-#define DEFAULT_LCG_SEED 0xA1A3A5A7A9ABAFA5
 
 #define EPSILON 0.01
 #define APPROX(a,b) ((a-b < EPSILON && a-b >= 0) || (b-a < EPSILON && b-a >= 0))
@@ -33,58 +25,6 @@ int str_starts(const char* test_str, const char* match_str) {
   }
   return 0;
 }
-
-#define INV_ERR_N 5
-//for random number generation
-class LCG {
-private:
-  //a-1 is divisible by 4 (and obviously 2 (the only prime factor of 2^64)
-  static const unsigned long a = 3*( ((unsigned long)1 << 24) + 5 );
-  static const unsigned long c = 170859375;//=15^7 which is relatively prime to m = 2^64
-  static const unsigned long x0 = DEFAULT_LCG_SEED;
-  static const unsigned long high_mask = ULONG_MAX << 32;
-  double c_k[INV_ERR_N];
-
-  unsigned long state; void update_state() { state = (state*a + c)/* the modulo 64 is implicit */;}
-public:
-  LCG(unsigned long seed=x0) : state(seed) {
-    //calculate the c_k terms in the taylor series for the inverse error function (from wikipedia)
-    c_k[0] = 1;
-    for (int k = 1; k < INV_ERR_N; ++k) {
-      c_k[k] = 0;
-      for (int m = 0; m < k; ++m) {
-        c_k[k] += (c_k[m]*c_k[k-1-m])/( (m+1)*(2*m+1) );
-      }
-    }
-    for (int k = 0; k < INV_ERR_N; ++k) {
-      //sqrt(pi)
-      c_k[k] *= pow(0.88622693, 2*k + 1)/(2*k + 1);
-    }
-  }
-  unsigned long random_ulong() {
-    unsigned long ret = state >> 32;
-    update_state();
-    ret = ret | (state & high_mask);
-    return ret;
-  }
-  double random_int() {
-    unsigned long val = random_ulong();
-    if ( val & (~(ULONG_MAX >> 1)) ) {
-      return -1*((int)val);
-    } else {
-      return (int)val;
-    }
-  }
-  double random_real() { return (double)random_ulong()/ULONG_MAX; }
-  double gaussian_0_1() {
-    double uniform = 2*random_real() - 1;
-    double ret = 0;
-    for (int k = 0; k < INV_ERR_N; ++k) {
-      ret += c_k[k]*pow(uniform, 2*k + 1);
-    }
-    return ret;
-  }
-};
 
 class PopulationPrinter {
 private:
@@ -165,81 +105,6 @@ public:
       org->apply_penalty(penalty_amt);
       apply_penalty = false;
     }
-  }
-};
-
-class TestProblemSingle : public Genetics::Problem {
-public:
-  TestProblemSingle() : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1) {
-    map->initialize(1, Genetics::t_real);
-  }
-  void evaluate_fitness(Genetics::Organism* org) {
-    double x = org->read_real(0);
-    org->set_fitness(0, -(x*x));
-  }
-};
-
-class TestProblemMulti : public Genetics::Problem {
-public:
-  TestProblemMulti() : Genetics::Problem(NUM_BITS, NUM_CHROMS, NUM_OBJS) {
-    map->initialize(NUM_CHROMS, Genetics::t_real);
-  }
-  void evaluate_fitness(Genetics::Organism* org) {
-    double x = org->read_real(0);
-    org->set_fitness(0, -x*x);
-    org->set_fitness(1, -(x - 2)*(x - 2));
-    org->apply_penalty(0.0);
-  }
-};
-
-class TestProblemSlow : public Genetics::Problem {
-public:
-  TestProblemSlow() : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1) {
-    map->initialize(1, Genetics::t_real);
-  }
-  void evaluate_fitness(Genetics::Organism* org) {
-    std::this_thread::sleep_for( std::chrono::milliseconds(SLEEP_TIME) );
-    double x = org->read_real(0);
-    org->set_fitness(0, -(x*x));
-  }
-};
-
-#define NOISY_DOMAIN  1
-#define NOISY_VAR     0.25
-class TestProblemNoisy : public Genetics::Problem {
-private:
-  LCG gen;
-  double domain, penalty_domain, variance;
-
-public:
-  TestProblemNoisy(double p_domain = NOISY_DOMAIN, double p_penalty_domain = NOISY_DOMAIN/8, double p_variance = NOISY_VAR) :
-  Genetics::Problem(NUM_BITS, NUM_CHROMS, 1), domain(p_domain), penalty_domain(p_penalty_domain), variance(p_variance) {
-    Genetics::Vector<Genetics::VarContainer> tmp_vars;
-    for (int i = 0; i < NUM_CHROMS; ++i) {
-      tmp_vars.emplace_back(0, -domain, domain, Genetics::t_real);
-    }
-    map->initialize(tmp_vars);
-    penalty_domain = abs(penalty_domain);
-  }
-
-  double evaluate_fitness_noiseless(Genetics::Organism* org) {
-    double ret = 0.0;
-    double penalty = 0;
-    for (unsigned i = 0; i < NUM_CHROMS; ++i) {
-      double x_i = org->read_real(i);
-      ret += x_i*x_i;
-      if (x_i < penalty_domain && x_i > -penalty_domain) {
-        penalty += 1;
-      }
-    }
-    org->apply_penalty(penalty);
-    return ret;
-  }
-
-  void evaluate_fitness(Genetics::Organism* org) {
-    double val = evaluate_fitness_noiseless(org);
-    val += variance*gen.gaussian_0_1();
-    org->set_cost(0, val);
   }
 };
 
@@ -795,7 +660,7 @@ TEST_CASE ("Noisy population evaluations don't break") {
     out->print_line();
 
     //evaluate for 10 generations
-    for (int gen = 0; gen < 10; ++gen) {
+    for (int gen = 0; gen < 20; ++gen) {
       pop.evaluate(&prob);
       std::shared_ptr<Genetics::Organism> best_org = pop.get_best_organism();
       double best_fitness = best_org->get_fitness(0);
