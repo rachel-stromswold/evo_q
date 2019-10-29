@@ -326,7 +326,7 @@ double Organism::get_fitness(unsigned int i) {
 
 double Organism::get_fitness_variance(unsigned int i) {
   if (i < N_OBJS)
-    return fit_vars[i];
+    return fit_vars[i] / n_evaluations;
   return 0.0;
 }
 
