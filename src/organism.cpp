@@ -4,11 +4,6 @@ namespace Genetics {
 
 // ==================== COMPARATORS ====================
 
-SingleFitness::SingleFitness() : FitnessStats(1) { fitness = 0.0; }
-double SingleFitness::get_fitness(_uint i) { return fitness; }
-void SingleFitness::update(double val, _uint i) { fitness = val; }
-
-MultiFitness::MultiFitness(_uint pn_objs) : FitnessStats(pn_objs), fitness(pn_objs, 0.0) {}
 void MultiFitness::update(double val, _uint i) {
   if (i < N_OBJS) {
     fitness[i] = val;
@@ -27,8 +22,6 @@ double MultiFitness::get_fitness(_uint i) {
   }
 }
 
-NoisyFitness::NoisyFitness() : FitnessStats(1) { fitness = 0.0; }
-double NoisyFitness::get_fitness(_uint i) { return fitness; }
 void NoisyFitness::update(double val, _uint i) {
   if (n_evaluations == 0) {
     variance = 0.0;
@@ -43,8 +36,26 @@ void NoisyFitness::update(double val, _uint i) {
   }
 }
 
-NoisyFitnessForgetful::NoisyFitnessForgetful(double p_forget_weight) : FitnessStats(1) { forget_weight = p_forget_weight; }
-double NoisyFitnessForgetful::get_fitness(_uint i) { return fitness; }
+void NoisyFitness::average_fitness(NoisyFitness* other) { 
+  _uint my_n = n_evaluations;
+  _uint their_n = n_evaluations; 
+
+  double my_mu_1 = fitness;
+  double their_mu_1 = other->get_fitness();
+  //these two functions combine the sample means and sample variances from two different measurements
+  fitness = (my_n*fitness + their_n*other->get_fitness()) / (my_n + their_n);
+  variance = my_n*( my_mu_1*(my_mu_1 - 2*fitness) + pow(fitness, 2) )/(my_n + their_n - 1) + 
+             their_n*( their_mu_1*(their_mu_1 - 2*fitness) + pow(fitness, 2) )/(my_n + their_n - 1) +
+          ( (my_n - 1)*variance + (their_n - 1)*other->variance )/(my_n + their_n - 1);
+
+  other->variance = variance;
+  other->fitness = fitness;
+
+  n_evaluations = my_n + their_n;
+  other->n_evaluations = n_evaluations;
+}
+
+NoisyFitnessForgetful::NoisyFitnessForgetful(double p_forget_weight) { forget_weight = p_forget_weight; }
 void NoisyFitnessForgetful::update(double val, _uint i) { 
   if (!evaluated) {
     fitness = val;
@@ -75,15 +86,17 @@ void NoisyMultiFitness::update(double val, _uint i) {
   }
 }
 
-// ==================== ORGANISM ====================
+}
 
+// ==================== ORGANISM ====================
+/*
 template <class FitType>
 Organism<FitType>::Organism() : genes(0) {
   N_BITS = 0;
   N_OBJS = 0;
-  /*for (auto it = fitness.begin(); it != fitness.end(); ++it) {
+  //for (auto it = fitness.begin(); it != fitness.end(); ++it) {
     *it = -std::numeric_limits<double>::infinity();
-  }*/
+  }
 //  genes = NULL;
 }
 
@@ -139,52 +152,6 @@ Organism<FitType>::Organism(int pn_bits, int pn_objs, Chromosome p_genes, std::s
 template <class FitType>
 void Organism<FitType>::set_fitness_stats(FitType temp) { fit = temp; }
 
-/*template <class FitType>
-Organism<FitType>::~Organism() {
-  if (genes) {
-    delete genes;
-  }
-}*/
-
-/*template <class FitType>
-Organism<FitType>::Organism(const Organism &obj) :
-  fitness(obj.fitness),
-  misc_data(obj.misc_data)
-{
-  N_BITS = obj.N_BITS;
-  N_OBJS = obj.N_OBJS;
-  genes = new Chromosome(*(obj.genes));
-  al = obj.al;
-}
-
-template <class FitType>
-Organism Organism<FitType>::copy() {
-  Organism ret(N_BITS, N_OBJS, al);
-  ret.genes = new Chromosome(*genes);
-  return ret;
-}
-
-template <class FitType>
-Organism::<FitType>Organism(Organism&& obj) :
-  fitness(std::move(obj.fitness)),
-  misc_data(std::move(obj.misc_data))
-{
-  genes = obj.genes;
-  al = obj.al;
-  obj.genes = NULL;
-}
-
-template <class FitType>
-Organism& Organism<FitType>::operator=(Organism& obj) {
-  Chromosome* tmp_genes = genes;
-  genes = obj.genes;
-  fitness = obj.fitness;
-  misc_data = obj.misc_data;
-  obj.genes = tmp_genes;
-  al = obj.al;
-  return *this;
-}*/
-
 template <class FitType>
 void Organism<FitType>::swap(Organism& obj) {
   FitType tmp = fit;
@@ -192,11 +159,6 @@ void Organism<FitType>::swap(Organism& obj) {
   obj.fit = tmp;
 }
 
-/*template <class FitType>
-Organism<FitType>& Organism::operator=(Organism& obj) {
-  swap(obj);
-  return *this;
-}*/
 template <class FitType>
 Organism<FitType> Organism<FitType>::copy() {
   Organism<FitType> ret(N_BITS, N_OBJS, genes, al);
@@ -258,7 +220,7 @@ bool Organism<FitType>::operator<(Organism& obj) {
 }
 
 template <class FitType>
-void Organism<FitType>::reset() {
+void Organism<FitType>::reset_fitness() {
   fit.reset();
   misc_data = "";
 }
@@ -363,30 +325,6 @@ void Organism<FitType>::randomize(ArgStore* args, Organism* orgtmp) {
   }
 }
 
-/*template <class FitType>
-void Organism<FitType>::evaluate_fitness_noisy(Problem<FitType>* prob, double forget_weight) {
-  double* prev_fitness = (double*)malloc(sizeof(double)*N_OBJS);
-  for (_uint i = 0; i < N_OBJS; ++i) {
-    prev_fitness[i] = fitness[i];
-  }
-  if (N_OBJS > 1) {
-    NoisyMultiFitness tmp(N_OBJS);
-    prob->evaluate_fitness(this, &tmp);
-
-    if ( !penalized() ) {
-      for (_uint i = 0; i < N_OBJS; ++i) {
-        fit->update(tmp.get_fitness(i), i);
-      }
-    }
-  } else {
-    NoisyFitness tmp;
-    prob->evaluate_fitness(this, &tmp);
-    if ( !penalized() ) {
-      fit->update(tmp.get_fitness());
-    }
-  }
-}*/
-
 template <class FitType>
 void Organism<FitType>::evaluate_fitness(Problem<FitType>* prob) {
   prob->evaluate_fitness(this);
@@ -422,48 +360,6 @@ void Organism<FitType>::set_fitness(_uint i, double val) {
 }
 
 template <class FitType>
-void Organism<FitType>::set_fitness(_uint i, double val) {
-  if (i >= fit.get_n_objs()) {
-    error(CODE_ARG_RANGE, "Attempt to modify invalid fitness index %d, size is %d.", i, fit.get_n_objs());
-  } else {
-    fit.set_fitness(-val, i);
-  }
-}
-
-template <class FitType>
-void Organism<FitType>::average_fitness(Organism* other) {
-  if ( !penalized() && !(other->penalized()) ) {
-    _uint my_n = n_evaluations;
-    _uint their_n = other->n_evaluations;
-    for (int j = 0; j < fitness.size(); ++j) {
-      double my_mu_1 = fitness[j];
-      double their_mu_1 = other->get_fitness(j);
-      //these two functions combine the sample means and sample variances from two different measurements
-      fitness[j] = (my_n*fitness[j] + their_n*other->get_fitness(j)) / (my_n + their_n);
-      fit_vars[j] = my_n*( my_mu_1*(my_mu_1 - 2*fitness[j]) + pow(fitness[j], 2) )/(my_n + their_n - 1) + 
-                 their_n*( their_mu_1*(their_mu_1 - 2*fitness[j]) + pow(fitness[j], 2) )/(my_n + their_n - 1) +
-              ( (my_n - 1)*fit_vars[j] + (their_n - 1)*other->fit_vars[j] )/(my_n + their_n - 1);
-
-      other->fit_vars[j] = fit_vars[j];
-      other->set_fitness(j, fitness[j]);
-    }
-    n_evaluations = my_n + their_n;
-    other->n_evaluations = n_evaluations;
-  }
-}
-
-template <class FitType>
-void Organism<FitType>::copy_fitness_data(Organism* other) {
-  if ( other->get_n_objs() == N_OBJS ) {
-    for (int j = 0; j < fitness.size(); ++j) {
-      fitness[j] = other->fitness[j];
-      fit_vars[j] = other->fit_vars[j];
-    }
-    n_evaluations = other->n_evaluations;
-  }
-}
-
-template <class FitType>
 void Organism<FitType>::set_int(_uint i, int value) {
   genes.set_to_int(al.get(), i, value);
 }
@@ -489,20 +385,6 @@ _uint Organism<FitType>::read_uint(_uint i) {
 }
 
 template <class FitType>
-bool Organism<FitType>::dominates(Organism* other) {
-  bool ret = false;
-  for (_uint i = 0; i < fitness.size(); ++i) {
-    if ( fitness[i] > other->get_fitness(i) ) {
-      ret = true;
-    }
-    if ( other->get_fitness(i) > fitness[i]) {
-      return false;
-    }
-  }
-  return ret;
-}
-
-template <class FitType>
 String Organism<FitType>::get_chromosome_string(_uint i) {
   if (N_BITS == 0 || !al) {
     error(1, "Attempt to access string for uninitialized organism.");
@@ -513,4 +395,4 @@ String Organism<FitType>::get_chromosome_string(_uint i) {
   return genes.get_string(al.get(), i);
 }
 
-}
+}*/

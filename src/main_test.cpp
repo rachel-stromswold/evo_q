@@ -22,6 +22,13 @@
 #define EPSILON 0.01
 #define APPROX(a,b) ((a-b < EPSILON && a-b >= 0) || (b-a < EPSILON && b-a >= 0))
 
+typedef Genetics::TournamentSelector<Genetics::SingleFitness> TournamentSingle;
+typedef Genetics::TournamentSelector<Genetics::NoisyFitness> TournamentNoisy;
+typedef Genetics::Population<Genetics::SingleFitness, TournamentSingle> PopulationSingle;
+typedef Genetics::Population<Genetics::NoisyFitness, TournamentNoisy> PopulationNoisy;
+typedef Genetics::Organism<Genetics::SingleFitness> OrganismSingle;
+typedef Genetics::Organism<Genetics::NoisyFitness> OrganismNoisy;
+
 int str_starts(const char* test_str, const char* match_str) {
   for (size_t i = 0; match_str[i] != 0; ++i) {
     if (match_str[i] == 0 || test_str[i] < match_str[i]) {
@@ -86,23 +93,28 @@ public:
   }
 };
 
+template <class PopType>
 class PopulationPrinter {
 private:
   std::ofstream ofs;
-  Genetics::Population* pop;
+  PopType* pop;
   int gen = -1;
 public:
-  PopulationPrinter(Genetics::Population* p_pop, std::string fname) : ofs(fname, std::ofstream::out) { pop = p_pop; }
+  PopulationPrinter(PopType* p_pop, std::string fname) :
+  ofs(fname, std::ofstream::out)
+  {
+    pop = p_pop;
+  }
 
   void print_line(bool include_best = true) {
     if (gen < 0) {
       ofs << "gen";
       if (include_best) {
-	ofs << ",n_evals";
-	Genetics::Vector<Genetics::String> best_data = pop->get_best_header();
-	for (auto it = best_data.begin(); it != best_data.end(); ++it) {
-	  ofs << "," << *it;
-	}
+        //ofs << ",n_evals";
+        Genetics::Vector<Genetics::String> best_data = pop->get_best_header();
+        for (auto it = best_data.begin(); it != best_data.end(); ++it) {
+          ofs << "," << *it;
+        }
       }
       Genetics::Vector<Genetics::String> data = pop->get_header();
       for (auto it = data.begin(); it != data.end(); ++it) {
@@ -113,11 +125,11 @@ public:
     } else {
       ofs << gen;
       if (include_best) {
-	Genetics::Vector<Genetics::String> best_data = pop->get_best_data();
-	ofs << "," << pop->get_best_organism()->get_n_evaluations();
-	for (auto it = best_data.begin(); it != best_data.end(); ++it) {
-	  ofs << "," << *it;
-	}
+        Genetics::Vector<Genetics::String> best_data = pop->get_best_data();
+        //ofs << "," << pop->get_best_organism()->get_fitness_info().get_n_evaluations();
+        for (auto it = best_data.begin(); it != best_data.end(); ++it) {
+          ofs << "," << *it;
+        }
       }
       Genetics::Vector<Genetics::String> data = pop->get_pop_data();
       for (auto it = data.begin(); it != data.end(); ++it) {
@@ -142,19 +154,20 @@ public:
   ChromosomeTestFixture() : chrom_96_bits_A(96), chrom_96_bits_B(96), chrom_64_bits_A(64), chrom_64_bits_B(64), chrom_32_bits_A(32), chrom_32_bits_B(32), map_96(96), map_64(64), map_32(32) {}
 };
 
-class TestProblemPenalties : public Genetics::Problem {
+class TestProblemPenalties : public Genetics::Problem<Genetics::SingleFitness> {
 private:
   bool apply_penalty;
   bool use_costs = false;
   double penalty_amt;
 public:
-  TestProblemPenalties(double p_penalty_amt, bool p_use_costs) : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1) {
+  TestProblemPenalties(double p_penalty_amt, bool p_use_costs) :
+  Genetics::Problem<Genetics::SingleFitness>(NUM_BITS, NUM_CHROMS, 1) {
     map->initialize(1, Genetics::t_real);
     apply_penalty = true;
     penalty_amt = p_penalty_amt;
     use_costs = p_use_costs;
   }
-  void evaluate_fitness(Genetics::Organism* org) {
+  void evaluate_fitness(Genetics::Organism<Genetics::SingleFitness>* org) {
     if (use_costs) {
       org->set_cost(0, 1);
     } else {
@@ -168,23 +181,25 @@ public:
   }
 };
 
-class TestProblemSingle : public Genetics::Problem {
+class TestProblemSingle : public Genetics::Problem<Genetics::SingleFitness> {
 public:
-  TestProblemSingle() : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1) {
+  TestProblemSingle() :
+  Genetics::Problem<Genetics::SingleFitness>(NUM_BITS, NUM_CHROMS, 1) {
     map->initialize(1, Genetics::t_real);
   }
-  void evaluate_fitness(Genetics::Organism* org) {
+  void evaluate_fitness(OrganismSingle* org) {
     double x = org->read_real(0);
     org->set_fitness(0, -(x*x));
   }
 };
 
-class TestProblemMulti : public Genetics::Problem {
+class TestProblemMulti : public Genetics::Problem<Genetics::MultiFitness> {
 public:
-  TestProblemMulti() : Genetics::Problem(NUM_BITS, NUM_CHROMS, NUM_OBJS) {
+  TestProblemMulti() :
+  Genetics::Problem<Genetics::MultiFitness>(NUM_BITS, NUM_CHROMS, NUM_OBJS) {
     map->initialize(NUM_CHROMS, Genetics::t_real);
   }
-  void evaluate_fitness(Genetics::Organism* org) {
+  void evaluate_fitness(Genetics::Organism<Genetics::MultiFitness>* org) {
     double x = org->read_real(0);
     org->set_fitness(0, -x*x);
     org->set_fitness(1, -(x - 2)*(x - 2));
@@ -192,12 +207,13 @@ public:
   }
 };
 
-class TestProblemSlow : public Genetics::Problem {
+class TestProblemSlow : public Genetics::Problem<Genetics::SingleFitness> {
 public:
-  TestProblemSlow() : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1) {
+  TestProblemSlow() :
+  Genetics::Problem<Genetics::SingleFitness>(NUM_BITS, NUM_CHROMS, 1) {
     map->initialize(1, Genetics::t_real);
   }
-  void evaluate_fitness(Genetics::Organism* org) {
+  void evaluate_fitness(OrganismSingle* org) {
     std::this_thread::sleep_for( std::chrono::milliseconds(SLEEP_TIME) );
     double x = org->read_real(0);
     org->set_fitness(0, -(x*x));
@@ -206,14 +222,14 @@ public:
 
 #define NOISY_DOMAIN  1
 #define NOISY_VAR     0.25
-class TestProblemNoisy : public Genetics::Problem {
+class TestProblemNoisy : public Genetics::Problem<Genetics::NoisyFitness> {
 private:
   LCG gen;
   double domain, penalty_domain, variance;
 
 public:
   TestProblemNoisy(double p_domain = NOISY_DOMAIN, double p_penalty_domain = NOISY_DOMAIN/8, double p_variance = NOISY_VAR) :
-  Genetics::Problem(NUM_BITS, NUM_CHROMS, 1), domain(p_domain), penalty_domain(p_penalty_domain), variance(p_variance) {
+  Genetics::Problem<Genetics::NoisyFitness>(NUM_BITS, NUM_CHROMS, 1), domain(p_domain), penalty_domain(p_penalty_domain), variance(p_variance) {
     Genetics::Vector<Genetics::VarContainer> tmp_vars;
     for (int i = 0; i < NUM_CHROMS; ++i) {
       tmp_vars.emplace_back(0, -domain, domain, Genetics::t_real);
@@ -222,7 +238,7 @@ public:
     penalty_domain = abs(penalty_domain);
   }
 
-  double evaluate_fitness_noiseless(Genetics::Organism* org) {
+  double evaluate_fitness_noiseless(OrganismNoisy* org) {
     double ret = 0.0;
     double penalty = 0;
     for (unsigned i = 0; i < NUM_CHROMS; ++i) {
@@ -236,22 +252,23 @@ public:
     return ret;
   }
 
-  void evaluate_fitness(Genetics::Organism* org) {
+  void evaluate_fitness(OrganismNoisy* org) {
     double val = evaluate_fitness_noiseless(org);
     val += variance*gen.gaussian_0_1();
     org->set_cost(0, val);
   }
 };
 
-class TestProblemAvgs : public Genetics::Problem {
+class TestProblemAvgs : public Genetics::Problem<Genetics::NoisyFitness> {
 public:
   LCG gen;
   Genetics::Vector<double> fit_vals;
 
 public:
-  TestProblemAvgs(unsigned long seed = DEFAULT_LCG_SEED) : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1), gen(seed) {}
+  TestProblemAvgs(unsigned long seed = DEFAULT_LCG_SEED) :
+  Genetics::Problem<Genetics::NoisyFitness>(NUM_BITS, NUM_CHROMS, 1), gen(seed) {}
 
-  void evaluate_fitness(Genetics::Organism* org) {
+  void evaluate_fitness(OrganismNoisy* org) {
     double val = gen.random_real();
     fit_vals.push_back(val);
     org->set_fitness(val);
@@ -556,22 +573,22 @@ TEST_CASE( "Ensure that phenotype mappings are set up properly", "[PhenotypeMapp
 TEST_CASE ("Accumulated averages and standard deviations work") {
   TestProblemAvgs avg;
   TestProblemAvgs avg2(0xA1B3C5D7E9FBABA5);
-  Genetics::Organism org1(1, 1, std::make_shared<Genetics::PhenotypeMap>(1));
-  Genetics::Organism org2(1, 1, std::make_shared<Genetics::PhenotypeMap>(1));
+  OrganismNoisy org1(1, 1, std::make_shared<Genetics::PhenotypeMap>(1));
+  OrganismNoisy org2(1, 1, std::make_shared<Genetics::PhenotypeMap>(1));
   double mean, var;
-  double org_mean, org_var;
+  double org_mean, org_stdev;
   for (int i = 0; i < N_TRIALS; ++i) {
-    org1.evaluate_fitness_noisy(&avg, 0);
-    org2.evaluate_fitness_noisy(&avg2, 0);
+    org1.evaluate_fitness(&avg);
+    org2.evaluate_fitness(&avg2);
     avg.get_mean_var(&mean, &var);
     org_mean = org1.get_fitness();
-    org_var = org1.get_fitness_variance();
+    org_stdev = org1.get_fitness_info().get_uncertainty();
 
-    REQUIRE( org1.get_n_evaluations() == i+1 );
-    INFO( "i=" << i << " accumulated fitness: " << org_mean << ", actual: " << mean << ", accumulated variance: " << org_var << ", actual: " << var)
+    REQUIRE( org1.get_fitness_info().get_n_evaluations() == i+1 );
+    INFO( "i=" << i << " accumulated fitness: " << org_mean << ", actual: " << mean << ", accumulated variance: " << org_stdev << ", actual: " << var)
     REQUIRE( APPROX(org_mean, mean) );
-    INFO( "i=" << i << " accumulated fitness: " << org_mean << ", actual: " << mean << ", accumulated variance: " << org_var << ", actual: " << var)
-    REQUIRE( APPROX(org_var, var) );
+    INFO( "i=" << i << " accumulated fitness: " << org_mean << ", actual: " << mean << ", accumulated variance: " << org_stdev << ", actual: " << var)
+    REQUIRE( APPROX(org_stdev*org_stdev, var) );
   }
 
   //use the more memory intensive but sure-fire way of calculating mean and variance
@@ -587,21 +604,22 @@ TEST_CASE ("Accumulated averages and standard deviations work") {
     var += (avg2.get_val(i) - mean)*(avg2.get_val(i) - mean);
   }
   var /= (2*N_TRIALS - 1);
-  org1.average_fitness(&org2);
+  //TODO: uncomment and fix whatever needs to be fixed
+  //org1.average_fitness(&org2);
   org_mean = org1.get_fitness();
-  org_var = org1.get_fitness_variance();
-  std::cout << "Using accumulated fitnesses with " << 2*N_TRIALS << " trials produced a value of " << org_mean << " and a variance " << org_var << ". The accepted values were " << mean << " and " << var << " respectively. Abs_mu=" << (org_mean - mean) << ", %_mu=" << 100*(org_mean - mean)/mean << ", Abs_var=" << (org_var - var) << ", %_var=" << 100*(org_var - var)/var << std::endl;
-  INFO( "accumulated fitness: " << org_mean << ", actual: " << mean << ", accumulated variance: " << org_var << ", actual: " << var)
+  org_stdev = org1.get_fitness_info().get_uncertainty();
+  std::cout << "Using accumulated fitnesses with " << 2*N_TRIALS << " trials produced a value of " << org_mean << " and a variance " << org_stdev << ". The accepted values were " << mean << " and " << var << " respectively. Abs_mu=" << (org_mean - mean) << ", %_mu=" << 100*(org_mean - mean)/mean << ", Abs_var=" << (org_stdev - var) << ", %_var=" << 100*(org_stdev - var)/var << std::endl;
+  INFO( "accumulated fitness: " << org_mean << ", actual: " << mean << ", accumulated variance: " << org_stdev << ", actual: " << var)
   REQUIRE( APPROX(org_mean, mean) );
-  INFO( "accumulated fitness: " << org_mean << ", actual: " << mean << ", accumulated variance: " << org_var << ", actual: " << var)
-  REQUIRE( APPROX(org_var, var) );
+  INFO( "accumulated fitness: " << org_mean << ", actual: " << mean << ", accumulated variance: " << org_stdev << ", actual: " << var)
+  REQUIRE( APPROX(org_stdev, var) );
 }
 
 TEST_CASE ( "Organisms are correctly created and decoded", "[organisms]" ) {
   std::shared_ptr<Genetics::PhenotypeMap> map_16 = std::make_shared<Genetics::PhenotypeMap>(16);
   std::shared_ptr<Genetics::PhenotypeMap> map_32 = std::make_shared<Genetics::PhenotypeMap>(32);
-  Genetics::Organism template_16_bits_1_params(16, 1, map_16);
-  Genetics::Organism template_32_bits_2_params(32, 2, map_32);
+  OrganismSingle template_16_bits_1_params(16, 1, map_16);
+  OrganismSingle template_32_bits_2_params(32, 2, map_32);
   LCG generator;
 
   SECTION ( "The organism correctly sets and reads unsigned integers" ) {
@@ -655,10 +673,10 @@ TEST_CASE ("Populations are correctly created and data is successfully read", "[
   std::shared_ptr<Genetics::PhenotypeMap> map = std::make_shared<Genetics::PhenotypeMap>(NUM_BITS);
   map->initialize(NUM_CHROMS, Genetics::t_real);
   map->set_range(0, POP_TEST_MIN, POP_TEST_MAX);
-  Genetics::Organism tmplt(NUM_BITS, NUM_OBJS, map);
+  OrganismSingle tmplt(NUM_BITS, NUM_OBJS, map);
   tmplt.set_real(0, 4.6);
-  Genetics::Population pop_none(NUM_BITS, NUM_OBJS, &tmplt, map, args);
-  Genetics::Population pop_tmplt(NUM_BITS, NUM_OBJS, map, args);
+  PopulationSingle pop_none(NUM_BITS, NUM_OBJS, &tmplt, map, args);
+  PopulationSingle pop_tmplt(NUM_BITS, NUM_OBJS, map, args);
 
   SECTION ( "The header is read correctly" ) {
     Genetics::Vector<Genetics::String> pop_dat = pop_none.get_header();
@@ -706,7 +724,7 @@ TEST_CASE ("Populations are correctly created and data is successfully read", "[
       for (unsigned i = 0; i < dims; ++i) {
         map_multi->set_range(i, POP_TEST_MIN, POP_TEST_MAX);
       }
-      Genetics::Population pop(NUM_BITS, NUM_OBJS, map_multi, args, true);
+      PopulationSingle pop(NUM_BITS, NUM_OBJS, map_multi, args, true);
       for (unsigned k = 0; k < dims; ++k) {
         for (unsigned i = 0; i < pop.get_offspring_num(); ++i) {
           unsigned row_i = (unsigned)floor( pop.get_offspring_num()*(pop.get_organism(i)->read_real(k) - POP_TEST_MIN) / (POP_TEST_MAX - POP_TEST_MIN) );
@@ -727,8 +745,8 @@ TEST_CASE ("Penalties are applied properly", "[populations]") {
   TestProblemPenalties prob_cost(penalty_str, true);
   Genetics::ArgStore args;
   args.initialize_from_file("ga.conf");
-  Genetics::Population pop_fit( NUM_BITS, 1, prob_fit.map, args);
-  Genetics::Population pop_cost( NUM_BITS, 1, prob_cost.map, args);
+  PopulationSingle pop_fit( NUM_BITS, 1, prob_fit.map, args);
+  PopulationSingle pop_cost( NUM_BITS, 1, prob_cost.map, args);
   pop_fit.evaluate(&prob_fit);
   pop_cost.evaluate(&prob_cost);
 
@@ -752,7 +770,7 @@ TEST_CASE ("ArgStore successfully parses a file") {
   Genetics::Conv_Plateau plat_cut(0.05, TEST_CONV_GEN / 2);
   Genetics::ArgStore args;
   args.initialize_from_file("ga.conf");
-  Genetics::Population pop( NUM_BITS, 1, prob.map, args);
+  PopulationSingle pop( NUM_BITS, 1, prob.map, args);
 
   //ga.conf must be as follows for this to work:
   /*
@@ -780,7 +798,7 @@ TEST_CASE ("ArgStore successfully parses a file") {
 
 #define N_VAR_TRIALS  5
 TEST_CASE ("Noisy population evaluations don't break") {
-  PopulationPrinter* out;
+  PopulationPrinter<PopulationNoisy>* out;
   char out_name[50];
   for (int n = 0; n < N_VAR_TRIALS; ++n) {
     double penalty_domain = NOISY_DOMAIN*(1 - pow(0.9, n));
@@ -788,16 +806,16 @@ TEST_CASE ("Noisy population evaluations don't break") {
     TestProblemNoisy prob(NOISY_DOMAIN, penalty_domain, NOISY_VAR);
     Genetics::ArgStore args;
     args.initialize_from_file("ga_noisy.conf");
-    Genetics::Population pop( NUM_BITS, 1, prob.map, args);
+    PopulationNoisy pop( NUM_BITS, 1, prob.map, args);
     pop.set_cost(0);
     snprintf(out_name, 50, "noisy_output_%d.csv", n);
-    out = new PopulationPrinter(&pop, out_name);
+    out = new PopulationPrinter<PopulationNoisy>(&pop, out_name);
     out->print_line();
 
     //evaluate for 10 generations
     for (int gen = 0; gen < 10; ++gen) {
       pop.evaluate(&prob);
-      std::shared_ptr<Genetics::Organism> best_org = pop.get_best_organism();
+      std::shared_ptr<OrganismNoisy> best_org = pop.get_best_organism();
       double best_fitness = best_org->get_fitness(0);
       Genetics::FitnessStats pop_stats = pop.get_pop_stats();
       REQUIRE( pop_stats.max == best_fitness );
@@ -805,7 +823,7 @@ TEST_CASE ("Noisy population evaluations don't break") {
       bool best_found = false;
       bool best_in_pop = false;
       for (int i = 0; i < pop.get_offspring_num(); ++i) {
-        std::shared_ptr<Genetics::Organism> org_i = pop.get_organism(i);
+        std::shared_ptr<OrganismNoisy> org_i = pop.get_organism(i);
         //check for information about the fitness relative to the best
         INFO( "i=" << i << ", best fitness=" << best_fitness << ", current observed=" << org_i->get_fitness(0) )
         REQUIRE( (org_i->get_fitness(0) < best_fitness || APPROX(org_i->get_fitness(0), best_fitness)) );
@@ -856,8 +874,8 @@ TEST_CASE ("Simple evolution of a single objective converges to roughly appropri
   TestProblemSingle prob;
   Genetics::ArgStore args;
   args.initialize_from_file("ga.conf");
-  Genetics::Population pop( NUM_BITS, 1, prob.map, args);
-  PopulationPrinter out(&pop, "simple_evo.csv");
+  PopulationSingle pop( NUM_BITS, 1, prob.map, args);
+  PopulationPrinter<PopulationSingle> out(&pop, "simple_evo.csv");
   out.print_line();
   for (size_t i = 0; i < 100; ++i) {
     pop.evaluate(&prob);
@@ -872,8 +890,8 @@ TEST_CASE ("Simple evolution of a multi objective converges to roughly appropria
   TestProblemMulti prob;
   Genetics::ArgStore args;
   args.initialize_from_file("ga.conf");
-  Genetics::Population_NSGAII pop( NUM_BITS, NUM_OBJS, prob.map, args);
-  PopulationPrinter out(&pop, "multi_objective.csv");
+  Genetics::Population_NSGAII<Genetics::MultiFitness, Genetics::TournamentSelector<Genetics::MultiFitness>> pop( NUM_BITS, NUM_OBJS, prob.map, args);
+  PopulationPrinter<Genetics::Population_NSGAII<Genetics::MultiFitness, Genetics::TournamentSelector<Genetics::MultiFitness>>> out(&pop, "multi_objective.csv");
   out.print_line(false);
   bool converged = false;
   while (!converged) {
@@ -935,7 +953,7 @@ TEST_CASE ("Combine convergence checking and evolution", "[populations]") {
   Genetics::Conv_Plateau plat_cut(0.05, TEST_CONV_GEN / 2);
   Genetics::ArgStore args;
   args.initialize_from_file("ga.conf");
-  Genetics::Population pop( NUM_BITS, 1, prob.map, args);
+  PopulationSingle pop( NUM_BITS, 1, prob.map, args);
 
   bool converged = false;
   int generation = 0;
@@ -986,7 +1004,7 @@ TEST_CASE ("timing info with and without parallelization", "[populations]") {
   for (unsigned i = 0; i < N_TRIALS; ++i) {
     //evaluate serial
     auto t_start = std::chrono::high_resolution_clock::now();
-      Genetics::Population pop_serial( NUM_BITS, 1, prob.map, args_serial);
+      PopulationSingle pop_serial( NUM_BITS, 1, prob.map, args_serial);
       pop_serial.run(&prob);
     auto t_end = std::chrono::high_resolution_clock::now();
     serial_times[i] = std::chrono::duration<double, std::milli>(t_end - t_start).count();
@@ -994,7 +1012,7 @@ TEST_CASE ("timing info with and without parallelization", "[populations]") {
 
     //evaluate async
     t_start = std::chrono::high_resolution_clock::now();
-      Genetics::Population pop_async( NUM_BITS, 1, prob.map, args_async);
+      PopulationSingle pop_async( NUM_BITS, 1, prob.map, args_async);
       pop_async.run(&prob);
     t_end = std::chrono::high_resolution_clock::now();
     async_times[i] = std::chrono::duration<double, std::milli>(t_end - t_start).count();

@@ -34,6 +34,9 @@
 
 namespace Genetics {
 
+template <typename Ts>
+using void_t = void;
+
 typedef unsigned int _uint;
 typedef unsigned char _uchar;
 

@@ -1,92 +1,9 @@
 #include "population.h"
-
+/*
 namespace Genetics {
 
-/*Population::Population(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, ArgStore p_args) :
-  N_BITS(pn_bits),
-  N_OBJS(pn_objs),
-  map(p_map),
-  args( const_cast<const ArgStore&>(p_args) )
-{
-  pop_stats = (FitnessStats*)malloc(sizeof(FitnessStats)*N_OBJS);
-  survivors_num = args.get_survivors();
-  offspring_num = args.get_pop_size();
-  if (offspring_num % 2 == 0) {
-    offspring_num++;
-  }
-  //we need to keep the old and new generation in separate arrays to avoid overwriting data
-  offspring.insert(offspring.end(), offspring_num, std::shared_ptr<Organism>(NULL)); 
-
-  //initally fill up the offspring randomly
-  for (size_t i = 0; i < offspring_num; ++i) {
-    old_gen.push_back(std::make_shared<Organism>(N_BITS, N_OBJS, map));
-    old_gen[i]->randomize(&args);
-  }
-
-  for (_uint i = 0; i < N_OBJS; ++i) {
-    pop_stats[i].max = -std::numeric_limits<double>::infinity();
-    pop_stats[i].min = std::numeric_limits<double>::infinity();
-  }
-
-  N_PARAMS = map->get_num_params();
-  var_labels = (char**)malloc(sizeof(char*)*N_PARAMS);
-  for (_uint j = 0; j < map->get_num_params(); ++j) {
-    var_labels[j] = (char*)malloc(sizeof(char)*OUT_BUF_SIZE);
-    snprintf(var_labels[j], OUT_BUF_SIZE, "x_%d", j);
-  }
-  obj_labels = (char**)malloc(sizeof(char*)*N_OBJS);
-  for (_uint j = 0; j < N_OBJS; ++j) {
-    obj_labels[j] = (char*)malloc(sizeof(char)*OUT_BUF_SIZE);
-    snprintf(obj_labels[j], OUT_BUF_SIZE - 1, "f_%d(x)", j);
-  }
-  calculated_flags = FLAG_NONE_SET;
-}
-
-Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, ArgStore p_args) :
-  N_BITS(pn_bits),
-  N_OBJS(pn_objs),
-  map(p_map),
-  args(p_args)
-{
-  pop_stats = (FitnessStats*)malloc(sizeof(FitnessStats)*N_OBJS);
-  this->survivors_num = args.get_survivors();
-  this->offspring_num = args.get_pop_size();
-  if (this->offspring_num % 2 == 0) {
-    this->offspring_num++;
-  }
-  //we need to keep the old and new generation in separate arrays to avoid overwriting data
-  this->offspring.insert(this->offspring.end(), this->offspring_num, NULL);
-
-  this->old_gen.push_back(std::make_shared<Organism>(*tmplt));
-  //initally fill up the offspring randomly
-  for (size_t i = 1; i < this->offspring_num; ++i) {
-    this->old_gen.push_back( std::make_shared<Organism>(N_BITS, N_OBJS, map) );
-    this->old_gen.back()->randomize(&args, tmplt);
-  }
-
-  for (_uint i = 0; i < N_OBJS; ++i) {
-    this->pop_stats[i].max = -std::numeric_limits<double>::infinity();
-    this->pop_stats[i].min = std::numeric_limits<double>::infinity();
-  }
-
-  char buf[OUT_BUF_SIZE];
-//  var_labels.resize(map->get_num_params());
-  N_PARAMS = map->get_num_params();
-  var_labels = (char**)malloc(sizeof(char*)*N_PARAMS);
-  for (_uint j = 0; j < map->get_num_params(); ++j) {
-    var_labels[j] = (char*)malloc(sizeof(char)*OUT_BUF_SIZE);
-    snprintf(var_labels[j], OUT_BUF_SIZE, "x_%d", j);
-  }
-  obj_labels = (char**)malloc(sizeof(char*)*N_OBJS);
-  for (_uint j = 0; j < N_OBJS; ++j) {
-    obj_labels[j] = (char*)malloc(sizeof(char)*OUT_BUF_SIZE);
-    snprintf(obj_labels[j], OUT_BUF_SIZE - 1, "f_%d(x)", j);
-  }
-
-  calculated_flags = FLAG_NONE_SET;
-}*/
-
-Population::Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, bool latin) :
+template <class FitType>
+Population<FitType>::Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, bool latin) :
   N_BITS(pn_bits),
   N_OBJS(pn_objs),
   is_obj_cost(N_OBJS, false)
@@ -95,7 +12,8 @@ Population::Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMa
   createOrganisms(NULL, latin);
 }
 
-Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map) :
+template <class FitType>
+Population<FitType>::Population(_uint pn_bits, _uint pn_objs, Organism<FitType>* tmplt, std::shared_ptr<PhenotypeMap> p_map) :
   N_BITS(pn_bits),
   N_OBJS(pn_objs),
   is_obj_cost(N_OBJS, false)
@@ -104,7 +22,8 @@ Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::share
   createOrganisms(tmplt, false);
 }
  
-Population::Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args, bool latin) :
+template <class FitType>
+Population<FitType>::Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args, bool latin) :
   N_BITS(pn_bits),
   N_OBJS(pn_objs),
   args(p_args),
@@ -114,7 +33,8 @@ Population::Population(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMa
   createOrganisms(NULL, latin);
 }
 
-Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args) :
+template <class FitType>
+Population<FitType>::Population(_uint pn_bits, _uint pn_objs, Organism<FitType>* tmplt, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args) :
   N_BITS(pn_bits),
   N_OBJS(pn_objs),
   args(p_args),
@@ -124,7 +44,8 @@ Population::Population(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::share
   createOrganisms(tmplt, false);
 }
 
-void Population::createOrganisms(Organism* tmplt, bool latin) {
+template <class FitType>
+void Population<FitType>::createOrganisms(Organism<FitType>* tmplt, bool latin) {
   pop_stats = (FitnessStats*)malloc(sizeof(FitnessStats)*N_OBJS);
   this->survivors_num = args.get_survivors();
   this->offspring_num = args.get_pop_size();
@@ -132,12 +53,12 @@ void Population::createOrganisms(Organism* tmplt, bool latin) {
     this->offspring_num++;
   }
   //we need to keep the old and new generation in separate arrays to avoid overwriting data
-  this->offspring.insert(this->offspring.end(), this->offspring_num, std::shared_ptr<Organism>(NULL));
+  this->offspring.insert(this->offspring.end(), this->offspring_num, std::shared_ptr<Organism<FitType>>(NULL));
   if (tmplt) {
-    this->old_gen.push_back(std::make_shared<Organism>(*tmplt));
+    this->old_gen.push_back(std::make_shared<Organism<FitType>>(*tmplt));
     //initally fill up the offspring randomly
     for (size_t i = 1; i < this->offspring_num; ++i) {
-      this->old_gen.push_back( std::make_shared<Organism>(N_BITS, N_OBJS, map) );
+      this->old_gen.push_back( std::make_shared<Organism<FitType>>(N_BITS, N_OBJS, map) );
       this->old_gen.back()->randomize(&args, tmplt);
     }
   } else {
@@ -148,7 +69,7 @@ void Population::createOrganisms(Organism* tmplt, bool latin) {
       
       this->old_gen.reserve(this->offspring_num);
       for (size_t i = 0; i < this->offspring_num; ++i) {
-        this->old_gen.push_back( std::make_shared<Organism>(N_BITS, N_OBJS, map) );
+        this->old_gen.push_back( std::make_shared<Organism<FitType>>(N_BITS, N_OBJS, map) );
       }
       for (size_t i = 0; i < map->get_num_params(); ++i) {
         row = samp( args.get_generator() ); 
@@ -163,7 +84,7 @@ void Population::createOrganisms(Organism* tmplt, bool latin) {
       this->old_gen.reserve(this->offspring_num);
       //initally fill up the offspring randomly
       for (size_t i = 0; i < this->offspring_num; ++i) {
-        this->old_gen.push_back( std::make_shared<Organism>(N_BITS, N_OBJS, map) );
+        this->old_gen.push_back( std::make_shared<Organism<FitType>>(N_BITS, N_OBJS, map) );
         this->old_gen[i]->randomize(&args);
       }
     }
@@ -189,7 +110,8 @@ void Population::createOrganisms(Organism* tmplt, bool latin) {
   calculated_flags = FLAG_NONE_SET;
 }
 
-Population::~Population() {
+template <class FitType>
+Population<FitType>::~Population() {
   for (size_t i = 0; i < this->offspring_num; ++i) {
     old_gen[i].reset();
   }
@@ -210,7 +132,8 @@ Population::~Population() {
   }
 }
 
-Population::Population(Population& o) : args(o.args), best_organism(o.best_organism) {
+template <class FitType>
+Population<FitType>::Population(Population& o) : args(o.args), best_organism(o.best_organism) {
   N_BITS = o.get_n_bits();
   N_PARAMS = o.N_PARAMS;
   N_OBJS = o.N_OBJS;
@@ -237,7 +160,8 @@ Population::Population(Population& o) : args(o.args), best_organism(o.best_organ
   calculated_flags = FLAG_NONE_SET;
 }
 
-Population& Population::operator=(Population& o) {
+template <class FitType>
+Population<FitType>& Population<FitType>::operator=(Population<FitType>& o) {
   int tmp_N_BITS = N_BITS;
   int tmp_N_OBJS = N_OBJS;
   std::shared_ptr<PhenotypeMap> tmp_map = map;
@@ -266,7 +190,8 @@ Population& Population::operator=(Population& o) {
   return *this;
 }
 
-Population::Population(Population&& o) : map(o.map), args(std::move(o.args)), best_organism(std::move(o.best_organism)) {
+template <class FitType>
+Population<FitType>::Population(Population&& o) : map(o.map), args(std::move(o.args)), best_organism(std::move(o.best_organism)) {
   N_BITS = o.get_n_bits();
   for (size_t i = 0; i < this->offspring_num; ++i) {
     old_gen[i].reset();
@@ -283,13 +208,14 @@ Population::Population(Population&& o) : map(o.map), args(std::move(o.args)), be
   calculated_flags = FLAG_NONE_SET;
 }
 
-void Population::resize_population(_uint new_size) {
+template <class FitType>
+void Population<FitType>::resize_population(_uint new_size) {
   size_t old_size = old_gen.size();
   if (new_size > old_size) {
-    offspring.insert( offspring.end(), new_size - old_size, std::shared_ptr<Organism>(NULL) );
+    offspring.insert( offspring.end(), new_size - old_size, std::shared_ptr<Organism<FitType>>(NULL) );
     old_gen.reserve(new_size);
     for (size_t i = old_size; i < old_size; ++i) {
-      old_gen.push_back( std::make_shared<Organism>(N_BITS, N_OBJS, map) );
+      old_gen.push_back( std::make_shared<Organism<FitType>>(N_BITS, N_OBJS, map) );
       old_gen.back()->randomize(&args);
     }
   } else {
@@ -301,26 +227,20 @@ void Population::resize_population(_uint new_size) {
   calculated_flags = FLAG_NONE_SET;
 }
 
-void Population::set_n_survivors(_uint new_size) {
+template <class FitType>
+void Population<FitType>::set_n_survivors(_uint new_size) {
   size_t old_size = survivors_num;
   if (new_size > old_size) {
-    survivors.insert( offspring.end(), new_size - old_size, std::shared_ptr<Organism>(NULL) );
+    survivors.insert( offspring.end(), new_size - old_size, std::shared_ptr<Organism<FitType>>(NULL) );
   } else {
     survivors.resize(new_size);
   }
   args.set_survivors(new_size);
 }
 
-void Population::set_best_organism(_uint i, bool force) {
+template <class FitType>
+void Population<FitType>::set_best_organism(_uint i, bool force) {
   pop_stats[0].max = old_gen[i]->get_fitness(0);
-  /*Organism tmp_org = old_gen[i]->copy();
-  if (force || tmp_org > best_organism) {
-    best_organism = tmp_org;
-    for (_uint j = 0; j < N_OBJS; ++j) {
-      best_organism->set_fitness( j, old_gen[i]->get_fitness(j) );
-    }
-    best_organism_ind = i;
-  }*/
   if (force || !best_organism || *(old_gen[i]) > *best_organism) {
     best_organism = old_gen[i];
     best_organism_ind = i;
@@ -328,14 +248,16 @@ void Population::set_best_organism(_uint i, bool force) {
   calculated_flags |= VALID_BEST;
 }
 
-void Population::evaluate_best(Problem* prob, double forget_weight) {
+template <class FitType>
+void Population<FitType>::evaluate_best(Problem<FitType>* prob, double forget_weight) {
   best_organism->evaluate_fitness_noisy(prob, forget_weight);
   for (_uint i = 0; i < N_OBJS; ++i) {
     pop_stats[i].max = best_organism->get_fitness(i);
   }
 }
 
-void Population::evaluate(Problem* prob) {
+template <class FitType>
+void Population<FitType>::evaluate(Problem<FitType>* prob) {
   if (N_OBJS == 1) {
     size_t start_i = 0;
     if ( best_organism && best_organism->valid() ) {
@@ -437,8 +359,7 @@ void Population::evaluate(Problem* prob) {
       _uint* best_org_set = new _uint[this->offspring_num];
       _uint n_best_orgs = 0;
       for (_uint j = 0; j < this->offspring_num; ++j) {
-        //if ( *(old_gen[j]) == *best_organism && j != best_organism_ind ) {
-	if ( *(old_gen[j]) == *best_organism && j != best_organism_ind ) {
+        if ( *(old_gen[j]) == *best_organism && j != best_organism_ind ) {
           best_organism->average_fitness( old_gen[j].get() );
           best_org_set[n_best_orgs] = j;
           ++n_best_orgs;
@@ -458,7 +379,8 @@ void Population::evaluate(Problem* prob) {
 }
 
 #ifdef USE_LIBOMP
-void Population::evaluate_async(Problem* prob) {
+template <class FitType>
+void Population<FitType>::evaluate_async(Problem<FitType>* prob) {
   if (N_OBJS == 1) { 
     for (_uint i = 0; i < offspring_num; ++i) {
       old_gen[i]->apply_penalty(0);
@@ -611,17 +533,16 @@ void Population::evaluate_async(Problem* prob) {
 }
 #endif
 
-/**
- * \brief Apply soft penalties to organisms, this gaurantees that a penalized organism will always have a lower fitness than an unpenalized organism
- *
- * \note Penalized organisms all have a nonzero penalty weight. Let this penalty weight be given by $P$. Let $m$ and $M$ be the minimum and maximum fitness among all unpenalized organisms respectively. Given an organism $O$ with an unpenalized fitness $F(O)$, after penalties are applied,
- * \f[
- * F_new(O)=m - F(O) - max(|M|, |m|)*P
- * \f]
- * By default $F(O)$ is set to zero unless the user specified function evaluate_fitness"("O")" calls O.set_fitness"()". 
- * Users may or may not want to assign fitnesses to penalized organisms depending on whether such a fitness is well defined.
- */
-void Population::apply_penalties(Problem* prob) {
+// \brief Apply soft penalties to organisms, this gaurantees that a penalized organism will always have a lower fitness than an unpenalized organism
+//
+// \note Penalized organisms all have a nonzero penalty weight. Let this penalty weight be given by $P$. Let $m$ and $M$ be the minimum and maximum fitness among all unpenalized organisms respectively. Given an organism $O$ with an unpenalized fitness $F(O)$, after penalties are applied,
+// \f[
+// F_new(O)=m - F(O) - max(|M|, |m|)*P
+// \f]
+// By default $F(O)$ is set to zero unless the user specified function evaluate_fitness"("O")" calls O.set_fitness"()". 
+// Users may or may not want to assign fitnesses to penalized organisms depending on whether such a fitness is well defined.
+template <class FitType>
+void Population<FitType>::apply_penalties(Problem<FitType>* prob) {
   //calculate penalties based on the range of fitnesses
   double penalty_fact = abs(pop_stats[0].min);
   if (abs(pop_stats[0].max) > penalty_fact) {
@@ -680,7 +601,8 @@ void Population::apply_penalties(Problem* prob) {
   }
 }
 
-void Population::find_best_organism() {
+template <class FitType>
+void Population<FitType>::find_best_organism() {
   for (int j = 0; j < N_OBJS; ++j) {
     pop_stats[j].max = best_organism->get_fitness(j);
     pop_stats[j].min = best_organism->get_fitness(j);
@@ -709,7 +631,8 @@ void Population::find_best_organism() {
   calculated_flags |= FLAG_STATS_SET | FLAG_BEST_FOUND;
 }
 
-void Population::calculate_distances() {
+template <class FitType>
+void Population<FitType>::calculate_distances() {
   for (_uint i = 0; i < offspring_num; ++i) {
     old_gen[i]->distance = 0;
   }
@@ -725,7 +648,8 @@ void Population::calculate_distances() {
   calculated_flags |= FLAG_DIST_SET;
 }
 
-void Population::hypermutate() {
+template <class FitType>
+void Population<FitType>::hypermutate() {
   if ( !(calculated_flags & FLAG_DIST_SET) ) {
     calculate_distances();
   }
@@ -742,36 +666,36 @@ void Population::hypermutate() {
   }
 }
 
-void Population::swap_orgs(int i, int j) {
-  std::shared_ptr<Organism> tmp = old_gen[j];
+template <class FitType>
+void Population<FitType>::swap_orgs(int i, int j) {
+  std::shared_ptr<Organism<FitType>> tmp = old_gen[j];
   old_gen[j] = old_gen[i];
   old_gen[i] = tmp;
 }
 
-int Population::partition(unsigned int fit_ind,
-			  std::vector<std::shared_ptr<Organism>>* work_arr,
+template <class FitType>
+int Population<FitType>::partition(unsigned int fit_ind,
+			  std::vector<std::shared_ptr<Organism<FitType>>>* work_arr,
 			  int s, int e) {
   double p = (*work_arr)[e]->get_fitness(fit_ind);
   int i = s;
   for (int j = s; j < e; ++j) {
     if ((*work_arr)[j]->get_fitness(fit_ind) > p) {
-/*      std::shared_ptr<Organism> tmp = (*work_arr)[i];
-      (*work_arr)[i] = (*work_arr)[j];
-      (*work_arr)[j] = tmp;*/
       (*work_arr)[i].swap( (*work_arr)[j] );
       i++;
     }
   }
   if (i != e) {
-    std::shared_ptr<Organism> tmp = (*work_arr)[i];
+    std::shared_ptr<Organism<FitType>> tmp = (*work_arr)[i];
     (*work_arr)[i] = (*work_arr)[e];
     (*work_arr)[e] = tmp;
   }
   return i;
 }
 
-void Population::sort_orgs (unsigned int fit_ind,
-			    std::vector<std::shared_ptr<Organism>>* work_arr,
+template <class FitType>
+void Population<FitType>::sort_orgs (unsigned int fit_ind,
+			    std::vector<std::shared_ptr<Organism<FitType>>>* work_arr,
 			    int s, int e) {
   sort_org_calls += 1;
   if (sort_org_calls > work_arr->size()*5) {
@@ -787,7 +711,8 @@ void Population::sort_orgs (unsigned int fit_ind,
   }
 }
 
-bool Population::cull_in_place() {
+template <class FitType>
+bool Population<FitType>::cull_in_place() {
   size_t j = 0;
 
   double difference = pop_stats[0].max - pop_stats[0].min;
@@ -802,9 +727,9 @@ bool Population::cull_in_place() {
     survivors.resize(survivors_num);
   }
   for (size_t i = 0; i < this->offspring_num && j < survivors_num; ++i) {
-    /* if M_f is the maximum fitness and m_f is the minimum the minimum, while x is the
-     * fitness of a given organism, then the probability of survival is x/(M_f-m_f) or 1
-     * if M_f = m_f */
+    // if M_f is the maximum fitness and m_f is the minimum the minimum, while x is the
+    // fitness of a given organism, then the probability of survival is x/(M_f-m_f) or 1
+    // if M_f = m_f
     if (dist(args.get_generator()) < old_gen[i]->get_fitness(0) - pop_stats[0].min) {
       survivors[j] = old_gen[i];
       j++;
@@ -819,12 +744,11 @@ bool Population::cull_in_place() {
   return false;
 }
 
-/**
- * \brief An implementation of simple roulette selection
- *
- * \returns True if all organisms have the same fitness (results have converged).
- */
-bool Population::cull() {
+// \brief An implementation of simple roulette selection
+//
+// \returns True if all organisms have the same fitness (results have converged).
+template <class FitType>
+bool Population<FitType>::cull() {
   sort_orgs(0, &old_gen);
   //if all the organisms have the same fitness then reinitialize the population
   if (old_gen[0]->get_fitness(0) - old_gen[this->offspring_num-1]->get_fitness(0) < 0.001 ) {
@@ -870,16 +794,17 @@ bool Population::cull() {
   return false;
 }
 
-void Population::breed_shuffle() {
+template <class FitType>
+void Population<FitType>::breed_shuffle() {
   std::uniform_int_distribution<size_t> dist_surv0(0, survivors_num - 1);
-  std::vector<Organism*> children;
-  Organism** shuffled_inds = (Organism**)malloc(sizeof(Organism*)*offspring_num);
+  std::vector<Organism<FitType>*> children;
+  Organism<FitType>** shuffled_inds = (Organism<FitType>**)malloc(sizeof(Organism<FitType>*)*offspring_num);
   for (size_t i = 0; i < survivors_num; ++i) {
     shuffled_inds[i] = survivors[i].get();
   }
   for (size_t i = 0; i < survivors_num; ++i) {
     size_t ind_o = dist_surv0( args.get_generator() );
-    Organism* tmp = shuffled_inds[i];
+    Organism<FitType>* tmp = shuffled_inds[i];
     shuffled_inds[i] = shuffled_inds[ind_o];
     shuffled_inds[ind_o] = tmp;
   }
@@ -895,33 +820,34 @@ void Population::breed_shuffle() {
   }
   if (this->offspring_num % 2 == 1) {
     //elitist algorithm, make the first individual in the next generation the previous most fit
-    //offspring[0] = std::make_shared<Organism>(best_organism);
+    //offspring[0] = std::make_shared<Organism<FitType>>(best_organism);
     offspring[0] = best_organism;
 
     for (size_t i = 1; 2*i < this->offspring_num; i++) {
       children = shuffled_inds[2*i - 1]->breed(&args, shuffled_inds[2*i]);
-      offspring[2*i] = std::shared_ptr<Organism>(children[0]);
-      offspring[2*i - 1] = std::shared_ptr<Organism>(children[1]);
+      offspring[2*i] = std::shared_ptr<Organism<FitType>>(children[0]);
+      offspring[2*i - 1] = std::shared_ptr<Organism<FitType>>(children[1]);
     }
   } else {
     for (size_t i = 0; 2*i + 1 < this->offspring_num; i++) {
       children = shuffled_inds[2*i]->breed(&args, shuffled_inds[2*i + 1]);
-      offspring[2*i] = std::shared_ptr<Organism>(children[0]);
-      offspring[2*i + 1] = std::shared_ptr<Organism>(children[1]);
+      offspring[2*i] = std::shared_ptr<Organism<FitType>>(children[0]);
+      offspring[2*i + 1] = std::shared_ptr<Organism<FitType>>(children[1]);
     }
   }
 
   offspring.swap(old_gen);
 }
 
-void Population::breed() {
+template <class FitType>
+void Population<FitType>::breed() {
   find_best_organism();
   std::uniform_int_distribution<size_t> dist_surv0(0, survivors_num - 1);
   std::uniform_int_distribution<size_t> dist_surv1(0, survivors_num - 2);
-  std::vector<Organism*> children;
+  std::vector<Organism<FitType>*> children;
   size_t* shuffled_inds = (size_t*)malloc(sizeof(size_t)*survivors_num);
   if (this->offspring_num % 2 == 1) {
-    //offspring[0] = std::make_shared<Organism>(best_organism);
+    //offspring[0] = std::make_shared<Organism<FitType>>(best_organism);
     offspring[0] = best_organism;
 
     for (size_t i = 1; 2*i < this->offspring_num; i++) {
@@ -932,8 +858,8 @@ void Population::breed() {
 	par2_i++;
       }
       children = survivors[par1_i].get()->breed(&args, survivors[par2_i].get());
-      offspring[2*i] = std::shared_ptr<Organism>(children[0]);
-      offspring[2*i - 1] = std::shared_ptr<Organism>(children[1]);
+      offspring[2*i] = std::shared_ptr<Organism<FitType>>(children[0]);
+      offspring[2*i - 1] = std::shared_ptr<Organism<FitType>>(children[1]);
     }
   } else {
     for (size_t i = 0; 2*i + 1 < this->offspring_num; i++) {
@@ -944,8 +870,8 @@ void Population::breed() {
 	par2_i++;
       }
       children = survivors[par1_i].get()->breed(&args, survivors[par2_i].get());
-      offspring[2*i] = std::shared_ptr<Organism>(children[0]);
-      offspring[2*i + 1] = std::shared_ptr<Organism>(children[1]);
+      offspring[2*i] = std::shared_ptr<Organism<FitType>>(children[0]);
+      offspring[2*i + 1] = std::shared_ptr<Organism<FitType>>(children[1]);
     }
   }
 
@@ -953,14 +879,15 @@ void Population::breed() {
   offspring.swap(old_gen);
 }
 
-void Population::tournament_selection() {
+template <class FitType>
+void Population<FitType>::tournament_selection() {
   _uint arena_size = args.get_survivors();
   SampleDraw sampler(offspring_num, arena_size, args.tournament_replacement());
   std::uniform_int_distribution<_uint> selector(0, offspring_num - 1);
-  std::vector<Organism*> children;
+  std::vector<Organism<FitType>*> children;
 
   for (size_t i = 0; 2*i + 1 < offspring_num; ++i) {
-    Organism *first_parent, *second_parent;
+    Organism<FitType> *first_parent, *second_parent;
     std::vector<_uint> t1 = sampler( args.get_generator() );
     std::vector<_uint> t2 = sampler( args.get_generator() );
     first_parent = old_gen[t1[0]].get();
@@ -984,21 +911,22 @@ void Population::tournament_selection() {
     }
 
     children = first_parent->breed(&args, second_parent);
-    offspring[2*i] = std::shared_ptr<Organism>(children[0]);
-    offspring[2*i + 1] = std::shared_ptr<Organism>(children[1]);
+    offspring[2*i] = std::shared_ptr<Organism<FitType>>(children[0]);
+    offspring[2*i + 1] = std::shared_ptr<Organism<FitType>>(children[1]);
   }
   if (offspring_num % 2 == 1) {
-    //offspring[offspring_num - 1] = std::make_shared<Organism>(best_organism);
+    //offspring[offspring_num - 1] = std::make_shared<Organism<FitType>>(best_organism);
     offspring[offspring_num - 1] = best_organism;
   } else {
-    //offspring[0] = std::make_shared<Organism>(best_organism);
+    //offspring[0] = std::make_shared<Organism<FitType>>(best_organism);
     offspring[0] = best_organism;
   }
   old_gen.swap(offspring);
   calculated_flags &= !FLAG_FRONTS;
 }
 
-bool Population::iterate(ConvergenceCriteria* conv) {
+template <class FitType>
+bool Population<FitType>::iterate(ConvergenceCriteria* conv) {
   find_best_organism();
   //check for hypermutation
   for (_uint i = 0; i < N_OBJS; ++i) {
@@ -1029,15 +957,13 @@ bool Population::iterate(ConvergenceCriteria* conv) {
   calculated_flags = FLAG_NONE_SET;
 }
 
-std::shared_ptr<Organism> Population::get_best_organism(size_t i) {
+template <class FitType>
+std::shared_ptr<Organism<FitType>> Population<FitType>::get_best_organism(size_t i) {
   if ( (calculated_flags & FLAG_BEST_FOUND) == 0 ) {
     find_best_organism();
   }
   if (i == 0) {
-    std::shared_ptr<Organism> tmp_org = std::make_shared<Organism>( best_organism->copy() );
-    /*for (_uint i = 0; i < N_OBJS; ++i) {
-      tmp_org->set_fitness(i, pop_stats[i].max);
-    }*/
+    std::shared_ptr<Organism<FitType>> tmp_org = std::make_shared<Organism<FitType>>( best_organism->copy() );
     return tmp_org;
   } else {
     sort_orgs(0, &old_gen);
@@ -1045,19 +971,22 @@ std::shared_ptr<Organism> Population::get_best_organism(size_t i) {
   }
 }
 
-std::shared_ptr<Organism> Population::get_organism(size_t i) {
+template <class FitType>
+std::shared_ptr<Organism<FitType>> Population<FitType>::get_organism(size_t i) {
   if (i >= old_gen.size())
     error(CODE_ARG_RANGE, "Attempt to access invalid index %d when the maximum allowed is %d.", i, old_gen.size());
   return old_gen[i];
 }
 
-std::shared_ptr<Organism> Population::get_child(size_t i) {
+template <class FitType>
+std::shared_ptr<Organism<FitType>> Population<FitType>::get_child(size_t i) {
   if (i >= offspring.size())
     error(CODE_ARG_RANGE, "Attempt to access invalid index %d when the maximum allowed is %d.", i, offspring.size());
   return offspring[i];
 }
 
-void Population::run(Problem* prob) {
+template <class FitType>
+void Population<FitType>::run(Problem<FitType>* prob) {
   evaluate(prob);
   if ( args.wait_for_con() ) {
     size_t i = 1;
@@ -1111,27 +1040,24 @@ void Population::run(Problem* prob) {
   }
 }
 
-/**
- * \brief Sets the objective referenced by index ind to use a cost (corresponding to a minimization problem).
- *
- * \param ind	The index of the parameter to set
- * \seealso set_fitness
- */
-void Population::set_cost(_uint ind) {
-  is_obj_cost[ind] = true;
-}
+// \brief Sets the objective referenced by index ind to use a cost (corresponding to a minimization problem).
+//
+// \param ind	The index of the parameter to set
+// \seealso set_fitness
+template <class FitType>
+void Population<FitType>::set_cost(_uint ind) { is_obj_cost[ind] = true; }
 
-/**
- * \brief Sets the objective referenced by index ind to use a fitness (corresponding to a maximization problem).
- *
- * \param ind	The index of the parameter to set
- * \seealso set_cost
- */
-void Population::set_fitness(_uint ind) {
+// \brief Sets the objective referenced by index ind to use a fitness (corresponding to a maximization problem).
+//
+// \param ind	The index of the parameter to set
+// \seealso set_cost
+template <class FitType>
+void Population<FitType>::set_fitness(_uint ind) {
   is_obj_cost[ind] = false;
 }
 
-void Population::set_var_label(_uint ind, String val) {
+template <class FitType>
+void Population<FitType>::set_var_label(_uint ind, String val) {
   if (ind >= N_PARAMS) {
     error(CODE_WARN, "Invalid parameter index %u provided for set_var_label. The parameter index must be less than %u.", ind, N_PARAMS);
   } else {
@@ -1147,7 +1073,8 @@ void Population::set_var_label(_uint ind, String val) {
   }
 }
 
-void Population::set_obj_label(_uint ind, String val) {
+template <class FitType>
+void Population<FitType>::set_obj_label(_uint ind, String val) {
   if (ind >= N_OBJS) {
     error(CODE_WARN, "Invalid objective index %u provided for set_obj_label. The objective index must be less than %u.", ind, N_OBJS);
   } else {
@@ -1163,7 +1090,8 @@ void Population::set_obj_label(_uint ind, String val) {
   }
 }
 
-Vector<String> Population::get_best_header() {
+template <class FitType>
+Vector<String> Population<FitType>::get_best_header() {
   String def;
   Vector<String> ret;
   ret.reserve( N_PARAMS + print_penalties + N_OBJS );
@@ -1185,7 +1113,8 @@ Vector<String> Population::get_best_header() {
   return ret;
 }
 
-Vector<String> Population::get_header() {
+template <class FitType>
+Vector<String> Population<FitType>::get_header() {
   String def;
   Vector<String> ret;
   ret.reserve( old_gen.size()*(N_PARAMS + print_penalties + N_OBJS) );
@@ -1208,7 +1137,8 @@ Vector<String> Population::get_header() {
   return ret;
 }
 
-Vector<String> Population::get_best_data() {
+template <class FitType>
+Vector<String> Population<FitType>::get_best_data() {
   sort_orgs(0, &old_gen);
   char buf[OUT_BUF_SIZE];
   String def;
@@ -1245,7 +1175,8 @@ Vector<String> Population::get_best_data() {
   return ret;
 }
 
-Vector<String> Population::get_pop_data() {
+template <class FitType>
+Vector<String> Population<FitType>::get_pop_data() {
   sort_orgs(0, &old_gen);
   _uint span = N_OBJS + print_penalties + map->get_num_params();
   String def;
@@ -1292,166 +1223,158 @@ Vector<String> Population::get_pop_data() {
 
 // =============================== POPULATION_NGSAII ===============================
 
-/*Population_NSGAII::Population_NSGAII(_uint pn_bits, _uint pn_objs, PhenotypeMap* p_map, ArgStore p_args) :
-Population(pn_bits, pn_objs, p_map, p_args) {
-  if (offspring_num % 2 == 1) {
-    offspring_num--;
+template <class FitType>
+Population_NSGAII<FitType>::Population_NSGAII(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map) :
+Population<FitType>(pn_bits, pn_objs, p_map) {
+  if (this->offspring_num % 2 == 1) {
+    this->offspring_num--;
   }
-  old_gen.resize(offspring_num);
-  offspring.resize(offspring_num);
+  this->old_gen.resize(this->offspring_num);
+  this->offspring.resize(this->offspring_num);
 }
 
-Population_NSGAII::Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, PhenotypeMap* p_map, String conf_fname) :
-Population(pn_bits, pn_objs, tmplt, p_map, conf_fname) {
-  if (offspring_num % 2 == 1) {
-    offspring_num--;
+template <class FitType>
+Population_NSGAII<FitType>::Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism<FitType>* tmplt, std::shared_ptr<PhenotypeMap> p_map) :
+Population<FitType>(pn_bits, pn_objs, tmplt, p_map) {
+  if (this->offspring_num % 2 == 1) {
+    this->offspring_num--;
   }
-  old_gen.resize(offspring_num);
-  offspring.resize(offspring_num);
-}*/
-
-Population_NSGAII::Population_NSGAII(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map) :
-Population(pn_bits, pn_objs, p_map) {
-  if (offspring_num % 2 == 1) {
-    offspring_num--;
-  }
-  old_gen.resize(offspring_num);
-  offspring.resize(offspring_num);
+  this->old_gen.resize(this->offspring_num);
+  this->offspring.resize(this->offspring_num);
 }
 
-Population_NSGAII::Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map) :
-Population(pn_bits, pn_objs, tmplt, p_map) {
-  if (offspring_num % 2 == 1) {
-    offspring_num--;
+template <class FitType>
+Population_NSGAII<FitType>::Population_NSGAII(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args) :
+Population<FitType>(pn_bits, pn_objs, p_map, p_args) {
+  if (this->offspring_num % 2 == 1) {
+    this->offspring_num--;
   }
-  old_gen.resize(offspring_num);
-  offspring.resize(offspring_num);
+  this->old_gen.resize(this->offspring_num);
+  this->offspring.resize(this->offspring_num);
 }
 
-Population_NSGAII::Population_NSGAII(_uint pn_bits, _uint pn_objs, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args) :
-Population(pn_bits, pn_objs, p_map, p_args) {
-  if (offspring_num % 2 == 1) {
-    offspring_num--;
+template <class FitType>
+Population_NSGAII<FitType>::Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism<FitType>* tmplt, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args) :
+Population<FitType>(pn_bits, pn_objs, tmplt, p_map, p_args) {
+  if (this->offspring_num % 2 == 1) {
+    this->offspring_num--;
   }
-  old_gen.resize(offspring_num);
-  offspring.resize(offspring_num);
+  this->old_gen.resize(this->offspring_num);
+  this->offspring.resize(this->offspring_num);
 }
 
-Population_NSGAII::Population_NSGAII(_uint pn_bits, _uint pn_objs, Organism* tmplt, std::shared_ptr<PhenotypeMap> p_map, ArgStore p_args) :
-Population(pn_bits, pn_objs, tmplt, p_map, p_args) {
-  if (offspring_num % 2 == 1) {
-    offspring_num--;
-  }
-  old_gen.resize(offspring_num);
-  offspring.resize(offspring_num);
-}
-
-Population_NSGAII::~Population_NSGAII() {
-  for (size_t i = 0; i < offspring_num; ++i) {
-    if (old_gen[i] != NULL) {
-      old_gen[i].reset();
+template <class FitType>
+Population_NSGAII<FitType>::~Population_NSGAII() {
+  for (size_t i = 0; i < this->offspring_num; ++i) {
+    if (this->old_gen[i] != NULL) {
+      this->old_gen[i].reset();
     }
-    if (offspring[i] != NULL) {
-      offspring[i].reset();
+    if (this->offspring[i] != NULL) {
+      this->offspring[i].reset();
     }
   }
 //  free(pop_stats);
 }
 
-void Population_NSGAII::hypermutate() {
-  sort_orgs(get_n_objs(), &(pareto_fronts[0]));
+template <class FitType>
+void Population_NSGAII<FitType>::hypermutate() {
+  sort_orgs(this->get_n_objs(), &(pareto_fronts[0]));
   //select the half of the most crowded individuals in the first front
   for (_uint i = pareto_fronts[0].size() - 1; i > pareto_fronts[0].size()/2; --i) {
-    pareto_fronts[0][i]->randomize(&args);
+    pareto_fronts[0][i]->randomize(&(this->args));
   }
 }
 
-void Population_NSGAII::update_fitness_ranges(Organism* org, size_t i) {
+template <class FitType>
+void Population_NSGAII<FitType>::update_fitness_ranges(Organism<FitType>* org, size_t i) {
   if (org->penalized()) {
-    max_penalty_ind = i + 1;
-    if (min_penalty_ind == offspring_num) {
-      min_penalty_ind = i;
+    this->max_penalty_ind = i + 1;
+    if (this->min_penalty_ind == this->offspring_num) {
+      this->min_penalty_ind = i;
     }
   } else {
     for (_uint j = 0; j < this->get_n_objs(); ++j) {
-      if (org->get_fitness(j) > pop_stats[j].max) {
-        pop_stats[j].max = org->get_fitness(j);
+      if (org->get_fitness(j) > this->pop_stats[j].max) {
+        this->pop_stats[j].max = org->get_fitness(j);
       }
-      if (org->get_fitness(j) < pop_stats[j].min) {
-        pop_stats[j].min = org->get_fitness(j);
+      if (org->get_fitness(j) < this->pop_stats[j].min) {
+        this->pop_stats[j].min = org->get_fitness(j);
       }
     }
   }
 }
 
-void Population_NSGAII::calculate_pop_stats() {
-  for (_uint i = 0; i < get_n_objs(); ++i) {
-    pop_stats[i].max = -std::numeric_limits<double>::infinity();
-    pop_stats[i].min = std::numeric_limits<double>::infinity();
-    pop_stats[i].mean = 0;
-    pop_stats[i].var = 0;
+template <class FitType>
+void Population_NSGAII<FitType>::calculate_pop_stats() {
+  for (_uint i = 0; i < this->get_n_objs(); ++i) {
+    this->pop_stats[i].max = -std::numeric_limits<double>::infinity();
+    this->pop_stats[i].min = std::numeric_limits<double>::infinity();
+    this->pop_stats[i].mean = 0;
+    this->pop_stats[i].var = 0;
     size_t n_orgs = 0;
     //calculate the maximum, minimum and mean fitness values
     for (_uint j = 0; j < pareto_fronts.size(); ++j) {
       for (_uint k = 0; k < pareto_fronts[j].size(); ++k) {
 	double fit_ijk = pareto_fronts[j][k]->get_fitness(i);
-	if (fit_ijk > pop_stats[i].max) {
-	  pop_stats[i].max = fit_ijk;
+	if (fit_ijk > this->pop_stats[i].max) {
+	  this->pop_stats[i].max = fit_ijk;
 	}
-	if (fit_ijk < pop_stats[i].min) {
-	  pop_stats[i].min = fit_ijk;
+	if (fit_ijk < this->pop_stats[i].min) {
+	  this->pop_stats[i].min = fit_ijk;
 	}
-	pop_stats[i].mean += fit_ijk;
+	this->pop_stats[i].mean += fit_ijk;
 	n_orgs++;
       }
     }
     if (n_orgs > 0) {
-      pop_stats[i].mean /= n_orgs;
+      this->pop_stats[i].mean /= n_orgs;
     }
     if (n_orgs > 1) {
       //calculate the variance
       for (_uint j = 0; j < pareto_fronts.size(); ++j) {
-	for (_uint k = 0; k < pareto_fronts[j].size(); ++k) {
-	  double fit_ijk = pareto_fronts[j][k]->get_fitness(i);
-	  pop_stats[i].var += (fit_ijk - pop_stats[i].mean)*(fit_ijk - pop_stats[i].mean) / (n_orgs - 1);
-	}
+        for (_uint k = 0; k < pareto_fronts[j].size(); ++k) {
+          double fit_ijk = pareto_fronts[j][k]->get_fitness(i);
+          this->pop_stats[i].var += (fit_ijk - this->pop_stats[i].mean)*(fit_ijk - this->pop_stats[i].mean)
+                                  / (n_orgs - 1);
+        }
       }
     }
   }
 }
 
-void Population_NSGAII::evaluate(Problem* prob) {
-  std::vector<std::shared_ptr<Organism>> cmb_arr = old_gen;
+template <class FitType>
+void Population_NSGAII<FitType>::evaluate(Problem<FitType>* prob) {
+  std::vector<std::shared_ptr<Organism<FitType>>> cmb_arr = this->old_gen;
   //initialize max and min fitness values
   for (_uint j = 0; j < this->get_n_objs(); ++j) {
-    pop_stats[j].max = -std::numeric_limits<double>::infinity();
-    pop_stats[j].min = std::numeric_limits<double>::infinity();
+    this->pop_stats[j].max = -std::numeric_limits<double>::infinity();
+    this->pop_stats[j].min = std::numeric_limits<double>::infinity();
   }
-  min_penalty_ind = offspring_num, max_penalty_ind = 0;
-  for (size_t i = 0; i < offspring_num; ++i) {
+  this->min_penalty_ind = this->offspring_num, this->max_penalty_ind = 0;
+  for (size_t i = 0; i < this->offspring_num; ++i) {
     //fitnesses for the old generation are leftover and already have applied penalties, ensure we don't apply these penalties again
-    old_gen[i]->apply_penalty(0);
-    if (offspring[i] != NULL) {
-      offspring[i]->apply_penalty(0);
-      offspring[i]->evaluate_fitness(prob);
-      offspring[i]->distance = 0;
+    this->old_gen[i]->apply_penalty(0);
+    if (this->offspring[i] != NULL) {
+      this->offspring[i]->apply_penalty(0);
+      this->offspring[i]->evaluate_fitness(prob);
+      this->offspring[i]->distance = 0;
       //to maintain elitism we look at both the parent and offspring generations
-      cmb_arr.push_back(offspring[i]);
-      update_fitness_ranges(offspring[i].get(), offspring_num + i);
+      cmb_arr.push_back(this->offspring[i]);
+      update_fitness_ranges(this->offspring[i].get(), this->offspring_num + i);
     }
-    old_gen[i]->evaluate_fitness(prob);
-    old_gen[i]->distance = 0;//initialize for later crowding calculations
-    update_fitness_ranges(old_gen[i].get(), i);
+    this->old_gen[i]->evaluate_fitness(prob);
+    this->old_gen[i]->distance = 0;//initialize for later crowding calculations
+    update_fitness_ranges(this->old_gen[i].get(), i);
   }
   //apply penalties to each organism in the combined array
-  for (size_t i = min_penalty_ind; i < max_penalty_ind; ++i) {
+  for (size_t i = this->min_penalty_ind; i < this->max_penalty_ind; ++i) {
     if (cmb_arr[i]->penalized()) {
       for (size_t j = 0; j < this->get_n_objs(); ++j) {
-        double n_fit = pop_stats[j].min;
-        if (pop_stats[j].max > 0) {
-          n_fit -= pop_stats[j].max*(cmb_arr[i]->get_penalty());
+        double n_fit = this->pop_stats[j].min;
+        if (this->pop_stats[j].max > 0) {
+          n_fit -= this->pop_stats[j].max*(cmb_arr[i]->get_penalty());
         } else {
-          n_fit += pop_stats[j].min*(cmb_arr[i]->get_penalty());
+          n_fit += this->pop_stats[j].min*(cmb_arr[i]->get_penalty());
         }
         cmb_arr[i]->set_fitness(n_fit);
       }
@@ -1460,11 +1383,12 @@ void Population_NSGAII::evaluate(Problem* prob) {
   make_fronts(&cmb_arr);
 }
 
-void Population_NSGAII::make_fronts(std::vector<std::shared_ptr<Organism>>* cmb_arr) {
+template <class FitType>
+void Population_NSGAII<FitType>::make_fronts(std::vector<std::shared_ptr<Organism<FitType>>>* cmb_arr) {
   pareto_fronts.clear();
-  std::vector<std::shared_ptr<Organism>> empty;
+  std::vector<std::shared_ptr<Organism<FitType>>> empty;
   pareto_fronts.push_back(empty);
-//  std::vector<std::vector<std::shared_ptr<Organism>>> dominating(cmb_arr.size(), empty);
+//  std::vector<std::vector<std::shared_ptr<Organism<FitType>>>> dominating(cmb_arr.size(), empty);
 
   for (size_t i = 0; i < cmb_arr->size(); ++i) {
     (*cmb_arr)[i]->n_dominations = 0;
@@ -1475,7 +1399,7 @@ void Population_NSGAII::make_fronts(std::vector<std::shared_ptr<Organism>>* cmb_
 	  //TODO: figure out if we need to use the dominating array for anything
 //          dominating[i].push_back( (*cmb_arr)[j] );
         } else if ( (*cmb_arr)[j].get()->dominates( (*cmb_arr)[i].get() ) ) {
-	  (*cmb_arr)[i]->n_dominations++;
+          (*cmb_arr)[i]->n_dominations++;
         }
       }
     }
@@ -1502,25 +1426,26 @@ void Population_NSGAII::make_fronts(std::vector<std::shared_ptr<Organism>>* cmb_
   calculated_flags |= FLAG_FRONTS;
 }
 
-bool Population_NSGAII::iterate(ConvergenceCriteria* conv) {
+template <class FitType>
+bool Population_NSGAII<FitType>::iterate(ConvergenceCriteria* conv) {
   if (pareto_fronts.size() == 0 && !(calculated_flags & FLAG_FRONTS)) {
-    std::vector<std::shared_ptr<Organism>> cmb_arr = old_gen;
-    cmb_arr.reserve(old_gen.size() + offspring.size());
-    for (_uint i = 0; i < offspring.size(); ++i) {
-      if (offspring[i]) {
-	cmb_arr.push_back(offspring[i]);
+    std::vector<std::shared_ptr<Organism<FitType>>> cmb_arr = this->old_gen;
+    cmb_arr.reserve(this->old_gen.size() + this->offspring.size());
+    for (_uint i = 0; i < this->offspring.size(); ++i) {
+      if (this->offspring[i]) {
+        cmb_arr.push_back(this->offspring[i]);
       }
     }
     make_fronts(&cmb_arr);
   }
   //if we exceed the threshold, start hypermutation
-  if ((double)(pareto_fronts[0].size())/offspring_num > args.get_hypermutation_threshold()) {
+  if ((double)(pareto_fronts[0].size())/(this->offspring_num) > this->args.get_hypermutation_threshold()) {
     hypermutate();
   }
   size_t i = 0;
-  std::vector<std::shared_ptr<Organism>> tmp(offspring_num, NULL);
+  std::vector<std::shared_ptr<Organism<FitType>>> tmp(this->offspring_num, NULL);
   _uint k = 0;
-  while (i < pareto_fronts.size() && (k + pareto_fronts[i].size()) <= offspring_num) {
+  while (i < pareto_fronts.size() && (k + pareto_fronts[i].size()) <= this->offspring_num) {
     for (size_t j = 0; j < pareto_fronts[i].size(); ++j) {
       tmp[k] = pareto_fronts[i][j];
       ++k;
@@ -1528,12 +1453,12 @@ bool Population_NSGAII::iterate(ConvergenceCriteria* conv) {
     ++i;
   }
   //fill in the last elements from the remaining pareto front ranked according to crowding
-  if (k < offspring_num) {
+  if (k < this->offspring_num) {
     for (size_t ii = 0; ii < pareto_fronts[i].size(); ++ii) {
       pareto_fronts[i][ii]->distance = 0;
     }
     //sort by each objective function for crowding evaluation
-    for (size_t j = 0; j < get_n_objs(); ++j) {
+    for (size_t j = 0; j < this->get_n_objs(); ++j) {
       sort_orgs(j, &(pareto_fronts[i]));
 
       //the highest and lowest values should be considered to have no crowding
@@ -1555,11 +1480,11 @@ bool Population_NSGAII::iterate(ConvergenceCriteria* conv) {
         }
       }
     }
-    sort_orgs(get_n_objs(), &(pareto_fronts[i]));
+    sort_orgs(this->get_n_objs(), &(pareto_fronts[i]));
     size_t j = 0;
     //select the least crowded individuals
     size_t p_i_size = pareto_fronts[i].size();
-    while (j < p_i_size && k < offspring_num) {
+    while (j < p_i_size && k < this->offspring_num) {
       tmp[k] = pareto_fronts[i][j];
       ++j;
       ++k;
@@ -1583,107 +1508,113 @@ bool Population_NSGAII::iterate(ConvergenceCriteria* conv) {
     }
     ++i;
   }
-  old_gen = tmp;
+  this->old_gen = tmp;
   //ensure that we aren't keeping null pointers around for safety
   pareto_fronts.clear();
 
   breed();
   if (conv) {
     calculate_pop_stats();
-    return conv->evaluate_convergence(get_n_objs(), pop_stats);
+    return conv->evaluate_convergence(this->get_n_objs(), this->pop_stats);
   } else {
     generation++;
-    return (generation > args.get_num_gens());
+    return (generation > this->args.get_num_gens());
   }
 }
 
-std::vector<std::shared_ptr<Organism>> Population_NSGAII:: get_pareto_front(_uint i) {
-      if (pareto_fronts.size() == 0) {
-	error(CODE_MISC, "The population has not yet been evaluated.");
-      }
-      if ( i >= pareto_fronts.size() ) {
-      	error(CODE_ARG_RANGE, "Attempt to access invalid index %d out of %d fronts.",
-	      i, pareto_fronts.size());
-      }
-      return pareto_fronts[i];
-    }
+template <class FitType>
+std::vector<std::shared_ptr<Organism<FitType>>> Population_NSGAII<FitType>:: get_pareto_front(_uint i) {
+  if (pareto_fronts.size() == 0) {
+error(CODE_MISC, "The population has not yet been evaluated.");
+  }
+  if ( i >= pareto_fronts.size() ) {
+    error(CODE_ARG_RANGE, "Attempt to access invalid index %d out of %d fronts.",
+    i, pareto_fronts.size());
+  }
+  return pareto_fronts[i];
+}
 
-void Population_NSGAII::breed() {
-  _uint arena_size = args.get_survivors();
-  SampleDraw sampler(offspring_num, arena_size);
-  std::uniform_int_distribution<_uint> selector(0, offspring_num - 1);
-  std::vector<Organism*> children;
+template <class FitType>
+void Population_NSGAII<FitType>::breed() {
+  _uint arena_size = this->args.get_survivors();
+  SampleDraw sampler(this->offspring_num, arena_size);
+  std::uniform_int_distribution<_uint> selector(0, this->offspring_num - 1);
+  std::vector<Organism<FitType>*> children;
 
-  for (size_t i = 0; 2*i + 1 < offspring_num; ++i) {
-    Organism *first_parent, *second_parent;
-    std::vector<_uint> t1 = sampler( args.get_generator() );
-    std::vector<_uint> t2 = sampler( args.get_generator() );
-    first_parent = old_gen[t1[0]].get();
-    second_parent = old_gen[t2[0]].get();
+  for (size_t i = 0; 2*i + 1 < this->offspring_num; ++i) {
+    Organism<FitType> *first_parent, *second_parent;
+    std::vector<_uint> t1 = sampler( this->args.get_generator() );
+    std::vector<_uint> t2 = sampler( this->args.get_generator() );
+    first_parent = this->old_gen[t1[0]].get();
+    second_parent = this->old_gen[t2[0]].get();
     for (size_t j = 1; j < t1.size(); ++j) {
-      if (old_gen[t1[j]]->get_rank() < first_parent->get_rank()) {
-        first_parent = old_gen[t1[0]].get();
+      if (this->old_gen[t1[j]]->get_rank() < first_parent->get_rank()) {
+        first_parent = this->old_gen[t1[0]].get();
       }
-      if (old_gen[t2[j]]->get_rank() < second_parent->get_rank()) {
-        second_parent = old_gen[t2[0]].get();
+      if (this->old_gen[t2[j]]->get_rank() < second_parent->get_rank()) {
+        second_parent = this->old_gen[t2[0]].get();
       }
     }
     //ensure that we don't use the same parent twice with reasonable probably
     if (first_parent == second_parent) {
-      second_parent = old_gen[selector( args.get_generator() )].get();
+      second_parent = this->old_gen[selector( this->args.get_generator() )].get();
     }
 
-    children = first_parent->breed(&args, second_parent);
-    offspring[2*i] = std::shared_ptr<Organism>(children[0]);
-    offspring[2*i + 1] = std::shared_ptr<Organism>(children[1]);
+    children = first_parent->breed(&(this->args), second_parent);
+    this->offspring[2*i] = std::shared_ptr<Organism<FitType>>(children[0]);
+    this->offspring[2*i + 1] = std::shared_ptr<Organism<FitType>>(children[1]);
   }
-  if (offspring_num % 2 == 1) {
-    offspring_num--;
-    offspring.pop_back();
+  if (this->offspring_num % 2 == 1) {
+    this->offspring_num--;
+    this->offspring.pop_back();
   }
-  old_gen.swap(offspring);
+  this->old_gen.swap(this->offspring);
   calculated_flags &= !FLAG_FRONTS;
 }
 
-Vector<String> Population_NSGAII::get_best_header() {
+template <class FitType>
+Vector<String> Population_NSGAII<FitType>::get_best_header() {
   Vector<String> ret;
   return ret;
 }
 
-Vector<String> Population_NSGAII::get_header() {
+template <class FitType>
+Vector<String> Population_NSGAII<FitType>::get_header() {
   Vector<String> ret;
   char buf[OUT_BUF_SIZE];
-  for (_uint i = 0; i < old_gen.size(); ++i) {
+  for (_uint i = 0; i < this->old_gen.size(); ++i) {
     snprintf(buf, OUT_BUF_SIZE, "rank_%d", i);
     ret.push_back( String(buf) );
 
-    for (_uint j = 0; j < map->get_num_params(); ++j) {
-      ret.push_back( String(var_labels[j]) );
+    for (_uint j = 0; j < this->map->get_num_params(); ++j) {
+      ret.push_back( String(this->var_labels[j]) );
     }
 
-    for (_uint j = 0; j < get_n_objs(); ++j) {
-      ret.push_back( String(obj_labels[j]) );
+    for (_uint j = 0; j < this->get_n_objs(); ++j) {
+      ret.push_back( String(this->obj_labels[j]) );
     }
   }
   return ret;
 }
 
-Vector<String> Population_NSGAII::get_best_data() {
+template <class FitType>
+Vector<String> Population_NSGAII<FitType>::get_best_data() {
   Vector<String> ret;
   return ret;
 }
 
-Vector<String> Population_NSGAII::get_pop_data() {
+template <class FitType>
+Vector<String> Population_NSGAII<FitType>::get_pop_data() {
   Vector<String> ret;
   bool make_front = true;
-  for (_uint i = 0; i < offspring_num; ++i) {
-    if (offspring[i].get() == NULL) {
+  for (_uint i = 0; i < this->offspring_num; ++i) {
+    if (this->offspring[i].get() == NULL) {
       make_front = false;
       break;
     }
   }
   if (make_front) {
-    make_fronts(&offspring);
+    make_fronts( &(this->offspring) );
     String tmp_str;
     char buf[OUT_BUF_SIZE];
     for (_uint n = 0; n < pareto_fronts.size(); ++n) {
@@ -1692,11 +1623,11 @@ Vector<String> Population_NSGAII::get_pop_data() {
         tmp_str = buf;
         ret.push_back(tmp_str);
 
-        for (_uint j = 0; j < map->get_num_params(); ++j) {
+        for (_uint j = 0; j < this->map->get_num_params(); ++j) {
           ret.push_back( pareto_fronts[n][i]->get_chromosome_string(j) );
         }
 
-        for (_uint j = 0; j < get_n_objs(); ++j) {
+        for (_uint j = 0; j < this->get_n_objs(); ++j) {
           snprintf(buf, OUT_BUF_SIZE - 1, "%f", pareto_fronts[n][i]->get_fitness(j));
           ret.push_back(String(buf));
         }
@@ -1706,4 +1637,10 @@ Vector<String> Population_NSGAII::get_pop_data() {
   return ret;
 }
 
+template <class FitType>
+std::shared_ptr< Organism<FitType> > Population_NSGAII<FitType>::get_organism(size_t i) {
+  return (i < this->offspring_num) ? this->old_gen[i] : this->offspring[i - this->offspring_num];
 }
+
+}
+*/
