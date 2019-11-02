@@ -91,14 +91,14 @@ public:
  */
 class NoisyFitness : public SingleFitness {
 protected:
-  double fitness = 0, variance = 0;
+  double variance = 0;
   _uint n_evaluations = 0;
 
 public:
   _uint get_n_evaluations() { return n_evaluations; }
   double get_uncertainty(_uint i = 0) { return sqrt(variance); }
   void update(double val, _uint i = 0);
-  void average_fitness(NoisyFitness* other);
+  void average_fitness(NoisyFitness& other);
 };
 
 /**
@@ -112,6 +112,7 @@ protected:
 public:
   NoisyFitnessForgetful(double p_forget_weight = 1.0);
   void update(double val, _uint i = 0);
+  void average_fitness(NoisyFitnessForgetful& other);
 };
 
 /**
@@ -383,9 +384,7 @@ public:
     if (i >= fit.get_n_objs()) {
       error(CODE_ARG_RANGE, "Attempt to modify invalid fitness index %d, size is %d.", i, fit.get_n_objs());
     } else {
-      if (std::is_base_of<MultiFitness, FitType>::value) {
-        fit.update(val, i);
-      }
+      fit.update(val, i);
     }
   }
   void set_cost(_uint i, double val) { set_fitness(i, -val); }

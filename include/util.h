@@ -8,6 +8,7 @@
 #include <math.h>
 #include <stdarg.h>
 #include <climits>
+#include <type_traits>
 
 #ifdef USE_EXCEPTIONS
 #include <stdexcept>
@@ -34,8 +35,66 @@
 
 namespace Genetics {
 
-template <typename Ts>
+template <bool condition, typename T>
+struct enable_if_c {};
+
+template <typename T>
+struct enable_if_c<true, T> { typedef T type; };
+
+/*template <typename Ts>
 using void_t = void;
+
+
+
+template <typename T>
+struct has_average_fitness {
+private:
+  struct true_val{ char x[1]; };
+  struct false_val{ char x[2]; };
+
+  template <typename U>
+  static true_val test( const U& a, decltype(&U::average_fitness) p = 0 ) {}
+  //template <typename U>
+  //static false_val test( ... ) {}
+public:
+  static const bool value = ( sizeof( test<T>(NULL) ) == sizeof( true_val ) );
+};*/
+
+// Primary template with a static assertion
+// for a meaningful error message
+// if it ever gets instantiated.
+// We could leave it undefined if we didn't care.
+
+template<typename, typename T>
+struct has_average_fitness {
+    static_assert(
+        std::integral_constant<T, false>::value,
+        "Second template parameter needs to be of function type.");
+};
+
+// specialization that does the checking
+
+template<typename C, typename Ret, typename... Args>
+struct has_average_fitness<C, Ret(Args...)> {
+private:
+    template<typename T>
+    static constexpr auto check(T*)
+    -> typename
+        std::is_same<
+            decltype( std::declval<T>().average_fitness( std::declval<Args>()... ) ),
+            Ret    // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        >::type;  // attempt to call it and see if the return type is correct
+
+    template<typename>
+    static constexpr std::false_type check(...);
+
+    typedef decltype(check<C>(0)) type;
+
+public:
+    static constexpr bool value = type::value;
+};
+
+//end template checkers
 
 typedef unsigned int _uint;
 typedef unsigned char _uchar;

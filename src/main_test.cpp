@@ -167,11 +167,11 @@ public:
     penalty_amt = p_penalty_amt;
     use_costs = p_use_costs;
   }
-  void evaluate_fitness(Genetics::Organism<Genetics::SingleFitness>* org) {
+  void evaluate_fitness(OrganismSingle* org) {
     if (use_costs) {
-      org->set_cost(0, 1);
+      org->set_cost(1);
     } else {
-      org->set_fitness(0, 1);
+      org->set_fitness(1);
     }
     
     if (apply_penalty) {
@@ -201,8 +201,8 @@ public:
   }
   void evaluate_fitness(Genetics::Organism<Genetics::MultiFitness>* org) {
     double x = org->read_real(0);
-    org->set_fitness(0, -x*x);
-    org->set_fitness(1, -(x - 2)*(x - 2));
+    org->set_cost(0, x*x);
+    org->set_cost(1, (x - 2)*(x - 2));
     org->apply_penalty(0.0);
   }
 };
@@ -604,15 +604,17 @@ TEST_CASE ("Accumulated averages and standard deviations work") {
     var += (avg2.get_val(i) - mean)*(avg2.get_val(i) - mean);
   }
   var /= (2*N_TRIALS - 1);
-  //TODO: uncomment and fix whatever needs to be fixed
-  //org1.average_fitness(&org2);
-  org_mean = org1.get_fitness();
-  org_stdev = org1.get_fitness_info().get_uncertainty();
+  
+  Genetics::NoisyFitness org1_fit_val = org1.get_fitness_info();
+  Genetics::NoisyFitness org2_fit_val = org2.get_fitness_info();
+  org1_fit_val.average_fitness(org2_fit_val);
+  org_mean = org1_fit_val.get_fitness();
+  org_stdev = org1_fit_val.get_uncertainty();
   std::cout << "Using accumulated fitnesses with " << 2*N_TRIALS << " trials produced a value of " << org_mean << " and a variance " << org_stdev << ". The accepted values were " << mean << " and " << var << " respectively. Abs_mu=" << (org_mean - mean) << ", %_mu=" << 100*(org_mean - mean)/mean << ", Abs_var=" << (org_stdev - var) << ", %_var=" << 100*(org_stdev - var)/var << std::endl;
   INFO( "accumulated fitness: " << org_mean << ", actual: " << mean << ", accumulated variance: " << org_stdev << ", actual: " << var)
   REQUIRE( APPROX(org_mean, mean) );
   INFO( "accumulated fitness: " << org_mean << ", actual: " << mean << ", accumulated variance: " << org_stdev << ", actual: " << var)
-  REQUIRE( APPROX(org_stdev, var) );
+  REQUIRE( APPROX(org_stdev, sqrt(var)) );
 }
 
 TEST_CASE ( "Organisms are correctly created and decoded", "[organisms]" ) {
@@ -760,7 +762,7 @@ TEST_CASE ("Penalties are applied properly", "[populations]") {
     REQUIRE( fit_0 < fit_i );
     REQUIRE( cost_i == 1.0 );
     REQUIRE( cost_0 > fit_i );
-  } 
+  }
 }
 
 // =============================== ARG_STORE TEST CASES ===============================

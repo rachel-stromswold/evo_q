@@ -36,23 +36,23 @@ void NoisyFitness::update(double val, _uint i) {
   }
 }
 
-void NoisyFitness::average_fitness(NoisyFitness* other) { 
+void NoisyFitness::average_fitness(NoisyFitness& other) { 
   _uint my_n = n_evaluations;
-  _uint their_n = n_evaluations; 
+  _uint their_n = other.n_evaluations; 
 
   double my_mu_1 = fitness;
-  double their_mu_1 = other->get_fitness();
+  double their_mu_1 = other.get_fitness();
   //these two functions combine the sample means and sample variances from two different measurements
-  fitness = (my_n*fitness + their_n*other->get_fitness()) / (my_n + their_n);
+  fitness = (my_n*fitness + their_n*other.get_fitness()) / (my_n + their_n);
   variance = my_n*( my_mu_1*(my_mu_1 - 2*fitness) + pow(fitness, 2) )/(my_n + their_n - 1) + 
              their_n*( their_mu_1*(their_mu_1 - 2*fitness) + pow(fitness, 2) )/(my_n + their_n - 1) +
-          ( (my_n - 1)*variance + (their_n - 1)*other->variance )/(my_n + their_n - 1);
+          ( (my_n - 1)*variance + (their_n - 1)*other.variance )/(my_n + their_n - 1);
 
-  other->variance = variance;
-  other->fitness = fitness;
+  other.variance = variance;
+  other.fitness = fitness;
 
   n_evaluations = my_n + their_n;
-  other->n_evaluations = n_evaluations;
+  other.n_evaluations = n_evaluations;
 }
 
 NoisyFitnessForgetful::NoisyFitnessForgetful(double p_forget_weight) { forget_weight = p_forget_weight; }
@@ -68,6 +68,12 @@ void NoisyFitnessForgetful::update(double val, _uint i) {
     variance = ( pow(fitness - mu, 2) + pow(forget_weight*val - mu, 2) ) / forget_weight;
     fitness = mu;
   }
+}
+void NoisyFitnessForgetful::average_fitness(NoisyFitnessForgetful& other) {
+  variance = pow((other.fitness - fitness) / 2, 2);
+  fitness = (other.fitness + fitness) / 2;
+  other.variance = variance;
+  other.fitness = fitness;
 }
 
 NoisyMultiFitness::NoisyMultiFitness(_uint pn_objs) { N_OBJS = pn_objs; }
