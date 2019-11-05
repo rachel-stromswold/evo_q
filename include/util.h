@@ -74,21 +74,20 @@ struct has_average_fitness {
 
 // specialization that does the checking
 
-template<typename C, typename Ret, typename... Args>
-struct has_average_fitness<C, Ret(Args...)> {
+template<typename T, typename Ret, typename... Args>
+struct has_average_fitness<T, Ret(Args...)> {
 private:
-    template<typename T>
-    static constexpr auto check(T*)
-    -> typename
-        std::is_same<
-            decltype( std::declval<T>().average_fitness( std::declval<Args>()... ) ),
+    template<typename U>
+    static constexpr auto check(U*) ->
+    typename std::is_same<
+            decltype( std::declval<U>().average_fitness( std::declval<Args>()... ) ),
             Ret    // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        >::type;  // attempt to call it and see if the return type is correct
+        >::type;   // attempt to call it and see if the return type is correct
 
     template<typename>
     static constexpr std::false_type check(...);
 
-    typedef decltype(check<C>(0)) type;
+    typedef decltype(check<T>(0)) type;
 
 public:
     static constexpr bool value = type::value;
@@ -111,6 +110,14 @@ size_t getlen_and_clean (char* str);
 unsigned int nChoosek( unsigned int n, unsigned int k );
 
 _uint factorial(_uint n);
+
+inline double max(double a, double b) {
+  if (a > b) {
+    return a;
+  } else {
+    return b;
+  }
+}
 
 //returns whether the array 
 template <class T>

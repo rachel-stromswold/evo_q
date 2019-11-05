@@ -22,12 +22,12 @@
 #define EPSILON 0.01
 #define APPROX(a,b) ((a-b < EPSILON && a-b >= 0) || (b-a < EPSILON && b-a >= 0))
 
-typedef Genetics::TournamentSelector<Genetics::SingleFitness> TournamentSingle;
+typedef Genetics::Organism<Genetics::NoisyFitness> OrganismNoisy;
 typedef Genetics::TournamentSelector<Genetics::NoisyFitness> TournamentNoisy;
-typedef Genetics::Population<Genetics::SingleFitness, TournamentSingle> PopulationSingle;
 typedef Genetics::Population<Genetics::NoisyFitness, TournamentNoisy> PopulationNoisy;
 typedef Genetics::Organism<Genetics::SingleFitness> OrganismSingle;
-typedef Genetics::Organism<Genetics::NoisyFitness> OrganismNoisy;
+typedef Genetics::TournamentSelector<Genetics::SingleFitness> TournamentSingle;
+typedef Genetics::Population<Genetics::SingleFitness, TournamentSingle> PopulationSingle;
 
 int str_starts(const char* test_str, const char* match_str) {
   for (size_t i = 0; match_str[i] != 0; ++i) {
@@ -52,7 +52,8 @@ private:
   static const unsigned long high_mask = ULONG_MAX << 32;
   double c_k[INV_ERR_N];
 
-  unsigned long state; void update_state() { state = (state*a + c)/* the modulo 64 is implicit */;}
+  // the modulo 64 is implicit
+  unsigned long state; void update_state() { state = (state*a + c);}
 public:
   LCG(unsigned long seed=x0) : state(seed) {
     //calculate the c_k terms in the taylor series for the inverse error function (from wikipedia)
@@ -171,7 +172,7 @@ public:
     if (use_costs) {
       org->set_cost(1);
     } else {
-      org->set_fitness(1);
+      org->update(1);
     }
     
     if (apply_penalty) {
@@ -189,7 +190,7 @@ public:
   }
   void evaluate_fitness(OrganismSingle* org) {
     double x = org->read_real(0);
-    org->set_fitness(0, -(x*x));
+    org->update(0, -(x*x));
   }
 };
 
@@ -216,7 +217,7 @@ public:
   void evaluate_fitness(OrganismSingle* org) {
     std::this_thread::sleep_for( std::chrono::milliseconds(SLEEP_TIME) );
     double x = org->read_real(0);
-    org->set_fitness(0, -(x*x));
+    org->update(0, -(x*x));
   }
 };
 
@@ -271,7 +272,7 @@ public:
   void evaluate_fitness(OrganismNoisy* org) {
     double val = gen.random_real();
     fit_vals.push_back(val);
-    org->set_fitness(val);
+    org->update(val);
   }
 
   double get_val(size_t i) { return fit_vals[i]; }
@@ -775,18 +776,16 @@ TEST_CASE ("ArgStore successfully parses a file") {
   PopulationSingle pop( NUM_BITS, 1, prob.map, args);
 
   //ga.conf must be as follows for this to work:
-  /*
-   * population_size: 50
-   * tournament_size: 2
-   * num_generations: 50
-   * num_crossovers: 2
-   * parameter_variance: 0.3
-   * parameter_mean: 0.0
-   * mutation_probability: 0.016
-   * crossover_probability: 0.9
-   * hypermutation_threshold: 1.0
-   * output_file: output.csv
-   */
+  // population_size: 50
+  // tournament_size: 2
+  // num_generations: 50
+  // num_crossovers: 2
+  // parameter_variance: 0.3
+  // parameter_mean: 0.0
+  // mutation_probability: 0.016
+  // crossover_probability: 0.9
+  // hypermutation_threshold: 1.0
+  // output_file: output.csv
   REQUIRE( pop.get_args().get_pop_size() == 50 );
   REQUIRE( pop.get_args().get_survivors() == 2 );
   REQUIRE( pop.get_args().get_num_gens() == 50 );
@@ -820,6 +819,7 @@ TEST_CASE ("Noisy population evaluations don't break") {
       std::shared_ptr<OrganismNoisy> best_org = pop.get_best_organism();
       double best_fitness = best_org->get_fitness(0);
       Genetics::FitnessStats pop_stats = pop.get_pop_stats();
+      INFO( "gen=" << gen )
       REQUIRE( pop_stats.max == best_fitness );
 
       bool best_found = false;
@@ -833,14 +833,6 @@ TEST_CASE ("Noisy population evaluations don't break") {
           best_found = true;
         }
         //check whether this organism has the same genotype as the best organism
-        /*bool is_best_geno = true;
-        REQUIRE( org_i->get_n_params()  == best_org->get_n_params() );
-
-        for (int j = 0; j < org_i->get_n_params(); ++j) {
-          if ( org_i->read_real(j) != best_org->read_real(j) ) {
-            is_best_geno = false;
-          }
-        }*/
         if ( *best_org == *org_i ) {
           std::cout << "\ti = " << i << ", value = " << org_i->read_real(0) << std::endl;
           best_in_pop = true;
@@ -849,6 +841,7 @@ TEST_CASE ("Noisy population evaluations don't break") {
         if (org_i->penalized()) {
           for (int j = 0; j < pop.get_offspring_num(); ++j) {
             if ( !(pop.get_organism(j)->penalized()) ) {
+              INFO("j=" << j)
               REQUIRE( org_i->get_fitness() < pop.get_organism(j)->get_fitness() );
             }
           }

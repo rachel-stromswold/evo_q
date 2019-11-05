@@ -52,6 +52,8 @@ public:
   Fitness() { fitness = 0; }
 
   void reset() {}
+  //For this simple implementation of a fitness tracker, set_fitness() and update() behave identically. However, other trackers, such as NoisyFitness keep track of an average fitness which may behave differently.
+  void set_fitness(double val, _uint i = 0) { fitness = val; }
   void update(double val, _uint i = 0) { fitness = val; }
   _uint get_n_objs() { return 1; }
   double get_fitness(_uint i = 0) { return fitness; }
@@ -166,6 +168,13 @@ protected:
   Chromosome genes;
   size_t n_nodes;
   FitType fit;
+  template <typename T = FitType>
+  auto set_fit_n_objs(_uint n_objs) -> typename enable_if_c<std::is_base_of<MultiFitness,T>::value, void>::type {
+    FitType tempFit(n_objs);
+    fit = tempFit;
+  }
+  template <typename T = FitType>
+  auto set_fit_n_objs(_uint n_objs) -> typename enable_if_c<!std::is_base_of<MultiFitness,T>::value, void>::type {}
   //Vector<double> fitness;
   //Vector<double> fit_vars;
   //int n_evaluations = 0;
@@ -183,6 +192,7 @@ public:
   genes(N_BITS),
   al(p_al)
   {
+    set_fit_n_objs(pn_objs);
     memset(output_stream, 0, BUF_SIZE);
     reset_fitness();
   }
@@ -192,6 +202,7 @@ public:
   genes(p_genes),
   al(p_al)
   {
+    set_fit_n_objs(pn_objs);
     reset_fitness();
   }
   Organism(int pn_bits, int pn_objs, std::shared_ptr<PhenotypeMap> p_al) :
@@ -200,6 +211,7 @@ public:
   genes(N_BITS),
   al(p_al)
   {
+    set_fit_n_objs(pn_objs);
     memset(output_stream, 0, BUF_SIZE);
     reset_fitness();
   }
@@ -209,6 +221,7 @@ public:
   genes(p_genes),
   al(p_al)
   {
+    set_fit_n_objs(pn_objs);
     reset_fitness();
   }
   /**
@@ -374,13 +387,21 @@ public:
 
   double get_fitness(_uint i = 0) { return fit.get_fitness(i); }
   double get_cost(_uint i = 0) { return fit.get_cost(i); }
-  void set_fitness(double val) { fit.update(val, 0); }
+  void set_fitness(double val) { fit.set_fitness(val, 0); }
+  void update(double val) { fit.update(val, 0); }
   void set_cost(double val) { fit.update(-val, 0); }
   void apply_penalty(double val) { penalty = val; }
 
   double get_penalty() { return penalty; }
   bool penalized() { return penalty != 0; }
   void set_fitness(_uint i, double val) {
+    if (i >= fit.get_n_objs()) {
+      error(CODE_ARG_RANGE, "Attempt to modify invalid fitness index %d, size is %d.", i, fit.get_n_objs());
+    } else {
+      fit.set_fitness(val, i);
+    }
+  }
+  void update(_uint i, double val) {
     if (i >= fit.get_n_objs()) {
       error(CODE_ARG_RANGE, "Attempt to modify invalid fitness index %d, size is %d.", i, fit.get_n_objs());
     } else {

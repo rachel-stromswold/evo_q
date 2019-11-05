@@ -229,13 +229,17 @@ protected:
    * \f[
    * F_new(O)=m - F(O) - max(|M|, |m|)*P
    * \f]
-   * By default $F(O)$ is set to zero unless the user specified function evaluate_fitness"("O")" calls O.set_fitness"()". 
+   * By default $F(O)$ is set to zero unless the user specified function evaluate_fitness"("O")" calls O.update"()". 
    * Users may or may not want to assign fitnesses to penalized organisms depending on whether such a fitness is well defined.
    */
   void apply_penalties(Problem<FitType>* prob) {
     //calculate penalties based on the range of fitnesses
-    double penalty_fact = abs(pop_stats[0].min);
-    if (abs(pop_stats[0].max) > penalty_fact) {
+    //double penalty_fact = min(abs(pop_stats[0].max - pop_stats[0].min), 1);
+    double penalty_fact = abs(pop_stats[0].max - pop_stats[0].min);
+    if (penalty_fact == 0) { penalty_fact = 1; }
+    if ( pop_stats[0].max == std::numeric_limits<double>::infinity() ) {
+      penalty_fact = abs(pop_stats[0].min);
+    } else if ( pop_stats[0].min == -std::numeric_limits<double>::infinity() ) {
       penalty_fact = abs(pop_stats[0].max);
     }
     bool penalties_applied = false;
@@ -243,7 +247,10 @@ protected:
 #pragma omp parallel for
     for (size_t i = 0; i < this->offspring_num; ++i) {
       if (old_gen[i]->penalized()) {
-        double new_fit = pop_stats[0].min - old_gen[i]->get_fitness(0);
+        double new_fit = pop_stats[0].min - max(pop_stats[0].max - old_gen[i]->get_fitness(0), 0);
+        if (old_gen[i]->get_fitness > pop_stats[0].max) {
+          new_fit = pop_stats[0].min
+        }
         new_fit -= penalty_fact*old_gen[i]->get_penalty();
         old_gen[i]->set_fitness(new_fit);
         penalties_applied = true;
@@ -252,7 +259,7 @@ protected:
 #else
     for (size_t i = 0; i < this->offspring_num; ++i) {
       if (old_gen[i]->penalized()) {
-        double new_fit = pop_stats[0].min - old_gen[i]->get_fitness(0);
+        double new_fit = pop_stats[0].min - max(pop_stats[0].max - old_gen[i]->get_fitness(0), 0);
         new_fit -= penalty_fact*old_gen[i]->get_penalty();
         old_gen[i]->set_fitness(new_fit);
         penalties_applied = true;
@@ -298,10 +305,10 @@ protected:
       for (size_t i = 0; i < offspring_num; ++i) {
         double fitness_i = old_gen[i]->get_fitness(j);
         if (fitness_i > pop_stats[j].max) {
-    //TODO: make this usefully track multiple objectives
-    if (j == 0) {
-      set_best_organism(i);
-    }
+          //TODO: make this usefully track multiple objectives
+          if (j == 0) {
+            set_best_organism(i);
+          }
         }
         if (fitness_i < pop_stats[j].min) {
     pop_stats[j].min = fitness_i;
@@ -704,7 +711,7 @@ public:
           //don't recalculate if we don't have to
           if (apply_averages) {
             for (auto it = identical_set.begin(); it != identical_set.end(); ++it) {
-              old_gen[*it]->set_fitness(0, old_gen[i]->get_fitness(0));
+              old_gen[*it]->update(0, old_gen[i]->get_fitness(0));
             }
             if (old_gen[i]->get_fitness(0) > best_organism->get_fitness(0) && !old_gen[i]->penalized()) {
                 set_best_organism(i);
@@ -779,7 +786,7 @@ public:
           //if we are in the skip set, then set fitness accordingly
           if (j < skip_set.size()) {
             uint prev_ind = skip_set[j][1];
-            old_gen[i]->set_fitness(0, old_gen[prev_ind]->get_fitness(0));
+            old_gen[i]->update(0, old_gen[prev_ind]->get_fitness(0));
             old_gen[i]->apply_penalty(old_gen[prev_ind]->get_penalty());
           } else if (old_gen[i]->get_fitness(0) > best_organism->get_fitness(0) && !old_gen[i]->penalized()) {
             //check the organism again to make sure this isn't a fluke
@@ -812,7 +819,7 @@ public:
 #pragma omp parallel for
     for (size_t i = 0; i < this->offspring_num; ++i) {
       if (old_gen[i]->penalized()) {
-        old_gen[i]->set_fitness(pop_stats[0].min - penalty_fact*old_gen[i]->get_penalty());
+        old_gen[i]->update(pop_stats[0].min - penalty_fact*old_gen[i]->get_penalty());
         penalties_applied = true;
       }
     }
@@ -826,135 +833,89 @@ public:
 #endif
   //function for population where organism FitType has a member average_fitness
   template <typename T = FitType> inline
-  typename enable_if_c< has_average_fitness<T, void(T*)>::value, void >::type
+  typename enable_if_c< has_average_fitness<T, void(T&)>::value, void >::type
   evaluate(Problem<T>* prob) {
     std::cout << "Called evaluate with " << typeid(T).name() << " which does implement average_fitness.\n";
-    if (this->N_OBJS == 1) {
-      size_t start_i = 0;
-      if ( this->best_organism && this->best_organism->valid() ) {
-        if ( this->args.noise_compensate() ) {
-          this->evaluate_best(prob, this->args.forget_weight);
-        }
-        this->pop_stats[0].max = this->best_organism->get_fitness(0);
-      } else {
-        //iterate until we find an organism that isn't penalized and set it to be the best
-        do {
-          if (start_i == this->offspring_num) {
-            error(CODE_MISC, "All organisms in population had an applied penalty.");
-          }
-          this->old_gen[start_i]->apply_penalty(0);
-          if ( this->args.noise_compensate() ) {
-            this->old_gen[start_i]->reset_fitness();
-            this->old_gen[start_i]->evaluate_fitness(prob);
-          } else {
-            this->old_gen[start_i]->reset_fitness();
-            this->old_gen[start_i]->evaluate_fitness(prob);
-          }
-          ++start_i;
-        } while( this->old_gen[start_i - 1]->penalized() );
-        this->set_best_organism(start_i - 1, this->args.noise_compensate());
-        //alltime_best_organism = best_organism->copy();
-        this->alltime_best_organism = this->best_organism;
+    size_t start_i = 0;
+    if ( this->best_organism && this->best_organism->valid() ) {
+      if ( this->args.noise_compensate() ) {
+        this->evaluate_best(prob, this->args.forget_weight);
       }
-      this->pop_stats[0].min = this->best_organism->get_fitness(0);
-     
-      for (_uint i = start_i; i < this->offspring_num; ++i) {
-        this->old_gen[i]->apply_penalty(0);
-      }
-      //calculate averages for organisms that appear twice in the population
-      if ( this->args.average_multiples() ) {
-        for (int i = start_i; i < this->offspring_num; ++i) {
-          this->old_gen[i]->evaluate_fitness(prob);
-        }
-        Vector<_uint> ignore_list;
-        for (_uint i = 0; i < this->offspring_num; ++i) {
-          if ( !contains<_uint>(ignore_list, i) ) {
-            for (_uint j = i+1; j < this->offspring_num; ++j) {
-              if ( *(this->old_gen[i]) == *(this->old_gen[j]) ){
-                this->old_gen[i]->get_fitness_info().average_fitness( this->old_gen[j]->get_fitness_info() );
-                //make sure we don't average with this site twice
-                ignore_list.push_back(j);
-              }
-            }
-            //if i is unpenalized and less than start_i, then this is the best organism so we should update the best fitness 
-            if ( (i < start_i && !(this->old_gen[i]->penalized()))
-                 || this->old_gen[i]->get_fitness(0) > this->best_organism->get_fitness(0) ) {
-              this->set_best_organism(i, this->args.noise_compensate());
-            }
-          }
-        }
-      } else {
-        for (_uint i = start_i; i < this->offspring_num; ++i) {
-          if ( this->args.verbose() ) {
-            std::cout << "Now evaluating organism " << i << std::endl;
-          }
-
-          bool found_identical = false;
-          if (this->args.skip_multiples() || this->args.perturb_multiples()) {
-            //look for duplicates of the current organism
-            for (size_t j = 0; j < i; ++j) {
-              //handle them
-              if ( this->args.skip_multiples() && *(this->old_gen[j]) == *(this->old_gen[i]) ) {
-                this->old_gen[i]->set_fitness( 0, this->old_gen[j]->get_fitness() );
-                found_identical = true;
-                break;
-              } else if ( this->args.perturb_multiples() && *(this->old_gen[j]) == *(this->old_gen[i]) ) {
-                this->old_gen[i]->mutate(&(this->args));
-                this->old_gen[i]->evaluate_fitness(prob);
-                for (_uint k = 0; k < this->args.noise_compensate(); ++k) {
-                  this->old_gen[i]->evaluate_fitness(prob);
-                }
-              }
-            }
-          } else {
-            this->old_gen[i]->evaluate_fitness(prob);
-            for (_uint j = 0; j < this->args.noise_compensate(); ++j) {
-              this->old_gen[i]->evaluate_fitness(prob);
-            }
-          }
-          // update the max and min fitnesses if we need to
-          if ( this->old_gen[i]->get_fitness(0) > this->best_organism->get_fitness(0) && !(this->old_gen[i]->penalized()) ) {
-            //check the organism again to make sure this isn't a fluke
-            for (_uint j = 0; j < this->args.noise_compensate(); ++j) {
-              this->old_gen[i]->evaluate_fitness(prob);
-              //evaluate_best(prob, args.forget_weight);
-            }
-            if (this->old_gen[i]->get_fitness(0) > this->best_organism->get_fitness(0)) {
-              this->set_best_organism(i);
-            }
-          }
-
-          if (this->old_gen[i]->get_fitness(0) < this->pop_stats[0].min) {
-            this->pop_stats[0].min = this->old_gen[i]->get_fitness(0);
-          }
-        }
-        //average the fitness of the best organism with each of its duplicates
-        _uint* best_org_set = new _uint[this->offspring_num];
-        _uint n_best_orgs = 0;
-        for (_uint j = 0; j < this->offspring_num; ++j) {
-          if ( *(this->old_gen[j]) == *(this->best_organism) && j != this->best_organism_ind ) {
-            this->best_organism->average_fitness( this->old_gen[j].get() );
-            best_org_set[n_best_orgs] = j;
-            ++n_best_orgs;
-          }
-        }
-        for (_uint j = 0; j < n_best_orgs; ++j) {
-          this->old_gen[ best_org_set[j] ]->copy_fitness_data( this->best_organism.get() );
-        }
-        //TODO: do something more intelligent?
-        this->pop_stats[0].max = this->best_organism->get_fitness();
-        delete[] best_org_set;
-      }
+      this->pop_stats[0].max = this->best_organism->get_fitness(0);
     } else {
-      //TODO: figure out what the default behavior should be
+      //iterate until we find an organism that isn't penalized and set it to be the best
+      do {
+        if (start_i == this->offspring_num) {
+          error(CODE_MISC, "All organisms in population had an applied penalty.");
+        }
+        this->old_gen[start_i]->apply_penalty(0);
+        if ( this->args.noise_compensate() ) {
+          this->old_gen[start_i]->reset_fitness();
+          this->old_gen[start_i]->evaluate_fitness(prob);
+        } else {
+          this->old_gen[start_i]->reset_fitness();
+          this->old_gen[start_i]->evaluate_fitness(prob);
+        }
+        ++start_i;
+      } while( this->old_gen[start_i - 1]->penalized() );
+      this->set_best_organism(start_i - 1, this->args.noise_compensate());
+      //alltime_best_organism = best_organism->copy();
+      this->alltime_best_organism = this->best_organism;
+    }
+    this->pop_stats[0].min = this->best_organism->get_fitness(0);
+   
+    for (_uint i = start_i; i < this->offspring_num; ++i) {
+      this->old_gen[i]->apply_penalty(0);
+      if ( args.perturb_multiples() ) {
+        for (_uint j = 0; j < i; ++j) {
+          if ( *(this->old_gen[i]) == *(this->old_gen[j]) ) {
+            this->old_gen[i]->mutate( &(this->args) );
+          }
+        }
+      }
+      this->old_gen[i]->evaluate_fitness(prob);
+      //average fitnesses with previous organisms if appropriate
+      if ( this->args.average_multiples() ) {
+        for (_uint j = 0; j < i; ++j) {
+          if ( *(this->old_gen[i]) == *(this->old_gen[i]) ) {
+            this->old_gen[i]->get_fitness_info().average_fitness( this->old_gen[j]->get_fitness_info() );
+          }
+        }
+      }
+      // update the max and min fitnesses if we need to
+      if ( this->old_gen[i]->get_fitness(0) > this->best_organism->get_fitness(0)
+      && !(this->old_gen[i]->penalized()) ) {
+        //check the organism again to make sure this isn't a fluke
+        for (_uint j = 0; j < this->args.noise_compensate(); ++j) {
+          this->old_gen[i]->evaluate_fitness(prob);
+          //evaluate_best(prob, args.forget_weight);
+        }
+        if (!(this->old_gen[i]->penalized())
+         &&  (this->old_gen[i]->get_fitness(0) > this->best_organism->get_fitness(0)
+           || this->old_gen[i]->get_fitness(0) > pop_stats[0].max)) {
+          this->set_best_organism(i);
+        }
+      }
+      if (this->old_gen[i]->get_fitness(0) < this->pop_stats[0].min) {
+        this->pop_stats[0].min = this->old_gen[i]->get_fitness(0);
+      }
     }
     this->apply_penalties(prob);
+    //TODO: make this more flexible and allow for custom comparators
+    for (_uint i = 0; i < this->offspring_num; ++i) {
+      if (!(this->old_gen[i]->penalized())
+       &&  (this->old_gen[i]->get_fitness(0) > this->best_organism->get_fitness(0)
+         || this->old_gen[i]->get_fitness(0) > pop_stats[0].max)) {
+        this->set_best_organism(i, true);
+      }
+    }
+    this->pop_stats[0].max = this->best_organism->get_fitness();
   }
   //function for population where organism FitType does not have a member average_fitness
   template <typename T = FitType> inline
-  typename enable_if_c< !has_average_fitness<T, void(T*)>::value, void >::type
+  typename enable_if_c< !has_average_fitness<T, void(T&)>::value, void >::type
   evaluate(Problem<T>* prob) {
-    std::cout << "Called evaluate with " << typeid(T).name() << " which does not implement average_fitness.\n";
+    //std::cout << "Called evaluate with " << typeid(T).name() << " which does not implement average_fitness.\n";
     size_t start_i = 0;
     if ( !(this->best_organism) || !(this->best_organism->valid()) ) {
       //iterate until we find an organism that isn't penalized and set it to be the best
@@ -986,7 +947,7 @@ public:
       for (size_t j = 0; j < i; ++j) {
         //handle them
         if ( *(this->old_gen[j]) == *(this->old_gen[i]) ) {
-          this->old_gen[i]->set_fitness( 0, this->old_gen[j]->get_fitness() );
+          this->old_gen[i]->update( 0, this->old_gen[j]->get_fitness() );
           found_identical = true;
           break;
         }
@@ -1098,7 +1059,7 @@ public:
     if (i == 0) {
       std::shared_ptr<Organism<FitType>> tmp_org = std::make_shared<Organism<FitType>>( best_organism->copy() );
       /*for (_uint i = 0; i < N_OBJS; ++i) {
-        tmp_org->set_fitness(i, pop_stats[i].max);
+        tmp_org->update(i, pop_stats[i].max);
       }*/
       return tmp_org;
     } else {
@@ -1289,12 +1250,12 @@ public:
    * \param ind	The index of the parameter to set
    * \seealso set_cost
    */
-  void set_fitness(_uint ind) { is_obj_cost[ind] = false; }
+  void update(_uint ind) { is_obj_cost[ind] = false; }
   /**
    * \brief Sets the objective referenced by index ind to use a cost (corresponding to a minimization problem).
    *
    * \param ind	The index of the parameter to set
-   * \seealso set_fitness
+   * \seealso update
    */
   void set_cost(_uint ind) { is_obj_cost[ind] = true; }
   void set_var_label(_uint ind, String val) {
@@ -1494,7 +1455,7 @@ public:
           } else {
             n_fit += this->pop_stats[j].min*(cmb_arr[i]->get_penalty());
           }
-          cmb_arr[i]->set_fitness(n_fit);
+          cmb_arr[i]->update(n_fit);
         }
       }
     }
