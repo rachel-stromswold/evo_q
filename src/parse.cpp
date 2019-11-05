@@ -191,6 +191,10 @@ void ArgStore::initialize_from_file(const char* fname) {
       flags = flags | VERBOSE;
     } else if (strcmp(token, "wait") == 0) {
       flags = flags | WAIT_CON;
+    } else {
+      String tmp_tok(token);
+      String tmp_val(val);
+      custom_parameters[tmp_tok] = tmp_val;
     }
     if (str) {
       free(str);
@@ -215,6 +219,14 @@ void ArgStore::initialize_from_file(const char* fname) {
   bern_mut = new std::bernoulli_distribution(mutate_prob);
   bern_cross = new std::bernoulli_distribution(crossover_prob);
   fclose(fp);
+}
+
+String ArgStore::get_custom_parameter(String val) {
+  auto it = custom_parameters.find(val);
+  if ( it != custom_parameters.end() ) {
+    return it->second;
+  }
+  return "";
 }
 
 void ArgStore::set_noise_compensation(_uint val) {

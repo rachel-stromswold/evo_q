@@ -2,6 +2,7 @@
 #define PARSE_H
 
 #include <fstream>
+#include <unordered_map>
 #include "util.h"
 
 #define DEF_POP_SIZE		20
@@ -68,6 +69,7 @@ class ArgStore {
     _uchar selection_type = SELECT_ROULETTE;
     int seed = 0;
     _uint noise_compensation_runs = 0;
+    std::unordered_map<String, String> custom_parameters;
 
   public: 
     double forget_weight = 0;
@@ -96,10 +98,10 @@ class ArgStore {
     void set_noise_compensation(_uint val);
 
     void set_selection_type(_uchar val);
-    bool use_roulette() { return selection_type == SELECT_ROULETTE; }
-    bool use_tournament() { return selection_type & SELECT_TOURNAMENT; }
-    bool use_roulette_pool() { return selection_type == SELECT_ROULETTE_POOL; }
-    bool tournament_replacement() { return selection_type & SELECT_USE_REPLACE; }
+    //bool use_roulette() { return selection_type == SELECT_ROULETTE; }
+    //bool use_tournament() { return selection_type & SELECT_TOURNAMENT; }
+    //bool use_roulette_pool() { return selection_type == SELECT_ROULETTE_POOL; }
+    //bool tournament_replacement() { return selection_type & SELECT_USE_REPLACE; }
     bool async() { return async_evaluation; }
     void set_async(bool val) { async_evaluation = val; }
 
@@ -127,6 +129,7 @@ class ArgStore {
     void set_wait_for_con(bool b = true)	{ flags |= WAIT_CON * ((_uint)b); }
     bool verbose()				{ return flags & VERBOSE; }
     void set_verbose(bool b = true)		{ flags |= VERBOSE * ((_uint)b); }
+    String get_custom_parameter(String val);
     String get_out_fname() 			{ return out_fname; }
 };
 

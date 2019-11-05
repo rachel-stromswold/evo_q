@@ -949,6 +949,8 @@ TEST_CASE ("Combine convergence checking and evolution", "[populations]") {
   Genetics::ArgStore args;
   args.initialize_from_file("ga.conf");
   PopulationSingle pop( NUM_BITS, 1, prob.map, args);
+  PopulationPrinter<PopulationSingle> out(&pop, "convergence_test.csv");
+  out.print_line();
 
   bool converged = false;
   int generation = 0;
@@ -956,9 +958,11 @@ TEST_CASE ("Combine convergence checking and evolution", "[populations]") {
     pop.evaluate(&prob);
     converged = pop.iterate(&plat_cut);
     generation++;
+    out.print_line();
   }
   std::cout << "Converged after " << generation << " generations\n";
   pop.evaluate(&prob);
+  out.print_line();
   double mean_x, mean_fit, var_x, var_fit;
   mean_x = 0.0;mean_fit = 0.0;var_x = 0.0;var_fit = 0.0;
   Genetics::Vector<Genetics::String> pop_dat = pop.get_pop_data();

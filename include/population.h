@@ -363,46 +363,7 @@ protected:
     free(shuffled_inds);
     offspring.swap(old_gen);
   }
-  void tournament_selection() {
-    _uint arena_size = args.get_survivors();
-    SampleDraw sampler(offspring_num, arena_size, args.tournament_replacement());
-    std::uniform_int_distribution<_uint> selector(0, offspring_num - 1);
-    std::vector<Organism<FitType>*> children;
-
-    for (size_t i = 0; 2*i + 1 < offspring_num; ++i) {
-      std::shared_ptr< Organism<FitType> > first_parent, second_parent;
-      std::vector<_uint> t1 = sampler( args.get_generator() );
-      std::vector<_uint> t2 = sampler( args.get_generator() );
-      first_parent = old_gen[t1[0]];
-      second_parent = old_gen[t2[0]];
-      for (size_t j = 1; j < t1.size(); ++j) {
-        //check whether the fitness is an improvement and use variance as a tiebreaker
-        if ( sel.compare(old_gen[t1[j]], first_parent) ) {
-          first_parent = old_gen[t1[0]];
-        }
-        if ( sel.compare(old_gen[t2[j]], second_parent) ) {
-          second_parent = old_gen[t2[0]];
-        }
-      }
-      //ensure that we don't use the same parent twice with reasonable probability
-      if (first_parent == second_parent) {
-        second_parent = old_gen[selector( args.get_generator() )];
-      }
-
-      children = first_parent->breed(&args, second_parent.get());
-      offspring[2*i] = std::shared_ptr<Organism<FitType>>(children[0]);
-      offspring[2*i + 1] = std::shared_ptr<Organism<FitType>>(children[1]);
-    }
-    if (offspring_num % 2 == 1) {
-      //offspring[offspring_num - 1] = std::make_shared<Organism<FitType>>(best_organism);
-      offspring[offspring_num - 1] = best_organism;
-    } else {
-      //offspring[0] = std::make_shared<Organism<FitType>>(best_organism);
-      offspring[0] = best_organism;
-    }
-    old_gen.swap(offspring);
-    calculated_flags &= !FLAG_FRONTS;
-  }
+  
   void calculate_distances() {
     for (_uint i = 0; i < offspring_num; ++i) {
       old_gen[i]->get_fitness_info().distance = 0;
@@ -492,9 +453,9 @@ public:
     pop_stats = (FitnessStats*)malloc(sizeof(FitnessStats)*N_OBJS);
     this->survivors_num = args.get_survivors();
     this->offspring_num = args.get_pop_size();
-    if (this->offspring_num % 2 == 0) {
+    /*if (this->offspring_num % 2 == 0) {
       this->offspring_num++;
-    }
+    }*/
     //we need to keep the old and new generation in separate arrays to avoid overwriting data
     this->offspring.insert(this->offspring.end(), this->offspring_num, std::shared_ptr<Organism<FitType>>(NULL));
     if (tmplt) {
@@ -982,14 +943,18 @@ public:
         break;
       }
     }
-    if (args.use_tournament()) {
+    sel.select(&args, old_gen, offspring);
+    offspring[offspring_num - 1] = best_organism;//elitism
+    old_gen.swap(offspring);
+    calculated_flags &= !FLAG_FRONTS;
+    /*if (args.use_tournament()) {
       tournament_selection();
     } else {
       if (cull_in_place()) {
         return true;
       }
       breed();
-    } 
+    }*/
     generation++;
     if (conv) {
     //TODO: implement a binary private member variable that tracks whether sorting needs to be performed for the sake of efficiency

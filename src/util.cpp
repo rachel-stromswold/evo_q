@@ -202,6 +202,13 @@ String read_number(String::iterator* it) {
   return ret;
 }
 
+double read_double(String str, double default_val) {
+  if (str == "") {
+    return default_val;
+  }
+  return atof( str.c_str() );
+}
+
 // ============== SampleDraw and Shuffle ===============
 
 #define N_PRIMES 25

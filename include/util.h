@@ -479,6 +479,7 @@ typedef std::string String;
 #endif
 void error (int fatal, String msg, ...);
 String read_number(String::iterator* it);
+double read_double(String str, double default_val=2);
 
 template<typename T>
 bool contains(Vector<T>& vec, T target) {
