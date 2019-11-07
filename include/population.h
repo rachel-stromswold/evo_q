@@ -952,9 +952,9 @@ public:
     calculated_flags &= !FLAG_FRONTS;
     generation++;
     if (conv) {
-      return conv->evaluate_convergence(1, pop_stats);
+      return conv->evaluate_convergence(old_gen[0]->get_fitness_info().get_n_objs(), pop_stats);
     } else {
-      return (generation < args.get_num_gens());
+      return (generation > args.get_num_gens());
     }
     calculated_flags = FLAG_NONE_SET;
   }

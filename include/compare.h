@@ -298,7 +298,7 @@ public:
       n_objs = old_gen[0]->get_fitness_info().get_n_objs();
       pop_stats.resize(n_objs);
     }
-    if (pareto_fronts.size() == 0 && !(calculated_flags & FLAG_FRONTS)) {
+    if (pareto_fronts.size() == 0) {
       std::vector<OrgPtr> cmb_arr = old_gen;
       cmb_arr.reserve(old_gen.size() + offspring.size());
       for (_uint i = 0; i < offspring.size(); ++i) {
