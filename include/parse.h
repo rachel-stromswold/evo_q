@@ -107,8 +107,8 @@ class ArgStore {
 
     size_t get_pop_size()			{ return pop_size; }
     void set_pop_size(size_t n)			{ pop_size = n; }
-    size_t get_survivors()			{ return breed_pop_size; }
-    void set_survivors(size_t n)		{ breed_pop_size = n; }
+    //size_t get_survivors()			{ return breed_pop_size; }
+    //void set_survivors(size_t n)		{ breed_pop_size = n; }
     size_t get_num_gens() 			{ return num_gens; }
     void set_num_gens(size_t n) 		{ num_gens = n; }
     int get_num_crossovers() 			{ return num_crossovers; }
@@ -130,6 +130,8 @@ class ArgStore {
     bool verbose()				{ return flags & VERBOSE; }
     void set_verbose(bool b = true)		{ flags |= VERBOSE * ((_uint)b); }
     String get_custom_parameter(String val);
+    int read_custom_int(String val, int default_val);
+    double read_custom_double(String val, double default_val);
     String get_out_fname() 			{ return out_fname; }
 };
 

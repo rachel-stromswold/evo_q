@@ -165,17 +165,17 @@ void Chromosome::exchange(Chromosome* other, size_t k) {
   }
 }
 
-void Chromosome::exchange_uniform(ArgStore* args, Chromosome* other) {
+void Chromosome::exchange_uniform(ArgStore& args, Chromosome* other) {
   if (N_BITS != other->get_n_bits()) {
     error(CODE_MISC, "Cannot exchange chromosomes with a differing number of bits, %d and %d.", get_n_bits(), other->get_n_bits());
   }
   std::binomial_distribution<> n_flipped( bin_size, 0.5);
   for (size_t i = 0; i < N; i++) {
-    unsigned char num_ones = n_flipped( args->get_generator() );
+    unsigned char num_ones = n_flipped( args.get_generator() );
 
     //pick a random bitmask with num_ones bits flipped
     std::uniform_int_distribution<unsigned long> dist( 0, nChoosek(bin_size, num_ones) - 1 );
-    unsigned long x = dist( args->get_generator() );
+    unsigned long x = dist( args.get_generator() );
     unsigned long flip_mask = getBitStream( bin_size, num_ones, x );
 
     unsigned long myg = genes[i];
@@ -210,11 +210,11 @@ size_t Chromosome::getBitStream (size_t n, size_t k, size_t x) {
   }
 }
 
-bool Chromosome::real_space_mutate(ArgStore* args) {
+bool Chromosome::real_space_mutate(ArgStore& args) {
   if (use_real & REAL_ACTIVE) {
-    std::normal_distribution<double> norm(0, args->get_init_coup_var());
+    std::normal_distribution<double> norm(0, args.get_init_coup_var());
     for (size_t i = 0; i < real_vals_size; ++i) {
-      real_vals[i] += norm( args->get_generator() );
+      real_vals[i] += norm( args.get_generator() );
       //ensure that the value is between 0 and 1
       if (real_vals[i] > 1.0) {
 	real_vals[i] = 1.0;
@@ -228,25 +228,25 @@ bool Chromosome::real_space_mutate(ArgStore* args) {
   return true;
 }
 
-void Chromosome::mutate(ArgStore* args) {
+void Chromosome::mutate(ArgStore& args) {
   bool perform_bit_mutation = true;
   if (use_real & REAL_ENABLED) {
     perform_bit_mutation = real_space_mutate(args);
   }
   if (perform_bit_mutation) {
     for (size_t i = 0; i < N; i++) {
-      unsigned char num_ones = args->sample_binomial( bin_size );
+      unsigned char num_ones = args.sample_binomial( bin_size );
 
       //pick a random bitmask with num_ones bits flipped
       std::uniform_int_distribution<unsigned long> dist( 0, nChoosek(bin_size, num_ones) - 1);
-      unsigned long x = dist(args->get_generator());
+      unsigned long x = dist(args.get_generator());
 
       genes[i] = genes[i] ^ getBitStream( bin_size, num_ones, x);
     }
   }
 }
 
-void Chromosome::slow_mutate(ArgStore* args) {
+void Chromosome::slow_mutate(ArgStore& args) {
   bool perform_bit_mutation = true;
   if (use_real & REAL_ENABLED) {
     perform_bit_mutation = real_space_mutate(args);
@@ -254,38 +254,38 @@ void Chromosome::slow_mutate(ArgStore* args) {
   if (perform_bit_mutation) {
     for (unsigned i = 0; i < N - 1; ++i) {
       for (unsigned j = 0; j < bin_size; ++j) {
-	if ( args->random_mutation() ) {
+	if ( args.random_mutation() ) {
 	  genes[i] = genes[i] ^ (0x01 << j);
 	}
       }
     }
     //we have to do something special for the last long because it isn't filled
     for (unsigned j = 0; j < N_BITS%(bin_size); ++j) {
-      if ( args->random_mutation() ) {
+      if ( args.random_mutation() ) {
 	genes[N-1] = genes[N-1] ^ (0x01 << j);
       }
     }
   }
 }
 
-void Chromosome::randomize(PhenotypeMap* al, ArgStore* args) {
+void Chromosome::randomize(PhenotypeMap* al, ArgStore& args) {
   std::uniform_int_distribution<unsigned long> dist(0, ULONG_MAX);
   for (size_t i = 0; i < N; i++) {
-    genes[i] = dist(args->get_generator());
+    genes[i] = dist(args.get_generator());
   }
   /*std::uniform_real_distribution<double> dist(0, 1.0);
 
   for (size_t i = 0; i < al->get_num_params(); i++) {
     Type t = al->get_type(i);
-    double val = dist(args->get_generator());
+    double val = dist(args.get_generator());
     if (t == t_bitstream || t == t_uint || t == t_int) {
       _uint l = al->get_block_length(i);
       std::uniform_int_distribution<unsigned int> int_dist(0, 1 << l);
-      set_to_ulong( al, i, int_dist( args->get_generator() ) );
+      set_to_ulong( al, i, int_dist( args.get_generator() ) );
     } else if (t == t_real) {
       double max = al->get_range_max(i);
       double min = al->get_range_min(i);
-      double val = dist( args->get_generator() )*(max - min) + min;
+      double val = dist( args.get_generator() )*(max - min) + min;
       set_to_num(al, i, val);
     }
   }*/

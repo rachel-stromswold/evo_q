@@ -497,6 +497,7 @@ String get_error();
 #endif
 
 char* clean_c_str(char* src);
+int divideup(int numerator, int denominator);
 
 //draw k elements from the integer range from 0 to n useful for sampling from arrays
 class SampleDraw {

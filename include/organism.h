@@ -48,7 +48,6 @@ protected:
   double fitness;
 public:
   double distance = 0;
-
   Fitness() { fitness = 0; }
 
   void reset() {}
@@ -156,6 +155,7 @@ template <class FitType>
 class Organism {
   static_assert( std::is_base_of<Fitness,FitType>::value, "FitType must be derived from SingleFitness or MultiFitness" );
 private:
+  typedef Organism<FitType> MyType;
   _uint N_BITS;
   _uint N_OBJS;
 
@@ -232,7 +232,7 @@ public:
   //Organism(Organism&& obj);
   //~Organism();
   Organism copy() {
-    Organism<FitType> ret(N_BITS, N_OBJS, genes, al);
+    MyType ret(N_BITS, N_OBJS, genes, al);
     ret.fit = fit;
     
     return ret;
@@ -286,42 +286,39 @@ public:
   }
   bool valid() { return (al != NULL && N_OBJS > 0 && N_BITS > 0); }
 
-  std::vector<Organism*> breed(ArgStore* args, Organism* o) {
+  typedef std::shared_ptr< MyType > OrgPtr;
+  std::pair<OrgPtr, OrgPtr> breed(ArgStore& args, OrgPtr o) {
     if (get_n_bits() != o->get_n_bits()) {
       error(CODE_MISC, "Cannot breed organsims with a differing number of bits, %d and %d.", get_n_bits(), o->get_n_bits());
     }
-    std::vector<Organism*> children(2);
+    std::pair<OrgPtr, OrgPtr> children;
 
     memset(output_stream, 0, BUF_SIZE);
     Chromosome gene0(genes);
     Chromosome gene1(o->genes);
 
-    if (args->random_crossover()) {
-      if (args->get_num_crossovers() <= 0) {
+    if (args.random_crossover()) {
+      if (args.get_num_crossovers() <= 0) {
         gene0.exchange_uniform(args, &gene1);
       } else {
         std::uniform_int_distribution<size_t> rint( 0, gene0.get_n_bits() - 1 );
-        for (int n = 0; n < args->get_num_crossovers(); ++n) {
-          size_t exch_bit = rint( args->get_generator() );
+        for (int n = 0; n < args.get_num_crossovers(); ++n) {
+          size_t exch_bit = rint( args.get_generator() );
           gene0.exchange(&gene1, exch_bit);
         }
       }
-      children[0] = new Organism<FitType>(N_BITS, N_OBJS, gene0, al);
-      children[1] = new Organism<FitType>(N_BITS, N_OBJS, gene1, al);
+      children.first  = std::make_shared<MyType>(N_BITS, N_OBJS, gene0, al);
+      children.second = std::make_shared<MyType>(N_BITS, N_OBJS, gene1, al);
     } else {
-      children[0] = new Organism<FitType>(*this);
-      children[1] = new Organism<FitType>(*o);
+      children.first  = std::make_shared<MyType>(*this);
+      children.second = std::make_shared<MyType>(*o);
     }
-#ifdef MUT_SLOW
-    children[0]->genes.slow_mutate(args);
-    children[1]->genes.slow_mutate(args);
-#else
-    children[0]->genes.mutate(args);
-    children[1]->genes.mutate(args);
-#endif
+    children.first->mutate(args);
+    children.second->mutate(args);
+
     return children;
   }
-  void mutate(ArgStore* args) {
+  void mutate(ArgStore& args) {
 #ifdef MUT_SLOW
     genes.slow_mutate(args);
 #else
@@ -332,13 +329,13 @@ public:
     fit.reset();
     misc_data = "";
   }
-  void randomize(ArgStore* args) { genes.randomize(al.get(), args); }
-  void randomize(ArgStore* args, Organism* orgtmp) {
+  void randomize(ArgStore& args) { genes.randomize(al.get(), args); }
+  void randomize(ArgStore& args, Organism* orgtmp) {
     //make most of the genes similar, with one gene more wildly varied
     std::uniform_int_distribution<size_t> chrom(0, al->get_num_params() - 1);
-    size_t high_ind = chrom( args->get_generator() );
+    size_t high_ind = chrom( args.get_generator() );
 
-    double var = args->get_init_coup_var();
+    double var = args.get_init_coup_var();
     double lvar = var/al->get_num_params();
     genes.reset();
     for (size_t i = 0; i < al->get_num_params(); i++) {
@@ -349,7 +346,7 @@ public:
           mean = orgtmp->read_real(i);
           double range = al->get_range_max(i) - al->get_range_min(i);
           std::normal_distribution<double> norm(mean, lvar*range);
-          double x = norm( args->get_generator() );
+          double x = norm( args.get_generator() );
           genes.set_to_num(al.get(), i, x);
         } else {
           _uint max_possible = 1 << al->get_block_length(i);
@@ -358,7 +355,7 @@ public:
           double p = 1 - lvar*max_possible/(2*mean);
           int n = (int)mean/p;
           std::binomial_distribution<int> dist(n, p);
-          int x = dist( args->get_generator() )*2 + genes.gene_to_int(al.get(), i);
+          int x = dist( args.get_generator() )*2 + genes.gene_to_int(al.get(), i);
           genes.set_to_int(al.get(), i, x);
         }
       }
@@ -368,13 +365,13 @@ public:
       double mean = orgtmp->read_real(high_ind);
       double range = al->get_range_max(high_ind) - al->get_range_min(high_ind);
       std::normal_distribution<double> norm(mean, var*range);
-      double x = norm( args->get_generator() );
+      double x = norm( args.get_generator() );
       genes.set_to_num(al.get(), high_ind, x);
     } else {
       int tmpx = orgtmp->read_int(high_ind);
       _uint max_possible = 1 << al->get_block_length(high_ind);
       std::normal_distribution<double> dist((double)tmpx, var*max_possible);
-      int x = (int)dist( args->get_generator() );
+      int x = (int)dist( args.get_generator() );
       genes.set_to_int(al.get(), high_ind, x);
       std::cout << " max_possible = " << max_possible << " x = " << x << " orgtmp_x = " << tmpx << "\n";
     }

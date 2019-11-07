@@ -39,44 +39,44 @@ void error (int code_class, String msg, ...) {
       i++;
       if (message[i] == 's') {
         char* tmp = va_arg(vl, char*);
-	iss << tmp;
+        iss << tmp;
         //fprintf(stderr, "%s", tmp);
       } else if (message[i] == 'd' || message[i] == 'i') {
         int tmp = va_arg(vl, int);
-	iss << tmp;
+        iss << tmp;
         //fprintf(stderr, "%d", tmp);
       } else if (message[i] == 'o') {
         unsigned int tmp = va_arg(vl, unsigned int);
-	iss << "0o";
+        iss << "0o";
         //fprintf(stderr, "0o");
         for (int k = sizeof(unsigned int)*8/3; k >= 0; --k) {
-	  iss << ( (tmp >> (k*3)) & 7 );
+          iss << ( (tmp >> (k*3)) & 7 );
           //fprintf(stderr, "%d", (tmp >> (k*3)) & 7);
         }
       } else if (message[i] == 'u') {
         unsigned int tmp = va_arg(vl, unsigned int);
-	iss << tmp;
+        iss << tmp;
         //fprintf(stderr, "%d", tmp);
       } else if (message[i] == 'x' || message[i] == 'X') {
         unsigned int tmp = va_arg(vl, unsigned int);
-	iss << "0x";
+        iss << "0x";
         //fprintf(stderr, "0x");
         for (int k = sizeof(unsigned int)*2 - 1; k >= 0; --k) {
-	  iss << ( (tmp >> (k*4)) & 15 );
+          iss << ( (tmp >> (k*4)) & 15 );
           //fprintf(stderr, "%d", (tmp >> (k*4)) & 15);
         }
       } else if (message[i] == 'f' || message[i] == 'F'
               || message[i] == 'g' || message[i] == 'G'
               || message[i] == 'e' || message[i] == 'E') {
         double tmp = va_arg(vl, double);
-	iss << tmp;
+        iss << tmp;
         //fprintf(stderr, "%g", tmp);
       } else if (message[i] == 'a' || message[i] == 'A') {
         double tmp = va_arg(vl, double);
-	iss << tmp;
+        iss << tmp;
         //fprintf(stderr, "%a", tmp);
       } else if (message[i] == '%') {
-	iss << '%';
+        iss << '%';
         //fprintf(stderr, "%%");
       }
       i++;
@@ -202,11 +202,8 @@ String read_number(String::iterator* it) {
   return ret;
 }
 
-double read_double(String str, double default_val) {
-  if (str == "") {
-    return default_val;
-  }
-  return atof( str.c_str() );
+int divideup(int numerator, int denominator) { 
+  return ( numerator + (denominator - 1) )/denominator; 
 }
 
 // ============== SampleDraw and Shuffle ===============

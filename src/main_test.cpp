@@ -777,7 +777,7 @@ TEST_CASE ("ArgStore successfully parses a file") {
 
   //ga.conf must be as follows for this to work:
   // population_size: 50
-  // tournament_size: 2
+  // arena_size: 2
   // num_generations: 50
   // num_crossovers: 2
   // parameter_variance: 0.3
@@ -787,7 +787,7 @@ TEST_CASE ("ArgStore successfully parses a file") {
   // hypermutation_threshold: 1.0
   // output_file: output.csv
   REQUIRE( pop.get_args().get_pop_size() == 50 );
-  REQUIRE( pop.get_args().get_survivors() == 2 );
+  REQUIRE( pop.get_args().read_custom_double("arena_size", 2) );
   REQUIRE( pop.get_args().get_num_gens() == 50 );
   REQUIRE( pop.get_args().get_num_crossovers() == 2 );
   REQUIRE( pop.get_args().get_init_coup_var() == 0.3 );
@@ -881,12 +881,14 @@ TEST_CASE ("Simple evolution of a single objective converges to roughly appropri
   REQUIRE( APPROX(pop.get_best_organism()->get_fitness(0), 0) );
 }
 
+typedef Genetics::Population<Genetics::MultiFitness, Genetics::NSGAII_TournamentSelector<Genetics::MultiFitness>> Population_NSGAII;
 TEST_CASE ("Simple evolution of a multi objective converges to roughly appropriate result", "[populations]") {
   TestProblemMulti prob;
   Genetics::ArgStore args;
   args.initialize_from_file("ga.conf");
-  Genetics::Population_NSGAII<Genetics::MultiFitness, Genetics::TournamentSelector<Genetics::MultiFitness>> pop( NUM_BITS, NUM_OBJS, prob.map, args);
-  PopulationPrinter<Genetics::Population_NSGAII<Genetics::MultiFitness, Genetics::TournamentSelector<Genetics::MultiFitness>>> out(&pop, "multi_objective.csv");
+
+  Population_NSGAII pop( NUM_BITS, NUM_OBJS, prob.map, args);
+  PopulationPrinter<Population_NSGAII> out(&pop, "multi_objective.csv");
   out.print_line(false);
   bool converged = false;
   while (!converged) {
