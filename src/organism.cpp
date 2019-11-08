@@ -9,6 +9,9 @@ void MultiFitness::update(double val, _uint i) {
     fitness[i] = val;
   }
 }
+void MultiFitness::set_fitness(double val, _uint i) {
+  update(val, i);
+}
 double MultiFitness::get_fitness(_uint i) {
   if (i < N_OBJS) {
     return fitness[i];
@@ -77,7 +80,7 @@ void NoisyFitnessForgetful::average_fitness(NoisyFitnessForgetful& other) {
 }
 
 NoisyMultiFitness::NoisyMultiFitness(_uint pn_objs) { N_OBJS = pn_objs; }
-double NoisyMultiFitness::get_fitness(_uint i) { return fitness[i]; }
+//double NoisyMultiFitness::get_fitness(_uint i) { return fitness[i]; }
 void NoisyMultiFitness::update(double val, _uint i) { 
   if (n_evaluations == 0) {
     variances[i] = 0.0;

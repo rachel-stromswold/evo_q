@@ -31,13 +31,13 @@ public:
     }
     int ret = 0;
     for (_uint i = 0; i < a_info.get_n_objs(); ++i) {
-      if (a->get_fitness() < b->get_fitness()) {
+      if (a->get_fitness(i) < b->get_fitness(i)) {
         --ret;
-      } else if (a->get_fitness() > b->get_fitness()) {
+      } else if (a->get_fitness(i) > b->get_fitness(i)) {
         ++ret;
       }
     }
-    return true;
+    return ret;
   }
 };
 
@@ -79,6 +79,7 @@ protected:
     return i;
   }
 public:
+  static const bool use_offspring=false;
   void sort_orgs(unsigned int fit_ind, std::vector<std::shared_ptr< Organism<FitType> >>& work_arr, int s = DEF_SORT_PARAM, int e = DEF_SORT_PARAM) {
     if (s == DEF_SORT_PARAM || e == DEF_SORT_PARAM) {
       sort_orgs(fit_ind, work_arr, 0, work_arr.size() - 1);
@@ -209,6 +210,7 @@ class NSGAII_TournamentSelector : public Selector<FitType, NSGAII_Comparator<Fit
 public:
   typedef std::shared_ptr< Organism<FitType> > OrgPtr;
   typedef NSGAII_Comparator<FitType> Comparator;
+  static const bool use_offspring=true;
 private:  
   _uint n_objs = 1;
   Vector<Vector< std::shared_ptr<Organism<FitType>> >> pareto_fronts;
@@ -298,7 +300,7 @@ public:
       n_objs = old_gen[0]->get_fitness_info().get_n_objs();
       pop_stats.resize(n_objs);
     }
-    if (pareto_fronts.size() == 0) {
+    //if (pareto_fronts.size() == 0) {
       std::vector<OrgPtr> cmb_arr = old_gen;
       cmb_arr.reserve(old_gen.size() + offspring.size());
       for (_uint i = 0; i < offspring.size(); ++i) {
@@ -307,7 +309,7 @@ public:
         }
       }
       make_fronts(cmb_arr);
-    }
+    //}
     size_t offspring_num = old_gen.size();
     size_t i = 0;
     std::vector<OrgPtr> tmp(offspring_num, NULL);
@@ -322,7 +324,7 @@ public:
     //fill in the last elements from the remaining pareto front ranked according to crowding
     if (k < offspring_num) {
       for (size_t ii = 0; ii < pareto_fronts[i].size(); ++ii) {
-        std::cout << "i=" << i << ", ii=" << ii << ", k=" << k << std::endl;
+        //std::cout << "i=" << i << ", ii=" << ii << ", k=" << k << std::endl;
         pareto_fronts[i][ii]->get_fitness_info().distance = 0;
       }
       //sort by each objective function for crowding evaluation
@@ -358,16 +360,16 @@ public:
         ++k;
       }
       //we don't need the rest of the elements so they should be deleted
-      while (j < pareto_fronts[i].size()) {
+      /*while (j < pareto_fronts[i].size()) {
         if (pareto_fronts[i][j] != NULL) {
           pareto_fronts[i][j].reset();
           pareto_fronts[i][j] = NULL;
         }
         ++j;
-      }
+      }*/
       ++i;
     }
-    while (i < pareto_fronts.size()) {
+    /*while (i < pareto_fronts.size()) {
       for (size_t j = 0; j < pareto_fronts[i].size(); ++j) {
         if (pareto_fronts[i][j] != NULL) {
           pareto_fronts[i][j].reset();
@@ -375,8 +377,8 @@ public:
         }
       }
       ++i;
-    }
-    old_gen = tmp;
+    }*/
+    old_gen.swap(tmp);
     //ensure that we aren't keeping null pointers around for safety
     pareto_fronts.clear();
 

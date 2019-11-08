@@ -400,21 +400,59 @@ protected:
   //    }
     }
   }
-  void set_best_organism(_uint i, bool force=false) {
-    pop_stats[0].max = old_gen[i]->get_fitness(0);
-    /*Organism<FitType> tmp_org = old_gen[i]->copy();
-    if (force || tmp_org > best_organism) {
-      best_organism = tmp_org;
-      for (_uint j = 0; j < N_OBJS; ++j) {
-        best_organism->set_fitness( j, old_gen[i]->get_fitness(j) );
+  void set_best_organism(_uint i, bool force=false, _uint j=0) {
+    if (j < N_OBJS) {
+      pop_stats[j].max = old_gen[i]->get_fitness(j);
+      /*Organism<FitType> tmp_org = old_gen[i]->copy();
+      if (force || tmp_org > best_organism) {
+        best_organism = tmp_org;
+        for (_uint j = 0; j < N_OBJS; ++j) {
+          best_organism->set_fitness( j, old_gen[i]->get_fitness(j) );
+        }
+        best_organism_ind = i;
+      }*/
+      if ( force || !best_organism || Comp::compare(old_gen[i], best_organism) > 0 ) {
+        best_organism = old_gen[i];
+        best_organism_ind = i;
       }
-      best_organism_ind = i;
-    }*/
-    if ( force || !best_organism || Comp::compare(old_gen[i], best_organism) > 0 ) {
-      best_organism = old_gen[i];
-      best_organism_ind = i;
+      calculated_flags |= VALID_BEST;
     }
-    calculated_flags |= VALID_BEST;
+  }
+  size_t find_first_unpenalized(Problem<FitType>* prob) {
+    size_t start_i = 0;
+    if ( best_organism && this->best_organism->valid() ) {
+      if ( args.noise_compensate() ) {
+        evaluate_best(prob, args.forget_weight);
+      }
+      pop_stats[0].max = best_organism->get_fitness(0);
+    } else {
+      do {
+        if (start_i == offspring_num) {
+          error(CODE_MISC, "All organisms in population had an applied penalty.");
+        }
+        old_gen[start_i]->apply_penalty(0);
+        old_gen[start_i]->reset_fitness();
+        old_gen[start_i]->evaluate_fitness(prob);
+        ++start_i;
+      } while( this->old_gen[start_i - 1]->penalized() );
+      set_best_organism(start_i - 1, args.noise_compensate());
+      //alltime_best_organism = best_organism->copy();
+      alltime_best_organism = best_organism;
+      --start_i;
+    }
+    pop_stats[0].min = best_organism->get_fitness(0);
+    return start_i;
+  }
+  void handle_multiples() {
+    if ( args.perturb_multiples() ) {
+      for (_uint i = 0; i < offspring_num; ++i) {
+        for (_uint j = 0; j < i; ++j) {
+          if ( *(old_gen[i]) == *(old_gen[j]) ) {
+            old_gen[i]->mutate(args);
+          }
+        }
+      }
+    }
   }
 
 public:
@@ -802,44 +840,14 @@ public:
   typename enable_if_c< has_average_fitness<T, void(T&)>::value, void >::type
   evaluate(Problem<T>* prob) {
     std::cout << "Called evaluate with " << typeid(T).name() << " which does implement average_fitness.\n";
-    size_t start_i = 0;
-    if ( this->best_organism && this->best_organism->valid() ) {
-      if ( this->args.noise_compensate() ) {
-        this->evaluate_best(prob, this->args.forget_weight);
-      }
-      this->pop_stats[0].max = this->best_organism->get_fitness(0);
-    } else {
-      //iterate until we find an organism that isn't penalized and set it to be the best
-      do {
-        if (start_i == this->offspring_num) {
-          error(CODE_MISC, "All organisms in population had an applied penalty.");
-        }
-        this->old_gen[start_i]->apply_penalty(0);
-        if ( this->args.noise_compensate() ) {
-          this->old_gen[start_i]->reset_fitness();
-          this->old_gen[start_i]->evaluate_fitness(prob);
-        } else {
-          this->old_gen[start_i]->reset_fitness();
-          this->old_gen[start_i]->evaluate_fitness(prob);
-        }
-        ++start_i;
-      } while( this->old_gen[start_i - 1]->penalized() );
-      this->set_best_organism(start_i - 1, this->args.noise_compensate());
-      //alltime_best_organism = best_organism->copy();
-      this->alltime_best_organism = this->best_organism;
-    }
-    this->pop_stats[0].min = this->best_organism->get_fitness(0);
-   
+    size_t start_i = find_first_unpenalized(prob);
+    handle_multiples();
+
     for (_uint i = start_i; i < this->offspring_num; ++i) {
-      this->old_gen[i]->apply_penalty(0);
-      if ( args.perturb_multiples() ) {
-        for (_uint j = 0; j < i; ++j) {
-          if ( *(this->old_gen[i]) == *(this->old_gen[j]) ) {
-            this->old_gen[i]->mutate(this->args);
-          }
-        }
-      }
       this->old_gen[i]->evaluate_fitness(prob);
+      if (SelectType::use_offspring) {
+        if (i < offspring.size() && offspring[i]) { offspring[i]->evaluate_fitness(prob); }
+      }
       //average fitnesses with previous organisms if appropriate
       if ( this->args.average_multiples() ) {
         for (_uint j = 0; j < i; ++j) {
@@ -849,29 +857,27 @@ public:
         }
       }
       // update the max and min fitnesses if we need to
-      if ( this->old_gen[i]->get_fitness(0) > this->best_organism->get_fitness(0)
-      && !(this->old_gen[i]->penalized()) ) {
-        //check the organism again to make sure this isn't a fluke
-        for (_uint j = 0; j < this->args.noise_compensate(); ++j) {
-          this->old_gen[i]->evaluate_fitness(prob);
-          //evaluate_best(prob, args.forget_weight);
+      for (_uint j = 0; j < N_OBJS; ++j) {
+        if ( this->old_gen[i]->get_fitness(j) > this->best_organism->get_fitness(j)
+        && !(this->old_gen[i]->penalized()) ) {
+          //check the organism again to make sure this isn't a fluke
+          for (_uint j = 0; j < this->args.noise_compensate(); ++j) {
+            this->old_gen[i]->evaluate_fitness(prob);
+          }
+          if (!(this->old_gen[i]->penalized())
+           &&  (this->old_gen[i]->get_fitness(j) > this->best_organism->get_fitness(j)
+             || this->old_gen[i]->get_fitness(j) > pop_stats[j].max)) {
+            this->set_best_organism(i);
+          }
         }
-        if (!(this->old_gen[i]->penalized())
-         &&  (this->old_gen[i]->get_fitness(0) > this->best_organism->get_fitness(0)
-           || this->old_gen[i]->get_fitness(0) > pop_stats[0].max)) {
-          this->set_best_organism(i);
+        if (this->old_gen[i]->get_fitness(j) < this->pop_stats[j].min) {
+          this->pop_stats[j].min = this->old_gen[i]->get_fitness(j);
         }
-      }
-      if (this->old_gen[i]->get_fitness(0) < this->pop_stats[0].min) {
-        this->pop_stats[0].min = this->old_gen[i]->get_fitness(0);
       }
     }
     this->apply_penalties(prob);
-    //TODO: make this more flexible and allow for custom comparators
     for (_uint i = 0; i < this->offspring_num; ++i) {
-      if (!(this->old_gen[i]->penalized())
-       &&  (this->old_gen[i]->get_fitness(0) > this->best_organism->get_fitness(0)
-         || this->old_gen[i]->get_fitness(0) > pop_stats[0].max)) {
+      if (!(this->old_gen[i]->penalized()) &&  this->old_gen[i]->get_fitness(0) > this->best_organism->get_fitness(0)) {
         this->set_best_organism(i, true);
       }
     }
@@ -881,57 +887,38 @@ public:
   template <typename T = FitType> inline
   typename enable_if_c< !has_average_fitness<T, void(T&)>::value, void >::type
   evaluate(Problem<T>* prob) {
-    //std::cout << "Called evaluate with " << typeid(T).name() << " which does not implement average_fitness.\n";
-    size_t start_i = 0;
-    if ( !(this->best_organism) || !(this->best_organism->valid()) ) {
-      //iterate until we find an organism that isn't penalized and set it to be the best
-      do {
-        if (start_i == this->offspring_num) {
-          error(CODE_MISC, "All organisms in population had an applied penalty.");
-        }
-        this->old_gen[start_i]->apply_penalty(0);
-        this->old_gen[start_i]->evaluate_fitness(prob);
-        ++start_i;
-      } while( this->old_gen[start_i - 1]->penalized() );
-      this->set_best_organism(start_i - 1, true);
-      //alltime_best_organism = best_organism->copy();
-      this->alltime_best_organism = this->best_organism;
-    }
-    this->pop_stats[0].min = this->best_organism->get_fitness(0);
+    size_t start_i = find_first_unpenalized(prob);
+    handle_multiples();
    
-    for (_uint i = start_i; i < this->offspring_num; ++i) {
-      this->old_gen[i]->apply_penalty(0);
-    }
     //calculate averages for organisms that appear twice in the population
     for (_uint i = start_i; i < this->offspring_num; ++i) {
-      if ( this->args.verbose() ) {
-        std::cout << "Now evaluating organism " << i << std::endl;
-      }
-
       bool found_identical = false;
       //look for duplicates of the current organism
       for (size_t j = 0; j < i; ++j) {
         //handle them
-        if ( *(this->old_gen[j]) == *(this->old_gen[i]) ) {
-          this->old_gen[i]->update( 0, this->old_gen[j]->get_fitness() );
+        if (!args.perturb_multiples() && *(this->old_gen[j]) == *(this->old_gen[i]) ) {
+          for (_uint k = 0; k < N_OBJS; ++k) { this->old_gen[i]->update( k, this->old_gen[j]->get_fitness(k) ); }
           found_identical = true;
           break;
         }
       }
       if (!found_identical) {
-        this->old_gen[i]->evaluate_fitness(prob);
+        old_gen[i]->evaluate_fitness(prob);
+      }
+      if (SelectType::use_offspring) {
+        if (i < offspring.size() && offspring[i]) { offspring[i]->evaluate_fitness(prob); }
       }
       // update the max and min fitnesses if we need to
-      if (this->old_gen[i]->get_fitness(0) > this->best_organism->get_fitness(0) && !(this->old_gen[i]->penalized())) {
-        this->set_best_organism(i);
-      }
-
-      if (this->old_gen[i]->get_fitness(0) < this->pop_stats[0].min) {
-        this->pop_stats[0].min = this->old_gen[i]->get_fitness(0);
+      for (_uint j = 0; j < N_OBJS; ++j) {
+        if ( !(this->old_gen[i]->penalized()) && Comp::compare(old_gen[i], best_organism) > 0 ) {
+          this->set_best_organism(i, false, j);
+        }
+        if (this->old_gen[i]->get_fitness(j) < this->pop_stats[j].min) {
+          this->pop_stats[j].min = this->old_gen[i]->get_fitness(j);
+        }
       }
     }
     this->pop_stats[0].max = this->best_organism->get_fitness();
-
     this->apply_penalties(prob);
   }
   //void evaluate(Problem<FitType>* prob) { evaluate_imp(prob, NULL); }

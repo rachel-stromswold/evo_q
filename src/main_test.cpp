@@ -202,9 +202,10 @@ public:
   }
   void evaluate_fitness(Genetics::Organism<Genetics::MultiFitness>* org) {
     double x = org->read_real(0);
-    org->set_cost(0, x*x);
-    org->set_cost(1, (x - 2)*(x - 2));
+    org->update_cost(0, x*x);
+    org->update_cost(1, (x - 2)*(x - 2));
     org->apply_penalty(0.0);
+    //std::cout << "set cost to (" << org->get_cost(0) << "," << org->get_cost(1) << ")" << std::endl;
   }
 };
 
@@ -256,7 +257,7 @@ public:
   void evaluate_fitness(OrganismNoisy* org) {
     double val = evaluate_fitness_noiseless(org);
     val += variance*gen.gaussian_0_1();
-    org->set_cost(0, val);
+    org->update_cost(0, val);
   }
 };
 
@@ -888,13 +889,22 @@ TEST_CASE ("Simple evolution of a multi objective converges to roughly appropria
   args.initialize_from_file("ga.conf");
 
   Population_NSGAII pop( NUM_BITS, NUM_OBJS, prob.map, args);
+  pop.set_cost(0);
+  pop.set_cost(1);
   PopulationPrinter<Population_NSGAII> out(&pop, "multi_objective.csv");
   out.print_line(false);
   bool converged = false;
+  int gen = 0;
   while (!converged) {
     pop.evaluate(&prob);
-    converged = pop.iterate();
+    for (int i = 0; i < pop.get_offspring_num(); ++i) {
+      //the fitness function we are using makes this impossible
+      INFO("organism " << i << " in generation " << gen << " has invalid fitness (x-2)^2=x^2=0")
+      REQUIRE( (!APPROX(pop.get_organism(i)->get_fitness(0), 0) || !APPROX(pop.get_organism(i)->get_fitness(1), 0)) );
+    }
     out.print_line(false);
+    converged = pop.iterate();
+    ++gen;
   }
   int modulo = NUM_OBJS + prob.map->get_num_params() + 1;
   pop.evaluate(&prob);

@@ -42,7 +42,29 @@ class ConvergenceWrapper : public ge::ConvergenceCriteria {
   }
 };
 
-class PythonProblem;
+class PythonFitness;
+
+class PythonFitnessSettings {
+protected:
+  bool function_set = false;
+  py::function update_func;
+
+  bool noise_compensate;
+  double forget_weight;
+
+public:
+  void set_n_objs() { n_objs = pn_objs; }
+  void set_update_function(py::function f) { update_func = f;function_set = true; }
+  friend class PythonFitness
+};
+
+class PythonFitness : public ge::NoisyMultiFitness {
+private:
+  PythonFitnessSettings& fit_sets;
+
+public:
+  void update(double val, _uint i = 0);
+};
 
 class OrganismWrapper {
 private:

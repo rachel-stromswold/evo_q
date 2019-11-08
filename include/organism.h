@@ -76,8 +76,8 @@ public:
   MultiFitness(_uint pn_objs = 1) : fitness(pn_objs, 0.0) { N_OBJS = pn_objs; }
 
   void reset() {}
+  void set_fitness(double val, _uint i = 0);
   void update(double val, _uint i);
-
   _uint get_n_objs() { return N_OBJS; }
   double get_fitness(_uint i);
   double get_cost(_uint i) { return -get_fitness(i); }
@@ -119,11 +119,9 @@ public:
 /**
  * \brief	An implementation of Fitness designed for single-objective optimization in the noisy case
  */
-class NoisyMultiFitness : public Fitness {
+class NoisyMultiFitness : public MultiFitness {
 protected:
-  Vector<double> fitness;
   Vector<double> variances;
-  _uint N_OBJS;
   _uint n_evaluations;
 
 public:
@@ -378,19 +376,17 @@ public:
   }
 
   //void evaluate_fitness_noisy(Problem<FitType>* prob, double forget_weight=0);
-  void evaluate_fitness(Problem<FitType>* prob) { prob->evaluate_fitness(this); }
+  void evaluate_fitness(Problem<FitType>* prob) { penalty = 0;prob->evaluate_fitness(this); }
 
   FitType& get_fitness_info() { return fit; }
 
   double get_fitness(_uint i = 0) { return fit.get_fitness(i); }
   double get_cost(_uint i = 0) { return fit.get_cost(i); }
-  void set_fitness(double val) { fit.set_fitness(val, 0); }
-  void update(double val) { fit.update(val, 0); }
-  void set_cost(double val) { fit.update(-val, 0); }
   void apply_penalty(double val) { penalty = val; }
 
   double get_penalty() { return penalty; }
   bool penalized() { return penalty != 0; }
+  //set fitness functions with arguments
   void set_fitness(_uint i, double val) {
     if (i >= fit.get_n_objs()) {
       error(CODE_ARG_RANGE, "Attempt to modify invalid fitness index %d, size is %d.", i, fit.get_n_objs());
@@ -406,6 +402,12 @@ public:
     }
   }
   void set_cost(_uint i, double val) { set_fitness(i, -val); }
+  void update_cost(_uint i, double val) { update(i, -val); }
+  //set fitness functions without arguments
+  void set_fitness(double val) { fit.set_fitness(val, 0); }
+  void set_cost(double val) { fit.set_fitness(-val, 0); }
+  void update(double val) { fit.update(val, 0); }
+  void update_cost(double val) { fit.update(-val, 0); }
   //_uint get_n_evaluations() { return n_evaluations; }
   //average fitness with another organism if they both have the same genotype
   /*void average_fitness(Organism* other);
