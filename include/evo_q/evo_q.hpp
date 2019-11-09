@@ -12,6 +12,7 @@
 
 //#ifndef USE_CUSTOM_CONTAINERS
 #include <vector>
+#include <unordered_map>
 #include <string>
 #include <sstream>
 //#endif
