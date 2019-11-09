@@ -12,6 +12,23 @@ int str_starts(const char* test_str, const char* match_str) {
   return 0;
 }
 
+// ============================= PYTHON_FITNESS =============================
+
+void PythonFitness::update(double val, _uint i) {
+  if (i < N_OBJS) {
+    if (!function_set) {
+      if (noise_compensate) {
+        if (forget_weight != 0) {
+          forge
+        }
+      }
+      fitness[i] = val;
+    } else {
+      function(val, i);
+    }
+  }
+}
+
 // ============================= ORGANISM_WRAPPER =============================
 
 OrganismWrapper::OrganismWrapper(std::shared_ptr<ge::Organism> p_org, ge::Problem* p_prob) :
@@ -89,9 +106,8 @@ PopulationWrapper::PopulationWrapper(_uint N_BITS, _uint N_OBJS, Genetics::Probl
   args.initialize_from_file( conf_file.c_str() );
   if (N_OBJS <= 1) {
     pop = new ge::Population(N_BITS, N_OBJS, map, args, latin);
-//    pop_type = POP_SINGLE;
   } else {
-    pop = new ge::Population_NSGAII(N_BITS, N_OBJS, map, args);
+    //pop = new ge::Population_NSGAII(N_BITS, N_OBJS, map, args);
 //    pop_type = POP_NSGAII;
   }
   prob = p_prob;
@@ -105,7 +121,7 @@ PopulationWrapper::PopulationWrapper(_uint N_BITS, _uint N_OBJS, ge::Problem* p_
     pop = new ge::Population(N_BITS, N_OBJS, map, args);
 //    pop_type = POP_SINGLE;
   } else {
-    pop = new ge::Population_NSGAII(N_BITS, N_OBJS, map, args);
+    //pop = new ge::Population_NSGAII(N_BITS, N_OBJS, map, args);
 //    pop_type = POP_NSGAII;
   }
   prob = p_prob;

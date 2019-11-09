@@ -41,7 +41,7 @@ public:
   Chromosome(Chromosome&& other);
   ~Chromosome();
   void exchange(Chromosome* other, size_t k);
-  void exchange_uniform(ArgStore* args, Chromosome* other);
+  void exchange_uniform(ArgStore& args, Chromosome* other);
 
   unsigned int get_N() { return N; }
   unsigned int get_n_bits() { return N_BITS; }
@@ -54,11 +54,11 @@ public:
 
   unsigned char operator[](unsigned int i);
   //randomly mutate each bit in the gene
-  bool real_space_mutate(ArgStore* args);
-  void mutate(ArgStore* args);
-  void slow_mutate(ArgStore* args);
+  bool real_space_mutate(ArgStore& args);
+  void mutate(ArgStore& args);
+  void slow_mutate(ArgStore& args);
   //set the gene to a new completely random value
-  void randomize(PhenotypeMap* al, ArgStore* args);
+  void randomize(PhenotypeMap* al, ArgStore& args);
   //sets the gene to encode the value specified by min, max
   void set_to_num(PhenotypeMap* al, _uint ind, double value);
   void set_to_int(PhenotypeMap* al, _uint ind, int value);

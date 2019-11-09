@@ -19,6 +19,15 @@
 #define SLEEP_TIME	1000
 
 #define INV_ERR_N 5
+
+typedef Genetics::Organism<Genetics::NoisyFitness> OrganismNoisy;
+typedef Genetics::Organism<Genetics::MultiFitness> OrganismMulti;
+typedef Genetics::TournamentSelector<Genetics::NoisyFitness> TournamentNoisy;
+typedef Genetics::Population<Genetics::NoisyFitness, TournamentNoisy> PopulationNoisy;
+typedef Genetics::Organism<Genetics::SingleFitness> OrganismSingle;
+typedef Genetics::TournamentSelector<Genetics::SingleFitness> TournamentSingle;
+typedef Genetics::Population<Genetics::SingleFitness, TournamentSingle> PopulationSingle;
+
 //for random number generation
 class LCG {
 private:
@@ -26,10 +35,11 @@ private:
   static const unsigned long a = 3*( ((unsigned long)1 << 24) + 5 );
   static const unsigned long c = 170859375;//=15^7 which is relatively prime to m = 2^64
   static const unsigned long x0 = DEFAULT_LCG_SEED;
-  static const unsigned long high_mask = ULONG_MAX;
+  static const unsigned long high_mask = ULONG_MAX << 32;
   double c_k[INV_ERR_N];
 
-  unsigned long state; void update_state() { state = (state*a + c)/* the modulo 64 is implicit */;}
+  // the modulo 64 is implicit
+  unsigned long state; void update_state() { state = (state*a + c);}
 public:
   LCG(unsigned long seed=x0) : state(seed) {
     //calculate the c_k terms in the taylor series for the inverse error function (from wikipedia)
@@ -70,33 +80,33 @@ public:
   }
 };
 
-class TestProblemSingle : public Genetics::Problem {
+class TestProblemSingle : public Genetics::Problem<Genetics::SingleFitness> {
 public:
   TestProblemSingle();
-  void evaluate_fitness(Genetics::Organism* org);
+  void evaluate_fitness(OrganismSingle* org);
 };
 
-class TestProblemMulti : public Genetics::Problem {
+class TestProblemMulti : public Genetics::Problem<Genetics::MultiFitness> {
 public:
   TestProblemMulti();
-  void evaluate_fitness(Genetics::Organism* org);
+  void evaluate_fitness(OrganismMulti* org);
 };
 
-class TestProblemSlow : public Genetics::Problem {
+class TestProblemSlow : public Genetics::Problem<Genetics::SingleFitness> {
 public:
   TestProblemSlow();
-  void evaluate_fitness(Genetics::Organism* org);
+  void evaluate_fitness(OrganismSingle* org);
 };
 
-class TestProblemNoisy : public Genetics::Problem {
+class TestProblemNoisy : public Genetics::Problem<Genetics::NoisyFitness> {
 private:
   LCG gen;
   double domain, penalty_domain, variance;
 
 public:
   TestProblemNoisy(double p_domain = NOISY_DOMAIN, double p_penalty_domain = NOISY_DOMAIN/8, double p_variance = NOISY_VAR);
-  double evaluate_fitness_noiseless(Genetics::Organism* org);
-  void evaluate_fitness(Genetics::Organism* org);
+  double evaluate_fitness_noiseless(OrganismNoisy* org);
+  void evaluate_fitness(OrganismNoisy* org);
 };
 
 #endif

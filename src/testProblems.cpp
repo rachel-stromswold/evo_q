@@ -2,20 +2,22 @@
 
 // =============================== SINGLE ===============================
 
-TestProblemSingle::TestProblemSingle() : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1) {
+TestProblemSingle::TestProblemSingle() :
+Genetics::Problem<Genetics::SingleFitness>(NUM_BITS, NUM_CHROMS, 1) {
   map->initialize(1, Genetics::t_real);
 }
-void TestProblemSingle::evaluate_fitness(Genetics::Organism* org) {
+void TestProblemSingle::evaluate_fitness(OrganismSingle* org) {
   double x = org->read_real(0);
-  org->set_fitness(0, -(x*x));
+  org->update(0, -(x*x));
 }
 
 // =============================== MULTI ===============================
 
-TestProblemMulti::TestProblemMulti() : Genetics::Problem(NUM_BITS, NUM_CHROMS, NUM_OBJS) {
+TestProblemMulti::TestProblemMulti() :
+Genetics::Problem<Genetics::MultiFitness>(NUM_BITS, NUM_CHROMS, NUM_OBJS) {
   map->initialize(NUM_CHROMS, Genetics::t_real);
 }
-void TestProblemMulti::evaluate_fitness(Genetics::Organism* org) {
+void TestProblemMulti::evaluate_fitness(OrganismMulti* org) {
   double x = org->read_real(0);
   org->set_fitness(0, -x*x);
   org->set_fitness(1, -(x - 2)*(x - 2));
@@ -24,10 +26,11 @@ void TestProblemMulti::evaluate_fitness(Genetics::Organism* org) {
 
 // =============================== SLOW ===============================
 
-TestProblemSlow::TestProblemSlow() : Genetics::Problem(NUM_BITS, NUM_CHROMS, 1) {
+TestProblemSlow::TestProblemSlow() :
+Genetics::Problem<Genetics::SingleFitness>(NUM_BITS, NUM_CHROMS, 1) {
   map->initialize(1, Genetics::t_real);
 }
-void TestProblemSlow::evaluate_fitness(Genetics::Organism* org) {
+void TestProblemSlow::evaluate_fitness(OrganismSingle* org) {
   std::this_thread::sleep_for( std::chrono::milliseconds(SLEEP_TIME) );
   double x = org->read_real(0);
   org->set_fitness(0, -(x*x));
@@ -36,7 +39,7 @@ void TestProblemSlow::evaluate_fitness(Genetics::Organism* org) {
 // =============================== NOISY ===============================
 
 TestProblemNoisy::TestProblemNoisy(double p_domain, double p_penalty_domain, double p_variance) :
-Genetics::Problem(NUM_BITS, NUM_CHROMS, 1),
+Genetics::Problem<Genetics::NoisyFitness>(NUM_BITS, NUM_CHROMS, 1),
 domain(p_domain),
 penalty_domain(p_penalty_domain),
 variance(p_variance) {
@@ -48,7 +51,7 @@ variance(p_variance) {
   penalty_domain = abs(penalty_domain);
 }
 
-double TestProblemNoisy::evaluate_fitness_noiseless(Genetics::Organism* org) {
+double TestProblemNoisy::evaluate_fitness_noiseless(OrganismNoisy* org) {
   double ret = 0.0;
   double penalty = 0;
   for (unsigned i = 0; i < NUM_CHROMS; ++i) {
@@ -62,7 +65,7 @@ double TestProblemNoisy::evaluate_fitness_noiseless(Genetics::Organism* org) {
   return ret;
 }
 
-void TestProblemNoisy::evaluate_fitness(Genetics::Organism* org) {
+void TestProblemNoisy::evaluate_fitness(OrganismNoisy* org) {
   double val = evaluate_fitness_noiseless(org);
   val += variance*gen.gaussian_0_1();
   org->set_cost(0, val);

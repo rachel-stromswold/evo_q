@@ -4,7 +4,7 @@ namespace Genetics {
 
 ArgStore::ArgStore() : generator() {
   pop_size = DEF_POP_SIZE;
-  breed_pop_size = DEF_BREED_POP_SIZE;
+  //breed_pop_size = DEF_BREED_POP_SIZE;
   num_gens = DEF_NUM_GENS;
   num_crossovers = DEF_NUM_CROSSOVERS;
   init_coup_var = DEF_COUP_VAR;
@@ -22,7 +22,7 @@ ArgStore::ArgStore() : generator() {
 
 ArgStore::ArgStore(const ArgStore& o) : out_fname(o.out_fname) {
   pop_size = o.pop_size;
-  breed_pop_size = o.breed_pop_size;
+  //breed_pop_size = o.breed_pop_size;
   num_gens = o.num_gens;
   num_crossovers = o.num_crossovers;
   init_coup_var = o.init_coup_var;
@@ -64,7 +64,7 @@ ArgStore::ArgStore(const ArgStore& o) : out_fname(o.out_fname) {
 
 ArgStore::ArgStore(ArgStore&& o) : out_fname(o.out_fname) {
   pop_size = o.pop_size;
-  breed_pop_size = o.breed_pop_size;
+  //breed_pop_size = o.breed_pop_size;
   num_gens = o.num_gens;
   num_crossovers = o.num_crossovers;
   init_coup_var = o.init_coup_var;
@@ -107,7 +107,7 @@ ArgStore::~ArgStore() {
 
 void ArgStore::initialize_from_file(const char* fname) {
   pop_size = DEF_POP_SIZE;
-  breed_pop_size = DEF_BREED_POP_SIZE;
+  //breed_pop_size = DEF_BREED_POP_SIZE;
   num_gens = DEF_NUM_GENS;
   num_crossovers = DEF_NUM_CROSSOVERS;
   init_coup_var = DEF_COUP_VAR;
@@ -139,13 +139,13 @@ void ArgStore::initialize_from_file(const char* fname) {
     }
     if (strcmp(token, "population_size") == 0) {
       pop_size = atoi(val);
-    } else if (strcmp(token, "tournament_size") == 0){
+    }/* else if (strcmp(token, "tournament_size") == 0){
       breed_pop_size = atoi(val);
       selection_type = SELECT_TOURNAMENT | SELECT_USE_REPLACE;
     } else if (strcmp(token, "breed_pop_size") == 0) {
       breed_pop_size = atoi(val);
       selection_type = SELECT_ROULETTE;
-    } else if (strcmp(token, "num_generations") == 0) {
+    }*/ else if (strcmp(token, "num_generations") == 0) {
       num_gens = atoi(val);
     } else if (strcmp(token, "num_crossovers") == 0) {
       num_crossovers = atoi(val);
@@ -193,6 +193,10 @@ void ArgStore::initialize_from_file(const char* fname) {
       flags = flags | VERBOSE;
     } else if (strcmp(token, "wait") == 0) {
       flags = flags | WAIT_CON;
+    } else {
+      String tmp_tok(token);
+      String tmp_val(val);
+      custom_parameters[tmp_tok] = tmp_val;
     }
     if (str) {
       free(str);
@@ -219,6 +223,30 @@ void ArgStore::initialize_from_file(const char* fname) {
   fclose(fp);
 }
 
+String ArgStore::get_custom_parameter(String val) {
+  auto it = custom_parameters.find(val);
+  if ( it != custom_parameters.end() ) {
+    return it->second;
+  }
+  return "";
+}
+
+double ArgStore::read_custom_double(String val, double default_val) {
+  String str = get_custom_parameter(val);
+  if (str == "") {
+    return default_val;
+  }
+  return atof( str.c_str() );
+}
+
+int ArgStore::read_custom_int(String val, int default_val) {
+  String str = get_custom_parameter(val);
+  if (str == "") {
+    return default_val;
+  }
+  return atoi( str.c_str() );
+}
+
 void ArgStore::set_noise_compensation(_uint val) {
   noise_compensation_runs = (val > 0)? val : 0;
   flags = (val > 0)? flags | NOISE_COMPENSATE: flags | (~NOISE_COMPENSATE);
@@ -232,7 +260,7 @@ void ArgStore::set_selection_type(_uchar val) {
 
 void ArgStore::initialize() {
   pop_size = DEF_POP_SIZE;
-  breed_pop_size = DEF_BREED_POP_SIZE;
+  //breed_pop_size = DEF_BREED_POP_SIZE;
   num_gens = DEF_NUM_GENS;
   num_crossovers = DEF_NUM_CROSSOVERS;
   init_coup_var = DEF_COUP_VAR;
@@ -248,7 +276,7 @@ void ArgStore::initialize() {
 
 void ArgStore::initialize_from_args(size_t argc, char** argv) {
   pop_size = DEF_POP_SIZE;
-  breed_pop_size = DEF_BREED_POP_SIZE;
+  //breed_pop_size = DEF_BREED_POP_SIZE;
   num_gens = DEF_NUM_GENS;
   num_crossovers = DEF_NUM_CROSSOVERS;
   init_coup_var = DEF_COUP_VAR;
@@ -277,10 +305,10 @@ void ArgStore::initialize_from_args(size_t argc, char** argv) {
         if (strcmp(namestr, "--pop_size") == 0) {
           pop_size = atoi( valstr );
           test_again = false;
-        } else if (strcmp(namestr, "--survivors") == 0) {
+        }/* else if (strcmp(namestr, "--survivors") == 0) {
           breed_pop_size = atoi( valstr );
           test_again = false;
-        } else if (strcmp(namestr, "--generations") == 0) {
+        }*/ else if (strcmp(namestr, "--generations") == 0) {
           num_gens = atoi( valstr );
           test_again = false;
         } else if (strcmp(namestr, "--variance") == 0 || strcmp(namestr, "--var") == 0) {
@@ -311,8 +339,8 @@ void ArgStore::initialize_from_args(size_t argc, char** argv) {
         switch (argv[i][1]) {
           case 'p': pop_size = atoi( argv[i+1] );
               i++; break;
-          case 'u': breed_pop_size = atoi( argv[i+1] );
-              i++; break;
+          //case 'u': breed_pop_size = atoi( argv[i+1] );
+          //    i++; break;
           case 'g': num_gens = atoi( argv[i+1] );
               i++; break;
           case 'c': num_crossovers = atoi( argv[i+1] );
@@ -357,12 +385,12 @@ void ArgStore::initialize_from_args(size_t argc, char** argv) {
   if (pop_size < 2) {
     error(CODE_ARG_INVALID, "The population size must be greater than 1.");
   }
-  if (breed_pop_size < 2) {
+  /*if (breed_pop_size < 2) {
     error(CODE_ARG_INVALID, "The number of survivors in each generation must be greater than 1.");
   }
   if (breed_pop_size > pop_size) {
     error(CODE_ARG_INVALID, "The number of surviving individuals cannot be larger than the size of the population.");
-  }
+  }*/
   if (long_bin) { delete long_bin; }
   if (bern_mut) { delete bern_mut; }
   if (bern_cross) { delete bern_cross; }
@@ -375,7 +403,7 @@ void ArgStore::print_data() {
   //print out data
   std::cout << "Now optimizing using the following parameters:" << std::endl
 	    << "\ttotal pop. size: " << get_pop_size() << std::endl
-	    << "\tnumber survivors/gen: " << get_survivors() << std::endl
+	    //<< "\tnumber survivors/gen: " << get_survivors() << std::endl
 	    << "\tnumber gens: " << get_num_gens() << std::endl
 	    << "\tvar: " << get_init_coup_var() << std::endl
 	    << "\tmean: " << get_init_coup_mean() << std::endl
