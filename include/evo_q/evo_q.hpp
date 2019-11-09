@@ -139,6 +139,13 @@ namespace Genetics {
     unsigned int nChoosek( unsigned int n, unsigned int k );
     
     _uint factorial(_uint n);
+    inline double max(double a, double b) {
+      if (a > b) {
+        return a;
+      } else {
+        return b;
+      }
+    }
     
     std::string read_number(std::string::iterator* it);
     
