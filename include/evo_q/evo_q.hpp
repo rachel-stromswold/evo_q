@@ -76,6 +76,40 @@
 
 namespace Genetics {
 //UTIL_H
+    template <bool condition, typename T>
+    struct enable_if_c {};
+
+    template <typename T>
+    struct enable_if_c<true, T> { typedef T type; };
+
+    //error message if we don't have average_fitness with the correct type
+    template<typename, typename T>
+    struct has_average_fitness {
+        static_assert(
+            std::integral_constant<T, false>::value,
+            "Second template parameter needs to be of function type.");
+    };
+
+    // specialization that does the checking
+
+    template<typename T, typename Ret, typename... Args>
+    struct has_average_fitness<T, Ret(Args...)> {
+    private:
+        template<typename U>
+        static constexpr auto check(U*) ->
+        typename std::is_same<
+                decltype( std::declval<U>().average_fitness( std::declval<Args>()... ) ),
+                Ret    // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            >::type;   // attempt to call it and see if the return type is correct
+
+        template<typename>
+        static constexpr std::false_type check(...);
+
+        typedef decltype(check<T>(0)) type;
+
+    public:
+        static constexpr bool value = type::value;
+    };
     
     typedef unsigned int _uint;
     typedef unsigned char _uchar;
