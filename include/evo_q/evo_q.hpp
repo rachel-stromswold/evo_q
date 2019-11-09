@@ -635,6 +635,7 @@ class ArgStore {
     _uchar selection_type = SELECT_ROULETTE;
     int seed = 0;
     _uint noise_compensation_runs = 0;
+    std::unordered_map<String, String> custom_parameters;
 
   public: 
     double forget_weight = 0;
@@ -663,17 +664,17 @@ class ArgStore {
     void set_noise_compensation(_uint val);
 
     void set_selection_type(_uchar val);
-    bool use_roulette() { return selection_type == SELECT_ROULETTE; }
-    bool use_tournament() { return selection_type & SELECT_TOURNAMENT; }
-    bool use_roulette_pool() { return selection_type == SELECT_ROULETTE_POOL; }
-    bool tournament_replacement() { return selection_type & SELECT_USE_REPLACE; }
+    //bool use_roulette() { return selection_type == SELECT_ROULETTE; }
+    //bool use_tournament() { return selection_type & SELECT_TOURNAMENT; }
+    //bool use_roulette_pool() { return selection_type == SELECT_ROULETTE_POOL; }
+    //bool tournament_replacement() { return selection_type & SELECT_USE_REPLACE; }
     bool async() { return async_evaluation; }
     void set_async(bool val) { async_evaluation = val; }
 
     size_t get_pop_size()			{ return pop_size; }
     void set_pop_size(size_t n)			{ pop_size = n; }
-    size_t get_survivors()			{ return breed_pop_size; }
-    void set_survivors(size_t n)		{ breed_pop_size = n; }
+    //size_t get_survivors()			{ return breed_pop_size; }
+    //void set_survivors(size_t n)		{ breed_pop_size = n; }
     size_t get_num_gens() 			{ return num_gens; }
     void set_num_gens(size_t n) 		{ num_gens = n; }
     int get_num_crossovers() 			{ return num_crossovers; }
@@ -694,6 +695,9 @@ class ArgStore {
     void set_wait_for_con(bool b = true)	{ flags |= WAIT_CON * ((_uint)b); }
     bool verbose()				{ return flags & VERBOSE; }
     void set_verbose(bool b = true)		{ flags |= VERBOSE * ((_uint)b); }
+    String get_custom_parameter(String val);
+    int read_custom_int(String val, int default_val);
+    double read_custom_double(String val, double default_val);
     String get_out_fname() 			{ return out_fname; }
 };
     
