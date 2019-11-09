@@ -91,7 +91,6 @@ namespace Genetics {
     };
 
     // specialization that does the checking
-
     template<typename T, typename Ret, typename... Args>
     struct has_average_fitness<T, Ret(Args...)> {
     private:
@@ -505,10 +504,10 @@ namespace Genetics {
     //draw k elements from the integer range from 0 to n useful for sampling from arrays
     class SampleDraw {
     private:
-        _uint n_;
-        _uint k_;
-        std::uniform_int_distribution<_uint> dist;
-        bool replace;
+      _uint n_;
+      _uint k_;
+      std::uniform_int_distribution<_uint> dist;
+      bool replace;
         
     public:
         SampleDraw(_uint p_n, _uint p_k) : dist(0, nChoosek(p_n-1, p_k-1)*factorial(p_k-1)) {
@@ -700,56 +699,59 @@ class ArgStore {
     
 //CHROMOSOME_H
     
-    class Chromosome {
-    private:
-      _uint N_BITS;
-      _uint N_BYTES;
-      size_t N;
-      double* real_vals = NULL;
-      size_t real_vals_size = 0;
+class Chromosome {
+private:
+  _uint N_BITS;
+  _uint N_BYTES;
+  size_t N;
+  double* real_vals = NULL;
+  size_t real_vals_size = 0;
 
-    protected:
-      static const _uint bin_size = sizeof(unsigned long)*8;
-    //  unsigned long genes[(N_BYTES+sizeof(unsigned long)-1)/sizeof(unsigned long)];
-      unsigned long* genes = NULL;
-      size_t getBitStream (size_t n, size_t k, size_t x);
-      _uchar use_real = 0;
-      size_t get_real_vals_size() { return real_vals_size; }
+protected:
+  static const _uint bin_size = sizeof(unsigned long)*8;
+//  unsigned long genes[(N_BYTES+sizeof(unsigned long)-1)/sizeof(unsigned long)];
+  unsigned long* genes = NULL;
+  size_t getBitStream (size_t n, size_t k, size_t x);
+  _uchar use_real = 0;
+  size_t get_real_vals_size() { return real_vals_size; }
 
-    public:
-      Chromosome(_uint pn_bits);
-      Chromosome(_uint pn_bits, _uchar real_mode);
-      Chromosome(_uint pn_bits, Chromosome* o);
-      Chromosome(Chromosome& other);
-      Chromosome(Chromosome&& other);
-      ~Chromosome();
-      void exchange(Chromosome* other, size_t k);
-      void exchange_uniform(ArgStore* args, Chromosome* other);
+public:
+  Chromosome(_uint pn_bits);
+  Chromosome(_uint pn_bits, _uchar real_mode);
+  Chromosome(_uint pn_bits, Chromosome* o);
+  Chromosome(Chromosome& other);
+  Chromosome(Chromosome&& other);
+  ~Chromosome();
+  void exchange(Chromosome* other, size_t k);
+  void exchange_uniform(ArgStore& args, Chromosome* other);
 
-      unsigned int get_N() { return N; }
-      unsigned int get_n_bits() { return N_BITS; }
-      Chromosome& operator=(Chromosome& other);
+  unsigned int get_N() { return N; }
+  unsigned int get_n_bits() { return N_BITS; }
+  void swap(Chromosome& other);
+  Chromosome& operator=(Chromosome& other);
+  Chromosome& operator=(Chromosome&& other);
+  bool operator==(Chromosome& other);
 
-      void reset();
+  void reset();
 
-      unsigned char operator[](unsigned int i);
-      //randomly mutate each bit in the gene
-      bool real_space_mutate(ArgStore* args);
-      void mutate(ArgStore* args);
-      void slow_mutate(ArgStore* args);
-      //set the gene to a new completely random value
-      void randomize(ArgStore* args);
-      //sets the gene to encode the value specified by min, max
-      void set_to_num(PhenotypeMap* al, _uint ind, double value);
-      void set_to_int(PhenotypeMap* al, _uint ind, int value);
-      void set_to_ulong(PhenotypeMap* al, _uint ind, unsigned long value);
-      //returns the corresponding integer for the gene
-      unsigned long gene_to_ulong(PhenotypeMap* al, _uint ind);
-      int gene_to_int(PhenotypeMap* al, _uint ind);
-      //returns a double value corresponding to the gene, it will have a value between max and min
-      double gene_to_num(PhenotypeMap* al, _uint ind);
-      String get_string(PhenotypeMap* al, _uint ind);
-    };
+  unsigned char operator[](unsigned int i);
+  //randomly mutate each bit in the gene
+  bool real_space_mutate(ArgStore& args);
+  void mutate(ArgStore& args);
+  void slow_mutate(ArgStore& args);
+  //set the gene to a new completely random value
+  void randomize(PhenotypeMap* al, ArgStore& args);
+  //sets the gene to encode the value specified by min, max
+  void set_to_num(PhenotypeMap* al, _uint ind, double value);
+  void set_to_int(PhenotypeMap* al, _uint ind, int value);
+  void set_to_ulong(PhenotypeMap* al, _uint ind, unsigned long value);
+  //returns the corresponding integer for the gene
+  unsigned long gene_to_ulong(PhenotypeMap* al, _uint ind);
+  int gene_to_int(PhenotypeMap* al, _uint ind);
+  //returns a double value corresponding to the gene, it will have a value between max and min
+  double gene_to_num(PhenotypeMap* al, _uint ind);
+  String get_string(PhenotypeMap* al, _uint ind);
+};
     
 //ORGANISM_H
     

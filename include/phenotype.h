@@ -41,9 +41,6 @@ private:
 
   _uint n_dims = 0;
   std::vector<VarContainer> vars;
-//  std::vector<_uint> var_locs;
-//  std::vector<std::pair<double, double>> ranges;
-//  std::vector<Type> var_types;
   void allocate_locations(_uint n_ints, _uint n_reals, std::vector<_uint> bstream_lens);
 public:
   static const _uint sto_size = sizeof(unsigned long)*8;
