@@ -16,10 +16,6 @@ struct FitnessStats {
   double min;
 };
 
-/*struct OrganismPair {
-  std::shared_ptr<Organism> first, second;
-};*/
-
 template <typename FitType>
 class Comparator {
 public:
@@ -300,16 +296,14 @@ public:
       n_objs = old_gen[0]->get_fitness_info().get_n_objs();
       pop_stats.resize(n_objs);
     }
-    //if (pareto_fronts.size() == 0) {
-      std::vector<OrgPtr> cmb_arr = old_gen;
-      cmb_arr.reserve(old_gen.size() + offspring.size());
-      for (_uint i = 0; i < offspring.size(); ++i) {
-        if (offspring[i]) {
-          cmb_arr.push_back(offspring[i]);
-        }
+    std::vector<OrgPtr> cmb_arr = old_gen;
+    cmb_arr.reserve(old_gen.size() + offspring.size());
+    for (_uint i = 0; i < offspring.size(); ++i) {
+      if (offspring[i]) {
+        cmb_arr.push_back(offspring[i]);
       }
-      make_fronts(cmb_arr);
-    //}
+    }
+    make_fronts(cmb_arr);
     size_t offspring_num = old_gen.size();
     size_t i = 0;
     std::vector<OrgPtr> tmp(offspring_num, NULL);
@@ -324,7 +318,6 @@ public:
     //fill in the last elements from the remaining pareto front ranked according to crowding
     if (k < offspring_num) {
       for (size_t ii = 0; ii < pareto_fronts[i].size(); ++ii) {
-        //std::cout << "i=" << i << ", ii=" << ii << ", k=" << k << std::endl;
         pareto_fronts[i][ii]->get_fitness_info().distance = 0;
       }
       //sort by each objective function for crowding evaluation
@@ -359,25 +352,8 @@ public:
         ++j;
         ++k;
       }
-      //we don't need the rest of the elements so they should be deleted
-      /*while (j < pareto_fronts[i].size()) {
-        if (pareto_fronts[i][j] != NULL) {
-          pareto_fronts[i][j].reset();
-          pareto_fronts[i][j] = NULL;
-        }
-        ++j;
-      }*/
       ++i;
     }
-    /*while (i < pareto_fronts.size()) {
-      for (size_t j = 0; j < pareto_fronts[i].size(); ++j) {
-        if (pareto_fronts[i][j] != NULL) {
-          pareto_fronts[i][j].reset();
-          pareto_fronts[i][j] = NULL;
-        }
-      }
-      ++i;
-    }*/
     old_gen.swap(tmp);
     //ensure that we aren't keeping null pointers around for safety
     pareto_fronts.clear();
