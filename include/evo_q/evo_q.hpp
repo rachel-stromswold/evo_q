@@ -2556,6 +2556,13 @@ public:
    * \seealso update
    */
   void set_cost(_uint ind) { is_obj_cost[ind] = true; }
+  /**
+   * \brief Sets the objective referenced by index ind to use a cost (corresponding to a minimization problem).
+   *
+   * \param ind	The index of the parameter to set
+   * \seealso update
+   */
+  void set_fitness(_uint ind) { is_obj_cost[ind] = false; }
   void set_var_label(_uint ind, String val) {
     if (ind >= N_PARAMS) {
       error(CODE_WARN, "Invalid parameter index %u provided for set_var_label. The parameter index must be less than %u.", ind, N_PARAMS);

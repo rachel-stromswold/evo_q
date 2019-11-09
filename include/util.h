@@ -41,30 +41,7 @@ struct enable_if_c {};
 template <typename T>
 struct enable_if_c<true, T> { typedef T type; };
 
-/*template <typename Ts>
-using void_t = void;
-
-
-
-template <typename T>
-struct has_average_fitness {
-private:
-  struct true_val{ char x[1]; };
-  struct false_val{ char x[2]; };
-
-  template <typename U>
-  static true_val test( const U& a, decltype(&U::average_fitness) p = 0 ) {}
-  //template <typename U>
-  //static false_val test( ... ) {}
-public:
-  static const bool value = ( sizeof( test<T>(NULL) ) == sizeof( true_val ) );
-};*/
-
-// Primary template with a static assertion
-// for a meaningful error message
-// if it ever gets instantiated.
-// We could leave it undefined if we didn't care.
-
+//error message if we don't have average_fitness with the correct type
 template<typename, typename T>
 struct has_average_fitness {
     static_assert(
