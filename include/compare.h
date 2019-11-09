@@ -155,7 +155,7 @@ public:
     }
     std::uniform_real_distribution<double> dist(0, total_fit);
 
-    _uint survivors_num = read_double(args.get_custom_parameter("num_survivors"), offspring_num/2);
+    _uint survivors_num = args.read_custom_double("num_survivors", offspring_num/2);
     std::vector< std::shared_ptr<Organism<FitType>> > survivors(survivors_num);
     //maintain a list of organisms that have already been added so no organism appears twice
     size_t* banned = (size_t*)malloc(sizeof(size_t)*survivors_num);

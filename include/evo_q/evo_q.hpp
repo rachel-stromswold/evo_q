@@ -58,6 +58,17 @@
 #define SELECT_ROULETTE_POOL	4
 
 //POPULATION_H
+#define NUM_GENES	10
+#define NUM_CARRY	1
+
+#define MAX_NUM_GENS	100
+#define OUT_BUF_SIZE    50
+
+#define FLAG_NONE_SET	0
+#define FLAG_STATS_SET	1
+#define FLAG_DIST_SET	2
+#define FLAG_BEST_FOUND	4
+#define VALID_BEST	16
 #define BUF_SIZE      50
 #define DEF_SORT_PARAM    -3
 #define FLAG_NONE_SET	0
@@ -501,54 +512,90 @@ namespace Genetics {
     bool has_error();
     String get_error();
 #endif
+
+int divideup(int numerator, int denominator);
     
-    //draw k elements from the integer range from 0 to n useful for sampling from arrays
-    class SampleDraw {
-    private:
-      _uint n_;
-      _uint k_;
-      std::uniform_int_distribution<_uint> dist;
-      bool replace;
-        
-    public:
-        SampleDraw(_uint p_n, _uint p_k) : dist(0, nChoosek(p_n-1, p_k-1)*factorial(p_k-1)) {
-            n_ = p_n;
-            k_ = p_k;
-            if (k_ > n_) {
-                error(1, "Cannot initialize sample draw with more samples than the population size.");
+//draw k elements from the integer range from 0 to n useful for sampling from arrays
+class SampleDraw {
+private:
+  _uint n_;
+  _uint k_;
+  std::uniform_int_distribution<_uint> dist;
+  bool replace;
+
+public:
+  SampleDraw(_uint p_n, _uint p_k, bool replace=false);
+
+  void reset() { dist.reset(); }
+  _uint n() { return n_; }
+  _uint k() { return k_; }
+
+  template <class Generator>
+  Vector<_uint> operator()(Generator& g) {
+    Vector<_uint> ret(k_, 0);
+    for (_uint i = 0; i < k_; ++i) {
+      if (replace) {
+        ret[i] = dist( g) % n_;
+      } else {
+        //TODO: this method biases results since UINT_MAX is not necessarily divisible by n-i
+        _uint x = dist( g ) % (n_ - i);
+        bool append = true;
+        for (_uint j = 0; j < i; ++j) {
+          if (x >= ret[j]) {
+            ++x;
+          } else {
+            //move everything up to maintain a proper sorting
+            for (_uint l = i; l > j; --l) {
+              ret[l] = ret[l - 1];
             }
+            ret[j] = x;
+            append = false;
+            break;
+          }
         }
-        
-        void reset() { dist.reset(); }
-        _uint n() { return n_; }
-        _uint k() { return k_; }
-        
-        template <class Generator>
-        std::vector<_uint> operator()(Generator& g) {
-            std::vector<_uint> ret(k_, 0);
-            for (_uint i = 0; i < k_; ++i) {
-                _uint x = dist( g ) % (n_ - i);
-                bool append = true;
-                for (_uint j = 0; j < i; ++j) {
-                    if (x >= ret[j]) {
-                        ++x;
-                    } else {
-                        //move everything up to maintain a proper sorting
-                        for (_uint l = i; l > j; --l) {
-                            ret[l] = ret[l - 1];
-                        }
-                        ret[j] = x;
-                        append = false;
-                        break;
-                    }
-                }
-                if (append) {
-                    ret[i] = x;
-                }
-            }
-            return ret;
+        if (append) {
+          ret[i] = x;
         }
-    };
+      }
+    }
+    return ret;
+  }
+};
+
+//rearrange n elements into a random order
+class Shuffle {
+private:
+  _uint n_;
+  std::uniform_int_distribution<_uint> dist;
+  bool replace;
+
+public:
+  Shuffle(_uint p_n);
+
+  void reset() { dist.reset(); }
+  _uint n() { return n_; }
+
+  template <class Generator>
+  Vector<_uint> operator()(Generator& g) {
+    Vector<_uint> ret(n_, 0);
+    for (_uint i = 0; i < n_; ++i) {
+      _uint x = dist( g ) % (n_ - i);
+      bool contained = true;
+      while (contained) {
+        contained = false;
+        for (_uint j = 0; j < i; ++j) {
+          if (ret[j] == x) { contained = true;break; }
+        }
+        if (!contained) {
+          ret[i] = x;
+        } else {
+          ++x;
+        }
+      }
+    }
+    return ret;
+  }
+};
 
 //PHENOTYPE_H
     
@@ -1299,7 +1346,7 @@ public:
     }
     std::uniform_real_distribution<double> dist(0, total_fit);
 
-    _uint survivors_num = read_double(args.get_custom_parameter("num_survivors"), offspring_num/2);
+    _uint survivors_num = args.read_custom_double("num_survivors", offspring_num/2);
     std::vector< std::shared_ptr<Organism<FitType>> > survivors(survivors_num);
     //maintain a list of organisms that have already been added so no organism appears twice
     size_t* banned = (size_t*)malloc(sizeof(size_t)*survivors_num);
