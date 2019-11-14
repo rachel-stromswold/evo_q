@@ -1251,14 +1251,14 @@ public:
 
 typedef std::pair<_uint, _uint> ParentIndSet;
 
-template <typename FitType, typename Comparator=Comparator<FitType>>
+template <typename FitType, typename Comp=Comparator<FitType>>
 class Selector {
 protected:
   int partition(_uint fit_ind, std::vector<std::shared_ptr< Organism<FitType> >>& work_arr, int s, int e) {
     //double p = (*work_arr)[e]->get_fitness(fit_ind);
     int i = s;
     for (int j = s; j < e; ++j) {
-      if ( Comparator::compare( work_arr[j], work_arr[e] ) > 0) {
+      if ( Comp::compare( work_arr[j], work_arr[e] ) > 0) {
         std::shared_ptr<Organism<FitType>> tmp = work_arr[i];
         work_arr[i] = work_arr[j];
         work_arr[j] = tmp;
@@ -1297,7 +1297,7 @@ public:
 template <class FitType>
 class TournamentSelector : public Selector<FitType> {
 public:
-  typedef Comparator<FitType> Comparator;
+  typedef Comparator<FitType> Comp;
 
   Vector<ParentIndSet> select(ArgStore& args, Vector<std::shared_ptr<Organism<FitType>>>& old_gen, Vector<std::shared_ptr<Organism<FitType>>>& offspring) {
     _uint arena_size = args.read_custom_double("arena_size", 2);
@@ -1317,10 +1317,10 @@ public:
       ret[i].second = t2[0];
       for (size_t j = 1; j < t1.size(); ++j) {
         //check whether the fitness is an improvement and use variance as a tiebreaker
-        if (Comparator::compare(old_gen[t1[j]], old_gen[ret[i].first]) > 0) {
+        if (Comp::compare(old_gen[t1[j]], old_gen[ret[i].first]) > 0) {
           ret[i].first  = t1[j];
         }
-        if (Comparator::compare(old_gen[t2[j]], old_gen[ret[i].second]) > 0) {
+        if (Comp::compare(old_gen[t2[j]], old_gen[ret[i].second]) > 0) {
           ret[i].second = t2[j];
         }
       }
@@ -1336,7 +1336,7 @@ public:
 template <class FitType>
 class SurvivalSelector : public Selector<FitType> {
 public:
-  typedef Comparator<FitType> Comparator;
+  typedef Comparator<FitType> Comp;
 
   Vector<ParentIndSet> select(ArgStore& args, Vector<std::shared_ptr<Organism<FitType>>>& old_gen, Vector<std::shared_ptr<Organism<FitType>>>& offspring) {
     sort_orgs(0, old_gen);
@@ -1403,7 +1403,7 @@ template <typename FitType>
 class NSGAII_TournamentSelector : public Selector<FitType, NSGAII_Comparator<FitType>> {
 public:
   typedef std::shared_ptr< Organism<FitType> > OrgPtr;
-  typedef NSGAII_Comparator<FitType> Comparator;
+  typedef NSGAII_Comparator<FitType> Comp;
   static const bool use_offspring=true;
 private:  
   _uint n_objs = 1;
@@ -1429,7 +1429,7 @@ private:
       for (size_t j = 0; j < cmb_arr.size(); ++j) {
         if (i != j) {
           //if the ith solution dominates the jth add the jth entry to the list of dominated solutions, otherwise increment the number of dominating solutions
-          if ( Comparator::compare(cmb_arr[j], cmb_arr[i]) > 0 ) {
+          if ( Comp::compare(cmb_arr[j], cmb_arr[i]) > 0 ) {
             cmb_arr[i]->get_fitness_info().n_dominations++;
           }
         }
@@ -1583,9 +1583,9 @@ private:
   }
 
 protected:
-  static_assert( std::is_base_of<Selector<FitType, typename SelectType::Comparator>, SelectType>::value, "SelectType must be derived from Selector<FitType>" );
+  static_assert( std::is_base_of<Selector<FitType, typename SelectType::Comp>, SelectType>::value, "SelectType must be derived from Selector<FitType>" );
   SelectType sel;
-  typedef typename SelectType::Comparator Comp;
+  typedef typename SelectType::Comp Comp;
   typedef std::shared_ptr< Organism<FitType> > OrgPtr;
   size_t carryover_num;//How many of the best individuals carry over to the next generation 
 
@@ -1613,6 +1613,125 @@ protected:
   std::vector<bool> is_obj_cost;
   int print_penalties = 0;
 
+  //cull in place is slightly faster but less accurate than the standard cull method
+  /*bool cull_in_place() {
+    size_t j = 0;
+    double difference = pop_stats[0].max - pop_stats[0].min;
+    //avoid divide by 0
+    if (difference == 0) {
+      error(CODE_WARN, "All organisms have the same fitness, exiting");
+      return true;
+    }
+    std::uniform_real_distribution<double> dist(0, difference);
+    if (survivors.size() < survivors_num) {
+      survivors.resize(survivors_num);
+    }
+    for (size_t i = 0; i < this->offspring_num && j < survivors_num; ++i) {
+      // if M_f is the maximum fitness and m_f is the minimum the minimum, while x is the
+      // fitness of a given organism, then the probability of survival is x/(M_f-m_f) or 1
+      // if M_f = m_f
+      if (dist(args.get_generator()) < old_gen[i]->get_fitness(0) - pop_stats[0].min) {
+        survivors[j] = old_gen[i];
+        j++;
+      }
+    }
+    std::uniform_int_distribution<int> ind_dist(0, this->offspring_num - 1);
+    while (j < survivors_num) {
+      survivors[j] = old_gen[ind_dist( args.get_generator() )];
+      j++;
+    }
+    return false;
+  }*/
+
+  /**
+   * \brief An implementation of simple roulette selection. This function first sorts the organisms and selects them based on the ratio of their relative fitness to the total relative fitness.
+   *
+   * \returns True if all organisms have the same fitness (results have converged).
+   */
+  /*bool cull() {
+    sort_orgs(0, &old_gen);
+    //if all the organisms have the same fitness then reinitialize the population
+    if (old_gen[0]->get_fitness(0) - old_gen[this->offspring_num-1]->get_fitness(0) < 0.001 ) {
+      return true;
+    }
+    double min_fit = old_gen[this->offspring_num-1]->get_fitness(0);
+    double total_fit = 0;
+    for (size_t i = 0; i < this->offspring_num; ++i) {
+      total_fit += old_gen[i]->get_fitness(0) - min_fit;
+    }
+    std::uniform_real_distribution<double> dist(0, total_fit);
+    //maintain a list of organisms that have already been added so no organism appears twice
+    size_t* banned = (size_t*)malloc(sizeof(size_t)*survivors_num);
+    for (size_t i = 0; i < survivors_num; ++i) { banned[i] = -1; }
+    for (size_t i = 0; i < survivors_num; ++i) {
+      double val = dist( args.get_generator() );
+      size_t j = 0;
+      while (val > 0.0) {
+        val -= old_gen[j]->get_fitness(0) - min_fit;
+        j++;
+      }
+      j -= 1;
+      while (contains<size_t>(banned, survivors_num, j)) {
+        j++;
+        if (j >= survivors_num) {
+          j = 0;
+        }
+      }
+      survivors[i] = old_gen[j];
+      banned[i] = j;
+    }
+    if (args.verbose()) {
+      std::cerr << "Added orgs to survs:";
+      for (size_t i = 0; i < survivors_num; ++i) {
+        std::cerr << " " << banned[i];
+      }
+      std::cerr << std::endl;
+    }
+    free(banned);
+  //  best_organism_ind = 0;
+    return false;
+  }*/
+  /*void breed_shuffle() {
+    std::uniform_int_distribution<size_t> dist_surv0(0, survivors_num - 1);
+    std::vector<Organism<FitType>*> children;
+    Organism<FitType>** shuffled_inds = (Organism<FitType>**)malloc(sizeof(Organism<FitType>*)*offspring_num);
+    for (size_t i = 0; i < survivors_num; ++i) {
+      shuffled_inds[i] = survivors[i].get();
+    }
+    for (size_t i = 0; i < survivors_num; ++i) {
+      size_t ind_o = dist_surv0( args.get_generator() );
+      Organism<FitType>* tmp = shuffled_inds[i];
+      shuffled_inds[i] = shuffled_inds[ind_o];
+      shuffled_inds[ind_o] = tmp;
+    }
+    size_t last_org_ind = offspring_num;
+    for (size_t i = survivors_num; i < offspring_num; ++i) {
+      size_t org_ind= dist_surv0( args.get_generator() );
+      //ensure that we don't see the same organism breeding with itself
+      if (org_ind == last_org_ind) {
+        org_ind = (org_ind + 1) % offspring_num;
+      }
+      shuffled_inds[i] = survivors[org_ind].get();
+      last_org_ind = org_ind;
+    }
+    if (this->offspring_num % 2 == 1) {
+      //elitist algorithm, make the first individual in the next generation the previous most fit
+      //offspring[0] = std::make_shared<Organism<FitType>>(best_organism);
+      offspring[0] = best_organism;
+      for (size_t i = 1; 2*i < this->offspring_num; i++) {
+        children = shuffled_inds[2*i - 1]->breed(&args, shuffled_inds[2*i]);
+        offspring[2*i] = std::shared_ptr<Organism<FitType>>(children[0]);
+        offspring[2*i - 1] = std::shared_ptr<Organism<FitType>>(children[1]);
+      }
+    } else {
+      for (size_t i = 0; 2*i + 1 < this->offspring_num; i++) {
+        children = shuffled_inds[2*i]->breed(&args, shuffled_inds[2*i + 1]);
+        offspring[2*i] = std::shared_ptr<Organism<FitType>>(children[0]);
+        offspring[2*i + 1] = std::shared_ptr<Organism<FitType>>(children[1]);
+      }
+    }
+    offspring.swap(old_gen);
+  }*/
   /**
    * \brief Apply soft penalties to organisms, this gaurantees that a penalized organism will always have a lower fitness than an unpenalized organism
    *
@@ -1625,6 +1744,7 @@ protected:
    */
   void apply_penalties(Problem<FitType>* prob) {
     //calculate penalties based on the range of fitnesses
+    //double penalty_fact = min(abs(pop_stats[0].max - pop_stats[0].min), 1);
     double penalty_fact = abs(pop_stats[0].max - pop_stats[0].min);
     if (penalty_fact == 0) { penalty_fact = 1; }
     if ( pop_stats[0].max == std::numeric_limits<double>::infinity() ) {
@@ -1638,8 +1758,8 @@ protected:
     for (size_t i = 0; i < this->offspring_num; ++i) {
       if (old_gen[i]->penalized()) {
         double new_fit = pop_stats[0].min - max(pop_stats[0].max - old_gen[i]->get_fitness(0), 0);
-        if (old_gen[i]->get_fitness > pop_stats[0].max) {
-          new_fit = pop_stats[0].min
+        if (old_gen[i]->get_fitness(0) > pop_stats[0].max) {
+          new_fit = pop_stats[0].min;
         }
         new_fit -= penalty_fact*old_gen[i]->get_penalty();
         old_gen[i]->set_fitness(new_fit);
@@ -1665,8 +1785,10 @@ protected:
     if (best_organism->get_fitness(0) > alltime_best_organism->get_fitness(0)) { 
       for (_uint j = 0; j < args.noise_compensate(); ++j) {
         evaluate_best(prob, args.forget_weight);
-      } 
-      alltime_best_organism = best_organism; 
+      }
+      //alltime_best_organism = best_organism->copy();
+      alltime_best_organism = best_organism;
+      //alltime_best_organism->set_fitness(0, best_organism->get_fitness(0));
     }
     //check to see if there has been a decrease in fitness
     if ( args.noise_compensate() &&
@@ -1679,6 +1801,7 @@ protected:
         evaluate_best(prob, args.forget_weight);
       }
       if ( alltime_best_organism->get_fitness(0) > best_organism->get_fitness(0) ) {
+        //best_organism->swap(alltime_best_organism);
         best_organism = alltime_best_organism;
         pop_stats[0].max = best_organism->get_fitness(0);
       }
@@ -1692,6 +1815,7 @@ protected:
       for (size_t i = 0; i < offspring_num; ++i) {
         double fitness_i = old_gen[i]->get_fitness(j);
         if (fitness_i > pop_stats[j].max) {
+          //TODO: make this usefully track multiple objectives
           if (j == 0) {
             set_best_organism(i);
           }
@@ -2076,7 +2200,8 @@ public:
     args.set_survivors(new_size);
   }*/
 #ifdef USE_LIBOMP
-  void evaluate_async(Problem* prob) {
+  template <typename T=FitType>
+  void evaluate_async(Problem<T>* prob) {
     if (N_OBJS == 1) { 
       for (_uint i = 0; i < offspring_num; ++i) {
         old_gen[i]->apply_penalty(0);
@@ -2101,7 +2226,7 @@ public:
 #pragma omp parallel for
           for (_uint j = 0; j < identical_set.size(); ++j) {
             for (_uint k = 0; k < args.noise_compensate() + 1; ++k) {
-              old_gen[i]->evaluate_fitness(prob, args.forget_weight);
+              old_gen[i]->evaluate_fitness(prob);
             }
           }
           
@@ -2129,7 +2254,7 @@ public:
           } else if (args.perturb_multiples()) {
             for (size_t j = 0; j < i; ++j) {
               if (*(old_gen[j]) == *(old_gen[i])) {
-                old_gen[j]->mutate(&args);
+                old_gen[j]->mutate(args);
               }
             }
           }
@@ -2147,7 +2272,7 @@ public:
             }
             old_gen[i]->evaluate_fitness(prob);
             for (_uint k = 0; k < args.noise_compensate(); ++k) {
-              old_gen[i]->evaluate_fitness(prob, args.forget_weight);
+              old_gen[i]->evaluate_fitness(prob);
             }
           }
         }
@@ -2188,7 +2313,7 @@ public:
           } else if (old_gen[i]->get_fitness(0) > best_organism->get_fitness(0) && !old_gen[i]->penalized()) {
             //check the organism again to make sure this isn't a fluke
             for (_uint j = 0; j < args.noise_compensate(); ++j) {
-              old_gen[i]->evaluate_fitness(prob, args.forget_weight);
+              old_gen[i]->evaluate_fitness(prob);
               evaluate_best(prob, args.forget_weight);
             }
             set_best_organism(i);
@@ -2560,7 +2685,7 @@ public:
    * \brief Sets the objective referenced by index ind to use a cost (corresponding to a minimization problem).
    *
    * \param ind	The index of the parameter to set
-   * \seealso update
+   * \seealso update, set_fitness
    */
   void set_cost(_uint ind) { is_obj_cost[ind] = true; }
   /**

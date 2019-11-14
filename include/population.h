@@ -57,9 +57,9 @@ private:
   }
 
 protected:
-  static_assert( std::is_base_of<Selector<FitType, typename SelectType::Comparator>, SelectType>::value, "SelectType must be derived from Selector<FitType>" );
+  static_assert( std::is_base_of<Selector<FitType, typename SelectType::Comp>, SelectType>::value, "SelectType must be derived from Selector<FitType>" );
   SelectType sel;
-  typedef typename SelectType::Comparator Comp;
+  typedef typename SelectType::Comp Comp;
   typedef std::shared_ptr< Organism<FitType> > OrgPtr;
   size_t carryover_num;//How many of the best individuals carry over to the next generation 
 
@@ -232,8 +232,8 @@ protected:
     for (size_t i = 0; i < this->offspring_num; ++i) {
       if (old_gen[i]->penalized()) {
         double new_fit = pop_stats[0].min - max(pop_stats[0].max - old_gen[i]->get_fitness(0), 0);
-        if (old_gen[i]->get_fitness > pop_stats[0].max) {
-          new_fit = pop_stats[0].min
+        if (old_gen[i]->get_fitness(0) > pop_stats[0].max) {
+          new_fit = pop_stats[0].min;
         }
         new_fit -= penalty_fact*old_gen[i]->get_penalty();
         old_gen[i]->set_fitness(new_fit);
@@ -674,7 +674,8 @@ public:
     args.set_survivors(new_size);
   }*/
 #ifdef USE_LIBOMP
-  void evaluate_async(Problem* prob) {
+  template <typename T=FitType>
+  void evaluate_async(Problem<T>* prob) {
     if (N_OBJS == 1) { 
       for (_uint i = 0; i < offspring_num; ++i) {
         old_gen[i]->apply_penalty(0);
@@ -699,7 +700,7 @@ public:
 #pragma omp parallel for
           for (_uint j = 0; j < identical_set.size(); ++j) {
             for (_uint k = 0; k < args.noise_compensate() + 1; ++k) {
-              old_gen[i]->evaluate_fitness(prob, args.forget_weight);
+              old_gen[i]->evaluate_fitness(prob);
             }
           }
           
@@ -727,7 +728,7 @@ public:
           } else if (args.perturb_multiples()) {
             for (size_t j = 0; j < i; ++j) {
               if (*(old_gen[j]) == *(old_gen[i])) {
-                old_gen[j]->mutate(&args);
+                old_gen[j]->mutate(args);
               }
             }
           }
@@ -745,7 +746,7 @@ public:
             }
             old_gen[i]->evaluate_fitness(prob);
             for (_uint k = 0; k < args.noise_compensate(); ++k) {
-              old_gen[i]->evaluate_fitness(prob, args.forget_weight);
+              old_gen[i]->evaluate_fitness(prob);
             }
           }
         }
@@ -786,7 +787,7 @@ public:
           } else if (old_gen[i]->get_fitness(0) > best_organism->get_fitness(0) && !old_gen[i]->penalized()) {
             //check the organism again to make sure this isn't a fluke
             for (_uint j = 0; j < args.noise_compensate(); ++j) {
-              old_gen[i]->evaluate_fitness(prob, args.forget_weight);
+              old_gen[i]->evaluate_fitness(prob);
               evaluate_best(prob, args.forget_weight);
             }
             set_best_organism(i);
