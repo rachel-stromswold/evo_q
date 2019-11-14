@@ -19,6 +19,7 @@ struct FitnessStats {
 template <typename FitType>
 class Comparator {
 public:
+  //compare should return >0 in the case where fitness(a) > fitness(b), <0 in the case where fitness(a) < fitness(b) or 0 in cases where comparison is equal or ill-defined
   static int compare(std::shared_ptr< Organism<FitType> > a, std::shared_ptr< Organism<FitType> > b) {
     FitType a_info = a->get_fitness_info();
     FitType b_info = a->get_fitness_info();
@@ -96,8 +97,8 @@ public:
   virtual Vector<ParentIndSet> select(ArgStore& args, Vector<std::shared_ptr<Organism<FitType>>>& old_gen, Vector<std::shared_ptr<Organism<FitType>>>& offspring) = 0;
 };
 
-template <class FitType>
-class TournamentSelector : public Selector<FitType> {
+template <class FitType, typename Comp=Comparator<FitType>>
+class TournamentSelector : public Selector<FitType, Comp> {
 public:
   typedef Comparator<FitType> Comp;
 
@@ -135,8 +136,8 @@ public:
   }
 };
 
-template <class FitType>
-class SurvivalSelector : public Selector<FitType> {
+template <class FitType, typename Comp=Comparator<FitType>>
+class SurvivalSelector : public Selector<FitType, Comp> {
 public:
   typedef Comparator<FitType> Comp;
 

@@ -57,7 +57,7 @@ private:
   }
 
 protected:
-  static_assert( std::is_base_of<Selector<FitType, typename SelectType::Comp>, SelectType>::value, "SelectType must be derived from Selector<FitType>" );
+  static_assert( std::is_base_of<Selector<FitType, typename SelectType::Comp>, SelectType>::value, "SelectType must be derived from Selector<FitType, Comp>" );
   SelectType sel;
   typedef typename SelectType::Comp Comp;
   typedef std::shared_ptr< Organism<FitType> > OrgPtr;
