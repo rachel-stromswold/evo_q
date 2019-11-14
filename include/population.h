@@ -36,13 +36,15 @@
 namespace Genetics {
 
 class ConvergenceCriteria {
-  public:
-    virtual bool evaluate_convergence(_uint N_OBJS, FitnessStats* stats) = 0;
-    virtual ~ConvergenceCriteria() = default;
+public:
+  virtual bool evaluate_convergence(_uint N_OBJS, FitnessStats* stats) = 0;
+  virtual ~ConvergenceCriteria() = default;
 };
 
 template <class FitType, class SelectType, class=void>
 class Population {
+public:
+  typedef typename SelectType::Comp Comp;
 private:
   _uint N_BITS;
   _uint N_PARAMS;
@@ -59,7 +61,6 @@ private:
 protected:
   static_assert( std::is_base_of<Selector<FitType, typename SelectType::Comp>, SelectType>::value, "SelectType must be derived from Selector<FitType, Comp>" );
   SelectType sel;
-  typedef typename SelectType::Comp Comp;
   typedef std::shared_ptr< Organism<FitType> > OrgPtr;
   size_t carryover_num;//How many of the best individuals carry over to the next generation 
 

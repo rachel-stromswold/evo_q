@@ -97,9 +97,10 @@ public:
   virtual Vector<ParentIndSet> select(ArgStore& args, Vector<std::shared_ptr<Organism<FitType>>>& old_gen, Vector<std::shared_ptr<Organism<FitType>>>& offspring) = 0;
 };
 
-template <class FitType, typename Comp=Comparator<FitType>>
-class TournamentSelector : public Selector<FitType, Comp> {
+template <class FitType, typename MyComp=Comparator<FitType>>
+class TournamentSelector : public Selector<FitType, MyComp> {
 public:
+  typedef MyComp Comp;
   Vector<ParentIndSet> select(ArgStore& args, Vector<std::shared_ptr<Organism<FitType>>>& old_gen, Vector<std::shared_ptr<Organism<FitType>>>& offspring) {
     _uint arena_size = args.read_custom_double("arena_size", 2);
     if (arena_size < 2) { arena_size = 2; }
@@ -134,9 +135,10 @@ public:
   }
 };
 
-template <class FitType, typename Comp=Comparator<FitType>>
-class SurvivalSelector : public Selector<FitType, Comp> {
+template <class FitType, typename MyComp=Comparator<FitType>>
+class SurvivalSelector : public Selector<FitType, MyComp> {
 public:
+  typedef MyComp Comp;
   Vector<ParentIndSet> select(ArgStore& args, Vector<std::shared_ptr<Organism<FitType>>>& old_gen, Vector<std::shared_ptr<Organism<FitType>>>& offspring) {
     sort_orgs(0, old_gen);
     /*TODO: determine whether we actually need to figure out a way to keep this in place
