@@ -1,7 +1,7 @@
 #ifndef CONVERGENCE_H
 #define CONVERGENCE_H
 
-#include "../compare.h"
+#include "evo_q.hpp"
 
 namespace Genetics {
 
