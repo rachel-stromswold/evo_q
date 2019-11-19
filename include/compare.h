@@ -19,6 +19,7 @@ struct FitnessStats {
 template <typename FitType>
 class Comparator {
 public:
+  //compare should return >0 in the case where fitness(a) > fitness(b), <0 in the case where fitness(a) < fitness(b) or 0 in cases where comparison is equal or ill-defined
   static int compare(std::shared_ptr< Organism<FitType> > a, std::shared_ptr< Organism<FitType> > b) {
     FitType a_info = a->get_fitness_info();
     FitType b_info = a->get_fitness_info();
@@ -53,14 +54,14 @@ public:
 
 typedef std::pair<_uint, _uint> ParentIndSet;
 
-template <typename FitType, typename Comparator=Comparator<FitType>>
+template <typename FitType, typename Comp=Comparator<FitType>>
 class Selector {
 protected:
   int partition(_uint fit_ind, std::vector<std::shared_ptr< Organism<FitType> >>& work_arr, int s, int e) {
     //double p = (*work_arr)[e]->get_fitness(fit_ind);
     int i = s;
     for (int j = s; j < e; ++j) {
-      if ( Comparator::compare( work_arr[j], work_arr[e] ) > 0) {
+      if ( Comp::compare( work_arr[j], work_arr[e] ) > 0) {
         std::shared_ptr<Organism<FitType>> tmp = work_arr[i];
         work_arr[i] = work_arr[j];
         work_arr[j] = tmp;
@@ -96,11 +97,10 @@ public:
   virtual Vector<ParentIndSet> select(ArgStore& args, Vector<std::shared_ptr<Organism<FitType>>>& old_gen, Vector<std::shared_ptr<Organism<FitType>>>& offspring) = 0;
 };
 
-template <class FitType>
-class TournamentSelector : public Selector<FitType> {
+template <class FitType, typename MyComp=Comparator<FitType>>
+class TournamentSelector : public Selector<FitType, MyComp> {
 public:
-  typedef Comparator<FitType> Comparator;
-
+  typedef MyComp Comp;
   Vector<ParentIndSet> select(ArgStore& args, Vector<std::shared_ptr<Organism<FitType>>>& old_gen, Vector<std::shared_ptr<Organism<FitType>>>& offspring) {
     _uint arena_size = args.read_custom_double("arena_size", 2);
     if (arena_size < 2) { arena_size = 2; }
@@ -119,10 +119,10 @@ public:
       ret[i].second = t2[0];
       for (size_t j = 1; j < t1.size(); ++j) {
         //check whether the fitness is an improvement and use variance as a tiebreaker
-        if (Comparator::compare(old_gen[t1[j]], old_gen[ret[i].first]) > 0) {
+        if (Comp::compare(old_gen[t1[j]], old_gen[ret[i].first]) > 0) {
           ret[i].first  = t1[j];
         }
-        if (Comparator::compare(old_gen[t2[j]], old_gen[ret[i].second]) > 0) {
+        if (Comp::compare(old_gen[t2[j]], old_gen[ret[i].second]) > 0) {
           ret[i].second = t2[j];
         }
       }
@@ -135,11 +135,10 @@ public:
   }
 };
 
-template <class FitType>
-class SurvivalSelector : public Selector<FitType> {
+template <class FitType, typename MyComp=Comparator<FitType>>
+class SurvivalSelector : public Selector<FitType, MyComp> {
 public:
-  typedef Comparator<FitType> Comparator;
-
+  typedef MyComp Comp;
   Vector<ParentIndSet> select(ArgStore& args, Vector<std::shared_ptr<Organism<FitType>>>& old_gen, Vector<std::shared_ptr<Organism<FitType>>>& offspring) {
     sort_orgs(0, old_gen);
     /*TODO: determine whether we actually need to figure out a way to keep this in place
@@ -205,7 +204,7 @@ template <typename FitType>
 class NSGAII_TournamentSelector : public Selector<FitType, NSGAII_Comparator<FitType>> {
 public:
   typedef std::shared_ptr< Organism<FitType> > OrgPtr;
-  typedef NSGAII_Comparator<FitType> Comparator;
+  typedef NSGAII_Comparator<FitType> Comp;
   static const bool use_offspring=true;
 private:  
   _uint n_objs = 1;
@@ -231,7 +230,7 @@ private:
       for (size_t j = 0; j < cmb_arr.size(); ++j) {
         if (i != j) {
           //if the ith solution dominates the jth add the jth entry to the list of dominated solutions, otherwise increment the number of dominating solutions
-          if ( Comparator::compare(cmb_arr[j], cmb_arr[i]) > 0 ) {
+          if ( Comp::compare(cmb_arr[j], cmb_arr[i]) > 0 ) {
             cmb_arr[i]->get_fitness_info().n_dominations++;
           }
         }

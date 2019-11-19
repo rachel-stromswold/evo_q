@@ -1,6 +1,8 @@
 #ifndef CONVERGENCE_H
 #define CONVERGENCE_H
 
+#include "evo_q.hpp"
+
 namespace Genetics {
 
 class Conv_VarianceCutoff : public ConvergenceCriteria {
