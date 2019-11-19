@@ -95,4 +95,8 @@ void NoisyMultiFitness::update(double val, _uint i) {
   }
 }
 
+double NoisyMultiFitness::get_fitness(_uint i) {
+  return fitness[i];
+}
+
 }
