@@ -2356,7 +2356,6 @@ public:
   template <typename T = FitType> inline
   typename enable_if_c< has_average_fitness<T, void(T&)>::value, void >::type
   evaluate(Problem<T>* prob) {
-    std::cout << "Called evaluate with " << typeid(T).name() << " which does implement average_fitness.\n";
     size_t start_i = find_first_unpenalized(prob);
     handle_multiples();
 
