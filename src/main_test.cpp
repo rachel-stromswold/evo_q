@@ -538,10 +538,18 @@ TEST_CASE ("Populations are correctly created and data is successfully read", "[
 
   SECTION ( "The header is read correctly" ) {
     Genetics::Vector<Genetics::String> pop_dat = pop_none.get_header();
-    for (unsigned i = 0; i < pop_dat.size() / 3; ++i) {
-      REQUIRE( pop_dat[i*3] == "x_0");
-      REQUIRE( pop_dat[i*3 + 1] == "f_0(x)" );
-      REQUIRE( pop_dat[i*3 + 2] == "f_1(x)" );
+    unsigned span = NUM_CHROMS + NUM_OBJS;
+    for (unsigned i = 0; i < pop_dat.size() / span; ++i) {
+      for (unsigned j = 0; j < NUM_CHROMS; ++j) {
+        std::stringstream oss;
+        oss << "x_" << j;
+        REQUIRE( pop_dat[i*span + j] == oss.str() );
+      }
+      for (unsigned j = 0; j < NUM_OBJS; ++j) {
+        std::stringstream oss;
+        oss << "f_" << j << "(x)";
+        REQUIRE( pop_dat[i*span + NUM_CHROMS + j] == oss.str() );
+      }
     }
 #ifdef PRINT_GARBAGE
     for (Genetics::Vector<Genetics::String>::iterator it = pop_dat.begin(); it != pop_dat.end(); ++it) {
@@ -558,7 +566,7 @@ TEST_CASE ("Populations are correctly created and data is successfully read", "[
   SECTION ( "The population data is read correctly" ) {
     Genetics::Vector<Genetics::String> pop_dat = pop_none.get_pop_data();
     Genetics::Vector<Genetics::String> pop_dat2 = pop_tmplt.get_pop_data();
-    REQUIRE( pop_dat.size() % 3 == 0 );
+    REQUIRE( pop_dat.size() % (NUM_CHROMS + NUM_OBJS) == 0 );
     REQUIRE( pop_dat.size() == pop_dat2.size() );
 
 #ifdef PRINT_GARBAGE
@@ -713,6 +721,11 @@ TEST_CASE ("Noisy population evaluations don't break") {
         std::cout << "\timprovement in generation " << gen << ". New fitness = " << best_fitness << std::endl;
       }
       out->print_line();
+    }
+    std::vector<std::pair<std::shared_ptr<OrganismNoisy>, unsigned>> species = pop.get_species_list();
+    std::cout << "total number of organisms: " << pop.get_offspring_num() << ", number of species: " << species.size();
+    for (unsigned i = 0; i < species.size(); ++i) {
+      std::cout << "\t species_" << i << ": " << 100*(double)(species[i].second)/pop.get_offspring_num() << "%\n";
     }
     delete out;
   }

@@ -2665,21 +2665,25 @@ public:
   }
   Vector<std::pair<std::shared_ptr<Organism<FitType>>, _uint>> get_species_list(double tolerance=0.1, _uint dimension_threshold=1) {
     Vector<std::pair<std::shared_ptr<Organism<FitType>>, _uint>> ret;
+    if (best_organism) { ret.emplace_back(best_organism, 1); }
     for (_uint i = 0; i < old_gen.size(); ++i) {
+      bool found = false;
       for (_uint j = 0; j < ret.size(); ++j) {
         _uint num_differences = 0;
         for (_uint k = 0; k < map->get_num_params(); ++k) {
-          if (abs( old_gen[i]->read_real(k) - ret[i].first.read_real(k) ) > tolerance*pop_stats[i].var) {
+          if ( abs( old_gen[i]->read_real(k) - ret[j].first->read_real(k) ) > tolerance*(map->get_range_max(k) - map->get_range_min(k)) ) {
             ++num_differences;
             if (num_differences > dimension_threshold) { break; }
           }
         }
-        if (num_differences <= dimension_threshold) {
+        if (num_differences < dimension_threshold) {
           ++ret[j].second;
+          found = true;
           break;
-        } else {
-          ret.emplace_back(old_gen[i], 1);
         }
+      }
+      if (!found) {
+        ret.emplace_back(old_gen[i], 1);
       }
     }
     return ret;

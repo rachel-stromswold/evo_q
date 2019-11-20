@@ -12,7 +12,7 @@
 #define NUM_BITS	16
 #define NUM_BITS_LARGE  64
 #define NUM_OBJS  	2
-#define NUM_CHROMS	1
+#define NUM_CHROMS	3
 
 #define NOISY_DOMAIN  1
 #define NOISY_VAR     0.25
