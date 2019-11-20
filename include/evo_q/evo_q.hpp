@@ -2665,7 +2665,7 @@ public:
   }
   Vector<std::pair<std::shared_ptr<Organism<FitType>>, _uint>> get_species_list(double tolerance=0.1, _uint dimension_threshold=1) {
     Vector<std::pair<std::shared_ptr<Organism<FitType>>, _uint>> ret;
-    if (best_organism) { ret.emplace_back(best_organism, 1); }
+    if (best_organism) { ret.emplace_back(best_organism, 0); }
     for (_uint i = 0; i < old_gen.size(); ++i) {
       bool found = false;
       for (_uint j = 0; j < ret.size(); ++j) {
