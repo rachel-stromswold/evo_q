@@ -2663,6 +2663,27 @@ public:
 
     return ret;
   }
+  Vector<std::pair<std::shared_ptr<Organism<FitType>>, _uint>> get_species_list(double tolerance=0.1, _uint dimension_threshold=1) {
+    Vector<std::pair<std::shared_ptr<Organism<FitType>>, _uint>> ret;
+    for (_uint i = 0; i < old_gen.size(); ++i) {
+      for (_uint j = 0; j < ret.size(); ++j) {
+        _uint num_differences = 0;
+        for (_uint k = 0; k < map->get_num_params(); ++k) {
+          if (abs( old_gen[i]->read_real(k) - ret[i].first.read_real(k) ) > tolerance*pop_stats[i].var) {
+            ++num_differences;
+            if (num_differences > dimension_threshold) { break; }
+          }
+        }
+        if (num_differences <= dimension_threshold) {
+          ++ret[j].second;
+          break;
+        } else {
+          ret.emplace_back(old_gen[i], 1);
+        }
+      }
+    }
+    return ret;
+  }
 
   FitnessStats get_pop_stats(_uint i = 0) { return pop_stats[i]; }
   DEPRECATED("get_min_fitness is deprecated, use get_pop_stats instead") double get_min_fitness(_uint i = 0) {
