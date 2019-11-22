@@ -1888,31 +1888,6 @@ protected:
     }
   }
   void find_best_organism() {
-    /*for (int j = 0; j < N_OBJS; ++j) {
-      pop_stats[j].max = best_organism->get_fitness(j);
-      pop_stats[j].min = best_organism->get_fitness(j);
-      pop_stats[j].mean = best_organism->get_fitness(j) / offspring_num;
-      for (size_t i = 0; i < offspring_num; ++i) {
-        double fitness_i = old_gen[i]->get_fitness(j);
-        if (fitness_i > pop_stats[j].max) {
-          //TODO: make this usefully track multiple objectives
-          if (j == 0) {
-            set_best_organism(i);
-          }
-        }
-        if (fitness_i < pop_stats[j].min) {
-          pop_stats[j].min = fitness_i;
-        }
-        pop_stats[j].mean += fitness_i / offspring_num;
-      }
-      //calculate the variance
-      pop_stats[j].var = 0;
-      for (size_t i = 0; i < offspring_num; ++i) {
-        double fitness_i = old_gen[i]->get_fitness(j);
-        pop_stats[j].var += (fitness_i - pop_stats[j].mean)*(fitness_i - pop_stats[j].mean);
-      }
-    }*/
-
     set_best_organism( SelectType::find_best_organism(old_gen, pop_stats) );
     
     calculated_flags |= FLAG_STATS_SET | FLAG_BEST_FOUND;
@@ -1931,42 +1906,6 @@ protected:
     offspring[offspring_num - 1] = best_organism;//elitism
     old_gen.swap(offspring);
   }
-  /*void breed() {
-    find_best_organism();
-    std::uniform_int_distribution<size_t> dist_surv0(0, survivors_num - 1);
-    std::uniform_int_distribution<size_t> dist_surv1(0, survivors_num - 2);
-    std::vector<Organism<FitType>*> children;
-    size_t* shuffled_inds = (size_t*)malloc(sizeof(size_t)*survivors_num);
-    if (this->offspring_num % 2 == 1) {
-      //offspring[0] = std::make_shared<Organism<FitType>>(best_organism);
-      offspring[0] = best_organism;
-      for (size_t i = 1; 2*i < this->offspring_num; i++) {
-        size_t par1_i = dist_surv0( args.get_generator() );
-        //use the survivors_num-1 distribution to guarantee different parents
-        size_t par2_i = dist_surv1( args.get_generator() );
-        if (par2_i >= par1_i) {
-    par2_i++;
-        }
-        children = survivors[par1_i].get()->breed(&args, survivors[par2_i].get());
-        offspring[2*i] = std::shared_ptr<Organism<FitType>>(children[0]);
-        offspring[2*i - 1] = std::shared_ptr<Organism<FitType>>(children[1]);
-      }
-    } else {
-      for (size_t i = 0; 2*i + 1 < this->offspring_num; i++) {
-        size_t par1_i = dist_surv0( args.get_generator() );
-        //use the survivors_num-1 distribution to guarantee different parents
-        size_t par2_i = dist_surv1( args.get_generator() );
-        if (par2_i >= par1_i) {
-    par2_i++;
-        }
-        children = survivors[par1_i].get()->breed(&args, survivors[par2_i].get());
-        offspring[2*i] = std::shared_ptr<Organism<FitType>>(children[0]);
-        offspring[2*i + 1] = std::shared_ptr<Organism<FitType>>(children[1]);
-      }
-    }
-    free(shuffled_inds);
-    offspring.swap(old_gen);
-  }*/
   
   void calculate_distances() {
     for (_uint i = 0; i < offspring_num; ++i) {
