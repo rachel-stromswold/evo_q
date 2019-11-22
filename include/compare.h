@@ -95,6 +95,40 @@ public:
   //errors if the two fitness values are not comprable (they do not have the same number of objectives)
   
   virtual Vector<ParentIndSet> select(ArgStore& args, Vector<std::shared_ptr<Organism<FitType>>>& old_gen, Vector<std::shared_ptr<Organism<FitType>>>& offspring) = 0;
+
+  //return the index of the best organism found in the population
+  static _uint find_best_organism(Vector<std::shared_ptr<Organism<FitType>>>& orgs, Vector<FitnessStats>& pop_stats) {
+    _uint ret = 0;
+    if (orgs.size() > 0) {
+      for (int j = 0; j < pop_stats.size(); ++j) {
+        pop_stats[j].max = orgs[0]->get_fitness(j);
+        pop_stats[j].min = orgs[0]->get_fitness(j);
+        pop_stats[j].mean = orgs[0]->get_fitness(j) / orgs.size();
+        for (size_t i = 0; i < orgs.size(); ++i) {
+          double fitness_i = orgs[i]->get_fitness(j);
+          if (fitness_i > pop_stats[j].max) {
+            ret = i;
+            pop_stats[j].max = fitness_i;
+          }
+          if (fitness_i < pop_stats[j].min) {
+            pop_stats[j].min = fitness_i;
+          }
+          pop_stats[j].mean += fitness_i / orgs.size();
+        }
+        //calculate the variance
+        pop_stats[j].var = 0;
+        for (size_t i = 0; i < orgs.size(); ++i) {
+          double fitness_i = orgs[i]->get_fitness(j);
+          pop_stats[j].var += (fitness_i - pop_stats[j].mean)*(fitness_i - pop_stats[j].mean);
+        }
+        if (orgs.size() > 1) {
+          pop_stats[j].var /= (orgs.size() - 1);
+        }
+      }
+    }
+    
+    return ret;
+  }
 };
 
 template <class FitType, typename MyComp=Comparator<FitType>>
@@ -196,6 +230,54 @@ public:
         ++ret[i].second;
       }
     }
+    return ret;
+  }
+};
+
+template <class FitType, typename MyComp=Comparator<FitType>>
+class DominanceTournamentSelector : public TournamentSelector<FitType, MyComp> {
+public:
+  typedef MyComp Comp;
+
+  //return the index of the best organism found in the population
+  static _uint find_best_organism(Vector<std::shared_ptr<Organism<FitType>>>& orgs, Vector<FitnessStats>& pop_stats) {
+    _uint ret = 0;
+    if (orgs.size() > 0) {
+      //set fitness to be given by the number of dominations
+      Vector<int> n_dominations(orgs.size(), 0);
+      for (_uint i = 0; i < orgs.size(); ++i) {
+        for (_uint j = i + 1; j < orgs.size(); ++j) {
+          int comp_val = MyComp::compare(orgs[i], orgs[j]);
+          n_dominations[i] += comp_val;
+          n_dominations[j] -= comp_val;
+        }
+        orgs[i]->set_fitness(0, n_dominations[i]);
+      }
+
+      pop_stats[0].max = n_dominations[0];
+      pop_stats[0].min = n_dominations[0];
+      pop_stats[0].mean = n_dominations[0] / orgs.size();
+      for (size_t i = 0; i < orgs.size(); ++i) {
+        double fitness_i = n_dominations[i];
+        if (fitness_i > pop_stats[0].max) {
+          ret = i;
+        }
+        if (fitness_i < pop_stats[0].min) {
+          pop_stats[0].min = fitness_i;
+        }
+        pop_stats[0].mean += fitness_i / orgs.size();
+      }
+      //calculate the variance
+      pop_stats[0].var = 0;
+      for (size_t i = 0; i < orgs.size(); ++i) {
+        double fitness_i = n_dominations[i];
+        pop_stats[0].var += (fitness_i - pop_stats[0].mean)*(fitness_i - pop_stats[0].mean);
+      }
+      if (orgs.size() > 1) {
+        pop_stats[0].var /= (orgs.size() - 1);
+      }
+    }
+    
     return ret;
   }
 };

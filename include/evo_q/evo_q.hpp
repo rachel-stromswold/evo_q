@@ -1292,6 +1292,40 @@ public:
   //errors if the two fitness values are not comprable (they do not have the same number of objectives)
   
   virtual Vector<ParentIndSet> select(ArgStore& args, Vector<std::shared_ptr<Organism<FitType>>>& old_gen, Vector<std::shared_ptr<Organism<FitType>>>& offspring) = 0;
+
+  //return the index of the best organism found in the population
+  static _uint find_best_organism(Vector<std::shared_ptr<Organism<FitType>>>& orgs, Vector<FitnessStats>& pop_stats) {
+    _uint ret = 0;
+    if (orgs.size() > 0) {
+      for (int j = 0; j < pop_stats.size(); ++j) {
+        pop_stats[j].max = orgs[0]->get_fitness(j);
+        pop_stats[j].min = orgs[0]->get_fitness(j);
+        pop_stats[j].mean = orgs[0]->get_fitness(j) / orgs.size();
+        for (size_t i = 0; i < orgs.size(); ++i) {
+          double fitness_i = orgs[i]->get_fitness(j);
+          if (fitness_i > pop_stats[j].max) {
+            ret = i;
+            pop_stats[j].max = fitness_i;
+          }
+          if (fitness_i < pop_stats[j].min) {
+            pop_stats[j].min = fitness_i;
+          }
+          pop_stats[j].mean += fitness_i / orgs.size();
+        }
+        //calculate the variance
+        pop_stats[j].var = 0;
+        for (size_t i = 0; i < orgs.size(); ++i) {
+          double fitness_i = orgs[i]->get_fitness(j);
+          pop_stats[j].var += (fitness_i - pop_stats[j].mean)*(fitness_i - pop_stats[j].mean);
+        }
+        if (orgs.size() > 1) {
+          pop_stats[j].var /= (orgs.size() - 1);
+        }
+      }
+    }
+    
+    return ret;
+  }
 };
 
 template <class FitType, typename MyComp=Comparator<FitType>>
@@ -1393,6 +1427,54 @@ public:
         ++ret[i].second;
       }
     }
+    return ret;
+  }
+};
+
+template <class FitType, typename MyComp=Comparator<FitType>>
+class DominanceTournamentSelector : public TournamentSelector<FitType, MyComp> {
+public:
+  typedef MyComp Comp;
+
+  //return the index of the best organism found in the population
+  static _uint find_best_organism(Vector<std::shared_ptr<Organism<FitType>>>& orgs, Vector<FitnessStats>& pop_stats) {
+    _uint ret = 0;
+    if (orgs.size() > 0) {
+      //set fitness to be given by the number of dominations
+      Vector<int> n_dominations(orgs.size(), 0);
+      for (_uint i = 0; i < orgs.size(); ++i) {
+        for (_uint j = i + 1; j < orgs.size(); ++j) {
+          int comp_val = MyComp::compare(orgs[i], orgs[j]);
+          n_dominations[i] += comp_val;
+          n_dominations[j] -= comp_val;
+        }
+        orgs[i]->set_fitness(0, n_dominations[i]);
+      }
+
+      pop_stats[0].max = n_dominations[0];
+      pop_stats[0].min = n_dominations[0];
+      pop_stats[0].mean = n_dominations[0] / orgs.size();
+      for (size_t i = 0; i < orgs.size(); ++i) {
+        double fitness_i = n_dominations[i];
+        if (fitness_i > pop_stats[0].max) {
+          ret = i;
+        }
+        if (fitness_i < pop_stats[0].min) {
+          pop_stats[0].min = fitness_i;
+        }
+        pop_stats[0].mean += fitness_i / orgs.size();
+      }
+      //calculate the variance
+      pop_stats[0].var = 0;
+      for (size_t i = 0; i < orgs.size(); ++i) {
+        double fitness_i = n_dominations[i];
+        pop_stats[0].var += (fitness_i - pop_stats[0].mean)*(fitness_i - pop_stats[0].mean);
+      }
+      if (orgs.size() > 1) {
+        pop_stats[0].var /= (orgs.size() - 1);
+      }
+    }
+    
     return ret;
   }
 };
@@ -1557,11 +1639,11 @@ public:
     return gen_breed_pairs(args, old_gen, offspring);
   }
 };
-    
+
 //POPULATION_H    
 class ConvergenceCriteria {
   public:
-    virtual bool evaluate_convergence(_uint N_OBJS, FitnessStats* stats) = 0;
+    virtual bool evaluate_convergence(Vector<FitnessStats> stats) = 0;
     virtual ~ConvergenceCriteria() = default;
 };
 
@@ -1583,19 +1665,18 @@ private:
   }
 
 protected:
-  static_assert( std::is_base_of<Selector<FitType, typename SelectType::Comp>, SelectType>::value, "SelectType must be derived from Selector<FitType>" );
+  static_assert( std::is_base_of<Selector<FitType, typename SelectType::Comp>, SelectType>::value, "SelectType must be derived from Selector<FitType, Comp>" );
   SelectType sel;
   typedef std::shared_ptr< Organism<FitType> > OrgPtr;
   size_t carryover_num;//How many of the best individuals carry over to the next generation 
 
-  //OWNED POINTERS
-  FitnessStats* pop_stats = NULL;
   //EXTERNALLY MANAGED POINTERS
   std::shared_ptr<PhenotypeMap> map;
   
   ArgStore args;
   //all offspring from the previous generation
   size_t offspring_num;
+  Vector<FitnessStats> pop_stats;
   std::vector<std::shared_ptr<Organism<FitType>>> offspring;
   std::vector<std::shared_ptr<Organism<FitType>>> old_gen;
   size_t min_penalty_ind, max_penalty_ind;
@@ -1807,7 +1888,7 @@ protected:
     }
   }
   void find_best_organism() {
-    for (int j = 0; j < N_OBJS; ++j) {
+    /*for (int j = 0; j < N_OBJS; ++j) {
       pop_stats[j].max = best_organism->get_fitness(j);
       pop_stats[j].min = best_organism->get_fitness(j);
       pop_stats[j].mean = best_organism->get_fitness(j) / offspring_num;
@@ -1820,7 +1901,7 @@ protected:
           }
         }
         if (fitness_i < pop_stats[j].min) {
-    pop_stats[j].min = fitness_i;
+          pop_stats[j].min = fitness_i;
         }
         pop_stats[j].mean += fitness_i / offspring_num;
       }
@@ -1830,7 +1911,9 @@ protected:
         double fitness_i = old_gen[i]->get_fitness(j);
         pop_stats[j].var += (fitness_i - pop_stats[j].mean)*(fitness_i - pop_stats[j].mean);
       }
-    }
+    }*/
+
+    set_best_organism( SelectType::find_best_organism(old_gen, pop_stats) );
     
     calculated_flags |= FLAG_STATS_SET | FLAG_BEST_FOUND;
   }
@@ -2009,7 +2092,7 @@ public:
     createOrganisms(tmplt, false);
   }
   void createOrganisms(Organism<FitType>* tmplt, bool latin) {
-    pop_stats = (FitnessStats*)malloc(sizeof(FitnessStats)*N_OBJS);
+    pop_stats.resize(N_OBJS);
     //this->survivors_num = args.get_survivors();
     this->offspring_num = args.get_pop_size();
     /*if (this->offspring_num % 2 == 0) {
@@ -2076,9 +2159,6 @@ public:
     for (size_t i = 0; i < this->offspring_num; ++i) {
       old_gen[i].reset();
     }
-    if (pop_stats) {
-      free(pop_stats);
-    }
     if (var_labels) {
       for (_uint i = 0; i < N_PARAMS; ++i) {
         free(var_labels[i]);
@@ -2102,7 +2182,7 @@ public:
     map = o.map;
     old_gen = o.old_gen;
     offspring = o.offspring;
-    pop_stats = (FitnessStats*)malloc(sizeof(FitnessStats)*N_OBJS);
+    pop_stats.resize(N_OBJS);
     var_labels = (char**)malloc(sizeof(char*)*N_PARAMS);
     obj_labels = (char**)malloc(sizeof(char*)*N_OBJS);
 
@@ -2122,25 +2202,26 @@ public:
     calculated_flags = FLAG_NONE_SET;
   }
   Population& operator=(Population& o) {
-    int tmp_N_BITS = N_BITS;
-    int tmp_N_OBJS = N_OBJS;
-    std::shared_ptr<PhenotypeMap> tmp_map = map;
-    FitnessStats* tmp_pop_stats = pop_stats;
-    char** tmp_var_labels = var_labels;
-    char** tmp_obj_labels = obj_labels;
     N_BITS = o.N_BITS;
     N_OBJS = o.N_OBJS;
     map = o.map;
-    pop_stats = tmp_pop_stats;
-    var_labels = o.var_labels;
-    obj_labels = o.obj_labels;
-    o.N_BITS = tmp_N_BITS;
-    o.N_OBJS = tmp_N_OBJS;
-    o.map = tmp_map;
-    o.pop_stats = tmp_pop_stats;
-    o.var_labels = tmp_var_labels;
-    o.obj_labels = tmp_obj_labels;
-
+    pop_stats = o.pop_stats;
+    //free existing pointers and reallocate array
+    for (_uint i = 0; i < N_PARAMS; ++i) { if(var_labels[i]) { free(var_labels[i]); } }
+    for (_uint i = 0; i < N_OBJS; ++i) { if(obj_labels[i]) { free(obj_labels[i]); } }
+    var_labels = (char**)realloc(var_labels, sizeof(char*)*N_PARAMS);
+    obj_labels = (char**)realloc(obj_labels, sizeof(char*)*N_OBJS);
+    //deep copy
+    for (_uint i = 0; i < N_PARAMS; ++i) {
+      _uint len = strlen(o.var_labels[i]) + 1;
+      var_labels[i] = (char*)malloc(sizeof(char)*len);
+      strncpy(var_labels[i], o.var_labels[i], len);
+    }
+    for (_uint i = 0; i < N_OBJS; ++i) {
+      _uint len = strlen(o.obj_labels[i]) + 1;
+      obj_labels[i] = (char*)malloc(sizeof(char)*len);
+      strncpy(obj_labels[i], o.obj_labels[i], len);
+    }
     old_gen = o.old_gen;
     offspring = o.offspring;
     best_organism = o.best_organism;
@@ -2163,7 +2244,6 @@ public:
     pop_stats = o.pop_stats;
     var_labels = o.var_labels;
     obj_labels = o.obj_labels;
-    o.pop_stats = NULL;
     o.var_labels = NULL;
     o.obj_labels = NULL;
 
@@ -2455,7 +2535,7 @@ public:
     calculated_flags &= !FLAG_FRONTS;
     generation++;
     if (conv) {
-      return conv->evaluate_convergence(old_gen[0]->get_fitness_info().get_n_objs(), pop_stats);
+      return conv->evaluate_convergence(pop_stats);
     } else {
       return (generation > args.get_num_gens());
     }
@@ -2515,20 +2595,22 @@ public:
     }
   }
   std::shared_ptr< Organism<FitType> > get_best_organism(size_t i = 0) {
-    if ( (calculated_flags & FLAG_BEST_FOUND) == 0 ) {
+    if ( pop_stats[i].max != best_organism->get_fitness(i) || (calculated_flags & FLAG_BEST_FOUND) == 0 ) {
       find_best_organism();
     }
-    if (i == 0) {
+    return best_organism;
+    /*if (i == 0) {
       std::shared_ptr<Organism<FitType>> tmp_org = std::make_shared<Organism<FitType>>( best_organism->copy() );
-      /*for (_uint i = 0; i < N_OBJS; ++i) {
-        tmp_org->update(i, pop_stats[i].max);
-      }*/
+      //for (_uint i = 0; i < N_OBJS; ++i) {
+      //tmp_org->update(i, pop_stats[i].max);
+      //}
       return tmp_org;
     } else {
       sel.sort_orgs(0, old_gen);
       return old_gen[i];
-    }
+    }*/
   }
+
   std::shared_ptr< Organism<FitType> > get_organism(size_t i) {
     if (i >= old_gen.size())
       error(CODE_ARG_RANGE, "Attempt to access invalid index %d when the maximum allowed is %d.", i, old_gen.size());
@@ -2663,6 +2745,7 @@ public:
 
     return ret;
   }
+
   Vector<std::pair<std::shared_ptr<Organism<FitType>>, _uint>> get_species_list(double tolerance=0.1, _uint dimension_threshold=1) {
     Vector<std::pair<std::shared_ptr<Organism<FitType>>, _uint>> ret;
     if (best_organism) { ret.emplace_back(best_organism, 0); }
