@@ -251,7 +251,11 @@ public:
           n_dominations[i] += comp_val;
           n_dominations[j] -= comp_val;
         }
-        orgs[i]->set_fitness(0, n_dominations[i]);
+        if ( !orgs[i]->penalized() ) {
+          orgs[i]->set_fitness(0, n_dominations[i]); 
+        } else {
+          orgs[i]->set_fitness(0, -orgs.size());
+        }
       }
 
       pop_stats[0].max = n_dominations[0];
