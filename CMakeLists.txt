@@ -52,11 +52,10 @@ if(NOT EXISTS "${PROJECT_SOURCE_DIR}/extern/pybind11/CMakeLists.txt")
     message(FATAL_ERROR "The submodules were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
 endif()
 
-add_subdirectory(extern/pybind11)
-
 include_directories( include )
 
 if(BUILD_PYTHON)
+  add_subdirectory(extern/pybind11)
   pybind11_add_module(evo_q src/util.cpp src/phenotype.cpp src/parse.cpp src/gene.cpp src/organism.cpp src/population.cpp src/convergence.cpp src/python.cpp)
 endif()
 
