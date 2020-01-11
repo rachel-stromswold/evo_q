@@ -9,12 +9,12 @@ Conv_VarianceCutoff::Conv_VarianceCutoff(double p_cutoff) {
   }
 }
 
-bool Conv_VarianceCutoff::evaluate_convergence(_uint N_OBJS, FitnessStats* stats) {
-  if (N_OBJS > max_variance.size()) {
-    max_variance.insert(max_variance.end(), N_OBJS - max_variance.size(), -std::numeric_limits<double>::infinity());
+bool Conv_VarianceCutoff::evaluate_convergence(Vector<FitnessStats> stats) {
+  if (stats.size() > max_variance.size()) {
+    max_variance.insert(max_variance.end(), stats.size() - max_variance.size(), -std::numeric_limits<double>::infinity());
   }
   bool ret = true;
-  for (_uint i = 0; i < N_OBJS; ++i) {
+  for (_uint i = 0; i < stats.size(); ++i) {
     if (stats[i].var > max_variance[i]) {
       max_variance[i] = stats[i].var;
     }
@@ -35,12 +35,12 @@ Conv_RangeCutoff::Conv_RangeCutoff(double p_cutoff) {
   }
 }
 
-bool Conv_RangeCutoff::evaluate_convergence(_uint N_OBJS, FitnessStats* stats) {
-  if (N_OBJS > max_range.size()) {
-    max_range.insert(max_range.end(), N_OBJS - max_range.size(), -std::numeric_limits<double>::infinity());
+bool Conv_RangeCutoff::evaluate_convergence(Vector<FitnessStats> stats) {
+  if (stats.size() > max_range.size()) {
+    max_range.insert(max_range.end(), stats.size() - max_range.size(), -std::numeric_limits<double>::infinity());
   }
   bool ret = true;
-  for (_uint i = 0; i < N_OBJS; ++i) {
+  for (_uint i = 0; i < stats.size(); ++i) {
     double range = stats[i].max - stats[i].min;
     if (range > max_range[i]) {
       max_range[i] = range;
@@ -64,13 +64,13 @@ Conv_Plateau::Conv_Plateau(double p_fitness_threshold, _uint p_generation_cutoff
   }
 }
 
-bool Conv_Plateau::evaluate_convergence(_uint N_OBJS, FitnessStats* stats) {
-  if ( N_OBJS > max_fitness.size() || N_OBJS > prev_fitness.size() ) {
-    max_fitness.insert(max_fitness.end(), N_OBJS - max_fitness.size(), -std::numeric_limits<double>::infinity());
-    prev_fitness.insert(prev_fitness.end(), N_OBJS - prev_fitness.size(), -std::numeric_limits<double>::infinity());
+bool Conv_Plateau::evaluate_convergence(Vector<FitnessStats> stats) {
+  if ( stats.size() > max_fitness.size() || stats.size() > prev_fitness.size() ) {
+    max_fitness.insert(max_fitness.end(), stats.size() - max_fitness.size(), -std::numeric_limits<double>::infinity());
+    prev_fitness.insert(prev_fitness.end(), stats.size() - prev_fitness.size(), -std::numeric_limits<double>::infinity());
   }
   bool improved = false;
-  for (_uint i = 0; i < N_OBJS; ++i) {
+  for (_uint i = 0; i < stats.size(); ++i) {
     double max_rel = stats[i].max;
     if (stats[i].max > max_fitness[i]) {
       max_fitness[i] = stats[i].max;
@@ -110,11 +110,11 @@ cutoffs(p_cutoffs)
   }
 }
 
-bool uConv_VarianceCutoff::evaluate_convergence(_uint N_OBJS, FitnessStats* stats) {
-  if (N_OBJS > cutoffs.size()) {
-    error(CODE_ARG_RANGE, "population range convergence out of bounds, %d objects were supplied, but bounds were only specified for %d variables.", N_OBJS, cutoffs.size());
+bool uConv_VarianceCutoff::evaluate_convergence(Vector<FitnessStats> stats) {
+  if (stats.size() > cutoffs.size()) {
+    error(CODE_ARG_RANGE, "population range convergence out of bounds, %d objects were supplied, but bounds were only specified for %d variables.", stats.size(), cutoffs.size());
   }
-  for (_uint i = 0; i < N_OBJS; ++i) {
+  for (_uint i = 0; i < stats.size(); ++i) {
     if (stats[i].var > cutoffs[i]) {
       return false;
     }
@@ -132,11 +132,11 @@ cutoffs(p_cutoffs)
   }
 }
 
-bool uConv_RangeCutoff::evaluate_convergence(_uint N_OBJS, FitnessStats* stats) {
-  if (N_OBJS > cutoffs.size()) {
-    error(CODE_ARG_RANGE, "population range convergence out of bounds, %d objects were supplied, but bounds were only specified for %d variables.", N_OBJS, cutoffs.size());
+bool uConv_RangeCutoff::evaluate_convergence(Vector<FitnessStats> stats) {
+  if (stats.size() > cutoffs.size()) {
+    error(CODE_ARG_RANGE, "population range convergence out of bounds, %d objects were supplied, but bounds were only specified for %d variables.", stats.size(), cutoffs.size());
   }
-  for (_uint i = 0; i < N_OBJS; ++i) {
+  for (_uint i = 0; i < stats.size(); ++i) {
     double range = stats[i].max - stats[i].min;
     if (range > cutoffs[i]) {
       return false;
@@ -159,14 +159,14 @@ uConv_Plateau::uConv_Plateau(Vector<double> p_fitness_thresholds, _uint p_genera
   }
 }
 
-bool uConv_Plateau::evaluate_convergence(_uint N_OBJS, FitnessStats* stats) {
-  if ( N_OBJS > fitness_thresholds.size() || N_OBJS > prev_fitness.size() ) {
-    fitness_thresholds.insert(fitness_thresholds.end(), N_OBJS - fitness_thresholds.size(), -std::numeric_limits<double>::infinity());
-    prev_fitness.insert(prev_fitness.end(), N_OBJS - prev_fitness.size(), -std::numeric_limits<double>::infinity());
+bool uConv_Plateau::evaluate_convergence(Vector<FitnessStats> stats) {
+  if ( stats.size() > fitness_thresholds.size() || stats.size() > prev_fitness.size() ) {
+    fitness_thresholds.insert(fitness_thresholds.end(), stats.size() - fitness_thresholds.size(), -std::numeric_limits<double>::infinity());
+    prev_fitness.insert(prev_fitness.end(), stats.size() - prev_fitness.size(), -std::numeric_limits<double>::infinity());
   }
 
   bool improved = false;
-  for (_uint i = 0; i < N_OBJS; ++i) {
+  for (_uint i = 0; i < stats.size(); ++i) {
     if (stats[i].max - prev_fitness[i] > fitness_thresholds[i]) {
       improved = true;
       break;
@@ -176,7 +176,7 @@ bool uConv_Plateau::evaluate_convergence(_uint N_OBJS, FitnessStats* stats) {
     gens_without_improvement++;
   } else {
     gens_without_improvement = 0;
-    for (_uint i = 0; i < N_OBJS; ++i) {
+    for (_uint i = 0; i < stats.size(); ++i) {
       prev_fitness[i] = stats[i].max;
     }
   }

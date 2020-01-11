@@ -16,7 +16,7 @@ class Conv_VarianceCutoff : public ConvergenceCriteria {
     Vector<double> max_variance;//used for normalization
   public:
     Conv_VarianceCutoff(double p_cutoff);
-    bool evaluate_convergence(_uint N_OBJS, FitnessStats* stats);
+    bool evaluate_convergence(Vector<FitnessStats> stats);
 };
 
 class Conv_RangeCutoff : public ConvergenceCriteria {
@@ -26,7 +26,7 @@ class Conv_RangeCutoff : public ConvergenceCriteria {
     Vector<double> max_range;//used for normalization
   public:
     Conv_RangeCutoff(double p_cutoff);
-    bool evaluate_convergence(_uint N_OBJS, FitnessStats* stats);
+    bool evaluate_convergence(Vector<FitnessStats> stats);
 };
 
 class Conv_Plateau : public ConvergenceCriteria {
@@ -39,7 +39,7 @@ class Conv_Plateau : public ConvergenceCriteria {
     Vector<double> prev_fitness;
   public:
     Conv_Plateau(double p_fitness_threshold, _uint p_generation_cutoff);
-    bool evaluate_convergence(_uint N_OBJS, FitnessStats* stats);
+    bool evaluate_convergence(Vector<FitnessStats> stats);
 };
 
 class uConv_VarianceCutoff : public ConvergenceCriteria {
@@ -47,7 +47,7 @@ class uConv_VarianceCutoff : public ConvergenceCriteria {
     Vector<double> cutoffs;
   public:
     uConv_VarianceCutoff(Vector<double> p_cutoffs);
-    bool evaluate_convergence(_uint N_OBJS, FitnessStats* stats);
+    bool evaluate_convergence(Vector<FitnessStats> stats);
 };
 
 class uConv_RangeCutoff : public ConvergenceCriteria {
@@ -55,7 +55,7 @@ class uConv_RangeCutoff : public ConvergenceCriteria {
     Vector<double> cutoffs;
   public:
     uConv_RangeCutoff(Vector<double> p_cutoffs);
-    bool evaluate_convergence(_uint N_OBJS, FitnessStats* stats);
+    bool evaluate_convergence(Vector<FitnessStats> stats);
 };
 
 class uConv_Plateau : public ConvergenceCriteria {
@@ -67,7 +67,7 @@ class uConv_Plateau : public ConvergenceCriteria {
     Vector<double> prev_fitness;
   public:
     uConv_Plateau(Vector<double> p_fitness_thresholds, _uint p_generation_cutoff);
-    bool evaluate_convergence(_uint N_OBJS, FitnessStats* stats);
+    bool evaluate_convergence(Vector<FitnessStats> stats);
 };
 
 }
