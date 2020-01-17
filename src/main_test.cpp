@@ -653,7 +653,7 @@ TEST_CASE ("ArgStore successfully parses a file") {
   REQUIRE( pop.get_args().read_custom_double("arena_size", 2) );
   REQUIRE( pop.get_args().get_num_gens() == 50 );
   REQUIRE( pop.get_args().get_num_crossovers() == 2 );
-  REQUIRE( pop.get_args().get_init_coup_var() == 0.3 );
+  REQUIRE( pop.get_args().get_init_param_var() == 0.3 );
   REQUIRE( pop.get_args().get_crossover_prob() == 0.9 );
   REQUIRE( pop.get_args().get_mutate_prob() == 0.016 );
   REQUIRE( pop.get_args().get_hypermutation_threshold() == 1.0 );

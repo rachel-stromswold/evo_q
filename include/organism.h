@@ -333,7 +333,7 @@ public:
     std::uniform_int_distribution<size_t> chrom(0, al->get_num_params() - 1);
     size_t high_ind = chrom( args.get_generator() );
 
-    double var = args.get_init_coup_var();
+    double var = args.get_init_param_var();
     double lvar = var/al->get_num_params();
     genes.reset();
     for (size_t i = 0; i < al->get_num_params(); i++) {

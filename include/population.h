@@ -63,6 +63,7 @@ protected:
   SelectType sel;
   typedef std::shared_ptr< Organism<FitType> > OrgPtr;
   size_t carryover_num;//How many of the best individuals carry over to the next generation 
+  double penalty_fact;//Used to guarantee that penalized
 
   //EXTERNALLY MANAGED POINTERS
   std::shared_ptr<PhenotypeMap> map;
@@ -219,12 +220,15 @@ protected:
   void apply_penalties(Problem<FitType>* prob) {
     //calculate penalties based on the range of fitnesses
     //double penalty_fact = min(abs(pop_stats[0].max - pop_stats[0].min), 1);
-    double penalty_fact = abs(pop_stats[0].max - pop_stats[0].min);
-    if (penalty_fact == 0) { penalty_fact = 1; }
+    double tmp_penalty_fact = abs(pop_stats[0].max - pop_stats[0].min);
+    if (tmp_penalty_fact == 0) { tmp_penalty_fact = 1; }
     if ( pop_stats[0].max == std::numeric_limits<double>::infinity() ) {
-      penalty_fact = abs(pop_stats[0].min);
+      tmp_penalty_fact = abs(pop_stats[0].min);
     } else if ( pop_stats[0].min == -std::numeric_limits<double>::infinity() ) {
-      penalty_fact = abs(pop_stats[0].max);
+      tmp_penalty_fact = abs(pop_stats[0].max);
+    }
+    if (tmp_penalty_fact > penalty_fact) {
+      penalty_fact = tmp_penalty_fact;
     }
     bool penalties_applied = false;
 #ifdef USE_LIBOMP

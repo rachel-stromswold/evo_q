@@ -212,7 +212,7 @@ size_t Chromosome::getBitStream (size_t n, size_t k, size_t x) {
 
 bool Chromosome::real_space_mutate(ArgStore& args) {
   if (use_real & REAL_ACTIVE) {
-    std::normal_distribution<double> norm(0, args.get_init_coup_var());
+    std::normal_distribution<double> norm(0, args.get_init_param_var());
     for (size_t i = 0; i < real_vals_size; ++i) {
       real_vals[i] += norm( args.get_generator() );
       //ensure that the value is between 0 and 1
