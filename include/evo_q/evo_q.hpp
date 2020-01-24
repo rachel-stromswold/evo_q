@@ -1177,6 +1177,10 @@ public:
   void set_cost(double val) { fit.set_fitness(-val, 0); }
   void update(double val) { fit.update(val, 0); }
   void update_cost(double val) { fit.update(-val, 0); }
+  //_uint get_n_evaluations() { return n_evaluations; }
+  //average fitness with another organism if they both have the same genotype
+  /*void average_fitness(Organism* other);
+  void copy_fitness_data(Organism* other);*/
 
   void set_int(_uint i, int value) { genes.set_to_int(al.get(), i, value); }
   void set_uint(_uint i, _uint value) { genes.set_to_ulong(al.get(), i, value); }
@@ -1184,6 +1188,7 @@ public:
   double read_real(_uint i) { return genes.gene_to_num(al.get(), i); }
   int read_int(_uint i) { return genes.gene_to_int(al.get(), i); }
   _uint read_uint(_uint i) { return genes.gene_to_ulong(al.get(), i); }
+  //bool dominates(Organism* other);
   String get_chromosome_string(_uint i) {
     if (N_BITS == 0 || !al) {
       error(1, "Attempt to access string for uninitialized organism.");
@@ -1195,6 +1200,7 @@ public:
   }
   char* get_output_stream() { return output_stream; }
   size_t get_output_len() {return output_len; }
+  //int get_rank() { return rank; }
   _uint get_n_bits() { return N_BITS; }
   _uint get_n_params() { return al->get_num_params(); }
   _uint get_n_objs() { return N_OBJS; }
@@ -1212,6 +1218,7 @@ struct FitnessStats {
 template <typename FitType>
 class Comparator {
 public:
+  //compare should return >0 in the case where fitness(a) > fitness(b), <0 in the case where fitness(a) < fitness(b) or 0 in cases where comparison is equal or ill-defined
   static int compare(std::shared_ptr< Organism<FitType> > a, std::shared_ptr< Organism<FitType> > b) {
     FitType a_info = a->get_fitness_info();
     FitType b_info = a->get_fitness_info();
@@ -1641,9 +1648,9 @@ public:
 
 //POPULATION_H    
 class ConvergenceCriteria {
-  public:
-    virtual bool evaluate_convergence(Vector<FitnessStats> stats) = 0;
-    virtual ~ConvergenceCriteria() = default;
+public:
+  virtual bool evaluate_convergence(Vector<FitnessStats> stats) = 0;
+  virtual ~ConvergenceCriteria() = default;
 };
 
 template <class FitType, class SelectType, class=void>
@@ -1668,6 +1675,7 @@ protected:
   SelectType sel;
   typedef std::shared_ptr< Organism<FitType> > OrgPtr;
   size_t carryover_num;//How many of the best individuals carry over to the next generation 
+  double penalty_fact;//Used to guarantee that penalized
 
   //EXTERNALLY MANAGED POINTERS
   std::shared_ptr<PhenotypeMap> map;
@@ -1824,12 +1832,15 @@ protected:
   void apply_penalties(Problem<FitType>* prob) {
     //calculate penalties based on the range of fitnesses
     //double penalty_fact = min(abs(pop_stats[0].max - pop_stats[0].min), 1);
-    double penalty_fact = abs(pop_stats[0].max - pop_stats[0].min);
-    if (penalty_fact == 0) { penalty_fact = 1; }
+    double tmp_penalty_fact = abs(pop_stats[0].max - pop_stats[0].min);
+    if (tmp_penalty_fact == 0) { tmp_penalty_fact = 1; }
     if ( pop_stats[0].max == std::numeric_limits<double>::infinity() ) {
-      penalty_fact = abs(pop_stats[0].min);
+      tmp_penalty_fact = abs(pop_stats[0].min);
     } else if ( pop_stats[0].min == -std::numeric_limits<double>::infinity() ) {
-      penalty_fact = abs(pop_stats[0].max);
+      tmp_penalty_fact = abs(pop_stats[0].max);
+    }
+    if (tmp_penalty_fact > penalty_fact) {
+      penalty_fact = tmp_penalty_fact;
     }
     bool penalties_applied = false;
 #ifdef USE_LIBOMP
