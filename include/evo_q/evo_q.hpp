@@ -675,10 +675,7 @@ class ArgStore {
     size_t breed_pop_size;
     size_t num_gens;
     int num_crossovers;
-    double init_coup_var;
-//REMOVAL_CANDIDATE
-    double init_coup_mean;
-//END REMOVAL CANDIDATE
+    double init_param_var;
     double crossover_prob;
     double mutate_prob;
     double hypermutation_threshold;
@@ -734,10 +731,8 @@ class ArgStore {
     void set_num_gens(size_t n) 		{ num_gens = n; }
     int get_num_crossovers() 			{ return num_crossovers; }
     void set_num_crossovers(int n) 		{ num_crossovers = n; }
-    double get_init_coup_var()			{ return init_coup_var; }
-    void set_init_coup_var(double x)		{ init_coup_var = x; }
-    double get_init_coup_mean() 		{ return init_coup_mean; }
-    void set_init_coup_mean(double x) 		{ init_coup_mean = x; }
+    double get_init_param_var()			{ return init_param_var; }
+    void set_init_param_var(double x)		{ init_param_var = x; }
     double get_crossover_prob()			{ return crossover_prob; }
     void set_crossover_prob(double x)		{ crossover_prob = x; }
     double get_mutate_prob()			{ return mutate_prob; }
@@ -1107,7 +1102,7 @@ public:
     std::uniform_int_distribution<size_t> chrom(0, al->get_num_params() - 1);
     size_t high_ind = chrom( args.get_generator() );
 
-    double var = args.get_init_coup_var();
+    double var = args.get_init_param_var();
     double lvar = var/al->get_num_params();
     genes.reset();
     for (size_t i = 0; i < al->get_num_params(); i++) {
