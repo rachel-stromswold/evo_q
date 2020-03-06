@@ -805,6 +805,7 @@ public:
   //returns a double value corresponding to the gene, it will have a value between max and min
   double gene_to_num(PhenotypeMap* al, _uint ind);
   String get_string(PhenotypeMap* al, _uint ind);
+  Vector<double> get_real_vector(PhenotypeMap* al);
 };
     
 //ORGANISM_H
@@ -1188,6 +1189,8 @@ public:
   double read_real(_uint i) { return genes.gene_to_num(al.get(), i); }
   int read_int(_uint i) { return genes.gene_to_int(al.get(), i); }
   _uint read_uint(_uint i) { return genes.gene_to_ulong(al.get(), i); }
+  Vector<double> read_real_vector() { return genes.get_real_vector(al.get()); 
+
   //bool dominates(Organism* other);
   String get_chromosome_string(_uint i) {
     if (N_BITS == 0 || !al) {
