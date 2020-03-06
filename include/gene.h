@@ -69,6 +69,7 @@ public:
   //returns a double value corresponding to the gene, it will have a value between max and min
   double gene_to_num(PhenotypeMap* al, _uint ind);
   String get_string(PhenotypeMap* al, _uint ind);
+  Vector<double> get_real_vector(PhenotypeMap* al);
 };
 
 }

@@ -429,4 +429,22 @@ String Chromosome::get_string(PhenotypeMap* al, _uint ind) {
 #endif
 }
 
+/**
+ * Returns: a vector containing all real valued parameters in order
+ * Note: If a parameter is not real-valued it is by default converted to an unsigned integer and represented as a double. This may result in a loss of precision.
+ */
+Vector<double> Chromosome::get_real_vector(PhenotypeMap* al) {
+  Vector<double> ret(al->get_num_params());
+  for (_uint ii = 0; ii < al->get_num_params(); ++ii) {
+    if (al->is_real(ii)) {
+      ret[ii] = (double)gene_to_num(al, ii);
+    } else if (al->is_int(ii)) {
+      ret[ii] = (double)gene_to_int(al, ii);
+    } else {
+      ret[ii] = gene_to_ulong(al, ii);
+    }
+  }
+  return ret;
+}
+
 }
