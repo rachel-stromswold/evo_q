@@ -667,6 +667,17 @@ public:
 
     calculated_flags = FLAG_NONE_SET;
   }
+  void reset_population_fitness() {
+    for (_uint i = 0; i < this->offspring_num; ++i) {
+      this->old_gen[i]->reset_fitness();
+    }
+    for (_uint i = 0; i < N_OBJS; ++i) {
+      pop_stats[i].min = 0;
+      pop_stats[i].max = 0;
+      pop_stats[i].var = 0;
+      pop_stats[i].mean = 0;
+    }
+  }
   /*void set_n_survivors(_uint new_size) {
     size_t old_size = survivors_num;
     if (new_size > old_size) {
@@ -771,7 +782,7 @@ public:
           } while( old_gen[first_valid_i]->penalized() );
           set_best_organism(first_valid_i - 1);
           //alltime_best_organism = best_organism->copy();
-    alltime_best_organism = best_organism;
+	  alltime_best_organism = best_organism;
           pop_stats[0].max = old_gen[first_valid_i]->get_fitness(0);
           pop_stats[0].min = old_gen[first_valid_i]->get_fitness(0);
         }

@@ -419,9 +419,7 @@ public:
   double read_real(_uint i) { return genes.gene_to_num(al.get(), i); }
   int read_int(_uint i) { return genes.gene_to_int(al.get(), i); }
   _uint read_uint(_uint i) { return genes.gene_to_ulong(al.get(), i); }
-  Vector<double> read_real_vector() {
-    return genes.get_real_vector(al.get());
-  }
+  Vector<double> read_real_vector() { return genes.get_real_vector(al.get()); }
 
   //bool dominates(Organism* other);
   String get_chromosome_string(_uint i) {

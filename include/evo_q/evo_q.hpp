@@ -2221,6 +2221,17 @@ public:
 
     calculated_flags = FLAG_NONE_SET;
   }
+  void reset_population_fitness() {
+    for (_uint i = 0; i < this->offspring_num; ++i) {
+      this->old_gen[i]->reset_fitness();
+    }
+    for (_uint i = 0; i < N_OBJS; ++i) {
+      pop_stats[i].min = 0;
+      pop_stats[i].max = 0;
+      pop_stats[i].var = 0;
+      pop_stats[i].mean = 0;
+    }
+  }
   /*void set_n_survivors(_uint new_size) {
     size_t old_size = survivors_num;
     if (new_size > old_size) {
