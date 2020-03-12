@@ -1223,16 +1223,16 @@ class Comparator {
 public:
   //compare should return >0 in the case where fitness(a) > fitness(b), <0 in the case where fitness(a) < fitness(b) or 0 in cases where comparison is equal or ill-defined
   static int compare(FitType& a, FitType& b) {
-    FitType a_info = a->get_fitness_info();
-    FitType b_info = a->get_fitness_info();
-    if ( a->get_n_objs() != b->get_n_objs() ) {
+    //FitType a_info = a->get_fitness_info();
+    //FitType b_info = a->get_fitness_info();
+    if ( a.get_n_objs() != b.get_n_objs() ) {
       error(CODE_MISC, "Comparison of fitness values with a different number of objectives.");
     }
     int ret = 0;
     for (_uint i = 0; i < a_info.get_n_objs(); ++i) {
-      if (a->get_fitness(i) < b->get_fitness(i)) {
+      if (a.get_fitness(i) < b.get_fitness(i)) {
         --ret;
-      } else if (a->get_fitness(i) > b->get_fitness(i)) {
+      } else if (a.get_fitness(i) > b.get_fitness(i)) {
         ++ret;
       }
     }
@@ -1245,8 +1245,8 @@ class NSGAII_Comparator : public Comparator<FitType> {
 public:
   static_assert( std::is_base_of<MultiFitness, FitType>::value, "FitType must be derived from MultiFitness for NSGAII comparator" );
   static int compare(FitType& a, FitType& b) {
-    for (_uint i = 0; i < a->get_fitness_info().get_n_objs(); ++i) {
-      if (a->get_fitness(i) <= b->get_fitness(i)) {
+    for (_uint i = 0; i < a.get_fitness_info().get_n_objs(); ++i) {
+      if (a.get_fitness(i) <= b.get_fitness(i)) {
         return 0;
       }
     }
