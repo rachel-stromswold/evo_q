@@ -20,17 +20,17 @@ template <typename FitType>
 class Comparator {
 public:
   //compare should return >0 in the case where fitness(a) > fitness(b), <0 in the case where fitness(a) < fitness(b) or 0 in cases where comparison is equal or ill-defined
-  static int compare(std::shared_ptr< Organism<FitType> > a, std::shared_ptr< Organism<FitType> > b) {
-    FitType a_info = a->get_fitness_info();
-    FitType b_info = a->get_fitness_info();
-    if ( a->get_n_objs() != b->get_n_objs() ) {
+  static int compare(FitType& a, FitType& b) {
+    //FitType a_info = a.get_fitness_info();
+    //FitType b_info = b.get_fitness_info();
+    if ( a.get_n_objs() != b.get_n_objs() ) {
       error(CODE_MISC, "Comparison of fitness values with a different number of objectives.");
     }
     int ret = 0;
-    for (_uint i = 0; i < a_info.get_n_objs(); ++i) {
-      if (a->get_fitness(i) < b->get_fitness(i)) {
+    for (_uint i = 0; i < a.get_n_objs(); ++i) {
+      if (a.get_fitness(i) < b.get_fitness(i)) {
         --ret;
-      } else if (a->get_fitness(i) > b->get_fitness(i)) {
+      } else if (a.get_fitness(i) > b.get_fitness(i)) {
         ++ret;
       }
     }
@@ -42,9 +42,9 @@ template <typename FitType>
 class NSGAII_Comparator : public Comparator<FitType> {
 public:
   static_assert( std::is_base_of<MultiFitness, FitType>::value, "FitType must be derived from MultiFitness for NSGAII comparator" );
-  static int compare(std::shared_ptr< Organism<FitType> > a, std::shared_ptr< Organism<FitType> > b) {
-    for (_uint i = 0; i < a->get_fitness_info().get_n_objs(); ++i) {
-      if (a->get_fitness(i) <= b->get_fitness(i)) {
+  static int compare(FitType& a, FitType& b) {
+    for (_uint i = 0; i < a.get_n_objs(); ++i) {
+      if (a.get_fitness(i) <= b.get_fitness(i)) {
         return 0;
       }
     }
@@ -61,7 +61,7 @@ protected:
     //double p = (*work_arr)[e]->get_fitness(fit_ind);
     int i = s;
     for (int j = s; j < e; ++j) {
-      if ( Comp::compare( work_arr[j], work_arr[e] ) > 0) {
+      if ( Comp::compare( work_arr[j]->get_fitness_info(), work_arr[e]->get_fitness_info() ) > 0) {
         std::shared_ptr<Organism<FitType>> tmp = work_arr[i];
         work_arr[i] = work_arr[j];
         work_arr[j] = tmp;
@@ -153,10 +153,10 @@ public:
       ret[i].second = t2[0];
       for (size_t j = 1; j < t1.size(); ++j) {
         //check whether the fitness is an improvement and use variance as a tiebreaker
-        if (Comp::compare(old_gen[t1[j]], old_gen[ret[i].first]) > 0) {
+        if (Comp::compare(old_gen[t1[j]]->get_fitness_info(), old_gen[ret[i].first]->get_fitness_info()) > 0) {
           ret[i].first  = t1[j];
         }
-        if (Comp::compare(old_gen[t2[j]], old_gen[ret[i].second]) > 0) {
+        if (Comp::compare(old_gen[t2[j]]->get_fitness_info(), old_gen[ret[i].second]->get_fitness_info()) > 0) {
           ret[i].second = t2[j];
         }
       }
@@ -247,7 +247,7 @@ public:
       Vector<int> n_dominations(orgs.size(), 0);
       for (_uint i = 0; i < orgs.size(); ++i) {
         for (_uint j = i + 1; j < orgs.size(); ++j) {
-          int comp_val = MyComp::compare(orgs[i], orgs[j]);
+          int comp_val = MyComp::compare(orgs[i]->get_fitness_info(), orgs[j]->get_fitness_info());
           n_dominations[i] += comp_val;
           n_dominations[j] -= comp_val;
         }
@@ -316,7 +316,7 @@ private:
       for (size_t j = 0; j < cmb_arr.size(); ++j) {
         if (i != j) {
           //if the ith solution dominates the jth add the jth entry to the list of dominated solutions, otherwise increment the number of dominating solutions
-          if ( Comp::compare(cmb_arr[j], cmb_arr[i]) > 0 ) {
+          if ( Comp::compare(cmb_arr[j]->get_fitness_info(), cmb_arr[i]->get_fitness_info()) > 0 ) {
             cmb_arr[i]->get_fitness_info().n_dominations++;
           }
         }

@@ -408,7 +408,7 @@ protected:
         }
         best_organism_ind = i;
       }*/
-      if ( force || !best_organism || Comp::compare(old_gen[i], best_organism) > 0 ) {
+      if ( force || !best_organism || Comp::compare(old_gen[i]->get_fitness_info(), best_organism->get_fitness_info()) > 0 ) {
         best_organism = old_gen[i];
         best_organism_ind = i;
       }
@@ -915,7 +915,7 @@ public:
       }
       // update the max and min fitnesses if we need to
       for (_uint j = 0; j < N_OBJS; ++j) {
-        if ( !(this->old_gen[i]->penalized()) && Comp::compare(old_gen[i], best_organism) > 0 ) {
+        if ( !(this->old_gen[i]->penalized()) && Comp::compare(old_gen[i]->get_fitness_info(), best_organism->get_fitness_info()) > 0 ) {
           this->set_best_organism(i, false, j);
         }
         if (this->old_gen[i]->get_fitness(j) < this->pop_stats[j].min) {
