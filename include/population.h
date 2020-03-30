@@ -550,7 +550,7 @@ public:
       obj_labels[j] = (char*)malloc(sizeof(char)*OUT_BUF_SIZE);
       snprintf(obj_labels[j], OUT_BUF_SIZE - 1, "f_%d(x)", j);
     }
-
+    penalty_fact = 1.0;
     calculated_flags = FLAG_NONE_SET;
   }
   ~Population() {

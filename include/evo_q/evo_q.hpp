@@ -1229,7 +1229,7 @@ public:
       error(CODE_MISC, "Comparison of fitness values with a different number of objectives.");
     }
     int ret = 0;
-    for (_uint i = 0; i < a_info.get_n_objs(); ++i) {
+    for (_uint i = 0; i < a.get_n_objs(); ++i) {
       if (a.get_fitness(i) < b.get_fitness(i)) {
         --ret;
       } else if (a.get_fitness(i) > b.get_fitness(i)) {
@@ -1703,125 +1703,6 @@ protected:
   std::vector<bool> is_obj_cost;
   int print_penalties = 0;
 
-  //cull in place is slightly faster but less accurate than the standard cull method
-  /*bool cull_in_place() {
-    size_t j = 0;
-    double difference = pop_stats[0].max - pop_stats[0].min;
-    //avoid divide by 0
-    if (difference == 0) {
-      error(CODE_WARN, "All organisms have the same fitness, exiting");
-      return true;
-    }
-    std::uniform_real_distribution<double> dist(0, difference);
-    if (survivors.size() < survivors_num) {
-      survivors.resize(survivors_num);
-    }
-    for (size_t i = 0; i < this->offspring_num && j < survivors_num; ++i) {
-      // if M_f is the maximum fitness and m_f is the minimum the minimum, while x is the
-      // fitness of a given organism, then the probability of survival is x/(M_f-m_f) or 1
-      // if M_f = m_f
-      if (dist(args.get_generator()) < old_gen[i]->get_fitness(0) - pop_stats[0].min) {
-        survivors[j] = old_gen[i];
-        j++;
-      }
-    }
-    std::uniform_int_distribution<int> ind_dist(0, this->offspring_num - 1);
-    while (j < survivors_num) {
-      survivors[j] = old_gen[ind_dist( args.get_generator() )];
-      j++;
-    }
-    return false;
-  }*/
-
-  /**
-   * \brief An implementation of simple roulette selection. This function first sorts the organisms and selects them based on the ratio of their relative fitness to the total relative fitness.
-   *
-   * \returns True if all organisms have the same fitness (results have converged).
-   */
-  /*bool cull() {
-    sort_orgs(0, &old_gen);
-    //if all the organisms have the same fitness then reinitialize the population
-    if (old_gen[0]->get_fitness(0) - old_gen[this->offspring_num-1]->get_fitness(0) < 0.001 ) {
-      return true;
-    }
-    double min_fit = old_gen[this->offspring_num-1]->get_fitness(0);
-    double total_fit = 0;
-    for (size_t i = 0; i < this->offspring_num; ++i) {
-      total_fit += old_gen[i]->get_fitness(0) - min_fit;
-    }
-    std::uniform_real_distribution<double> dist(0, total_fit);
-    //maintain a list of organisms that have already been added so no organism appears twice
-    size_t* banned = (size_t*)malloc(sizeof(size_t)*survivors_num);
-    for (size_t i = 0; i < survivors_num; ++i) { banned[i] = -1; }
-    for (size_t i = 0; i < survivors_num; ++i) {
-      double val = dist( args.get_generator() );
-      size_t j = 0;
-      while (val > 0.0) {
-        val -= old_gen[j]->get_fitness(0) - min_fit;
-        j++;
-      }
-      j -= 1;
-      while (contains<size_t>(banned, survivors_num, j)) {
-        j++;
-        if (j >= survivors_num) {
-          j = 0;
-        }
-      }
-      survivors[i] = old_gen[j];
-      banned[i] = j;
-    }
-    if (args.verbose()) {
-      std::cerr << "Added orgs to survs:";
-      for (size_t i = 0; i < survivors_num; ++i) {
-        std::cerr << " " << banned[i];
-      }
-      std::cerr << std::endl;
-    }
-    free(banned);
-  //  best_organism_ind = 0;
-    return false;
-  }*/
-  /*void breed_shuffle() {
-    std::uniform_int_distribution<size_t> dist_surv0(0, survivors_num - 1);
-    std::vector<Organism<FitType>*> children;
-    Organism<FitType>** shuffled_inds = (Organism<FitType>**)malloc(sizeof(Organism<FitType>*)*offspring_num);
-    for (size_t i = 0; i < survivors_num; ++i) {
-      shuffled_inds[i] = survivors[i].get();
-    }
-    for (size_t i = 0; i < survivors_num; ++i) {
-      size_t ind_o = dist_surv0( args.get_generator() );
-      Organism<FitType>* tmp = shuffled_inds[i];
-      shuffled_inds[i] = shuffled_inds[ind_o];
-      shuffled_inds[ind_o] = tmp;
-    }
-    size_t last_org_ind = offspring_num;
-    for (size_t i = survivors_num; i < offspring_num; ++i) {
-      size_t org_ind= dist_surv0( args.get_generator() );
-      //ensure that we don't see the same organism breeding with itself
-      if (org_ind == last_org_ind) {
-        org_ind = (org_ind + 1) % offspring_num;
-      }
-      shuffled_inds[i] = survivors[org_ind].get();
-      last_org_ind = org_ind;
-    }
-    if (this->offspring_num % 2 == 1) {
-      //elitist algorithm, make the first individual in the next generation the previous most fit
-      //offspring[0] = std::make_shared<Organism<FitType>>(best_organism);
-      offspring[0] = best_organism;
-      for (size_t i = 1; 2*i < this->offspring_num; i++) {
-        children = shuffled_inds[2*i - 1]->breed(&args, shuffled_inds[2*i]);
-        offspring[2*i] = std::shared_ptr<Organism<FitType>>(children[0]);
-        offspring[2*i - 1] = std::shared_ptr<Organism<FitType>>(children[1]);
-      }
-    } else {
-      for (size_t i = 0; 2*i + 1 < this->offspring_num; i++) {
-        children = shuffled_inds[2*i]->breed(&args, shuffled_inds[2*i + 1]);
-        offspring[2*i] = std::shared_ptr<Organism<FitType>>(children[0]);
-        offspring[2*i + 1] = std::shared_ptr<Organism<FitType>>(children[1]);
-      }
-    }
-    offspring.swap(old_gen);
-  }*/
   /**
    * \brief Apply soft penalties to organisms, this gaurantees that a penalized organism will always have a lower fitness than an unpenalized organism
    *
@@ -2104,7 +1985,7 @@ public:
       obj_labels[j] = (char*)malloc(sizeof(char)*OUT_BUF_SIZE);
       snprintf(obj_labels[j], OUT_BUF_SIZE - 1, "f_%d(x)", j);
     }
-
+    penalty_fact = 1.0;
     calculated_flags = FLAG_NONE_SET;
   }
   ~Population() {
