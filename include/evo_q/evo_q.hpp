@@ -1245,7 +1245,7 @@ class NSGAII_Comparator : public Comparator<FitType> {
 public:
   static_assert( std::is_base_of<MultiFitness, FitType>::value, "FitType must be derived from MultiFitness for NSGAII comparator" );
   static int compare(FitType& a, FitType& b) {
-    for (_uint i = 0; i < a.get_fitness_info().get_n_objs(); ++i) {
+    for (_uint i = 0; i < a.get_n_objs(); ++i) {
       if (a.get_fitness(i) <= b.get_fitness(i)) {
         return 0;
       }
